@@ -17,6 +17,46 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
+    <Window.Styles>
+        <Style Selector="Button.LegacyIsoButton">
+            <Setter Property="Background" Value="#D4D4D4"/>
+            <Setter Property="BorderBrush" Value="#B8B8B8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="3">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="Center"
+                                          VerticalContentAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.LegacyIsoButton:pointerover /template/ Border#PART_Border">
+            <Setter Property="Background" Value="#E0E0E0"/>
+        </Style>
+        <Style Selector="Button.LegacyIsoButton:pressed /template/ Border#PART_Border">
+            <Setter Property="Background" Value="#C4C4C4"/>
+        </Style>
+        <Style Selector="Button.LegacyIsoButton:disabled">
+            <Setter Property="Foreground" Value="#7A7A7A"/>
+            <Setter Property="Background" Value="#D0D0D0"/>
+        </Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="Auto,*">
         <Border Background="#FFFFFF"
                 BorderBrush="#C0C0C8"
@@ -93,6 +133,7 @@
                                     <DataTemplate x:DataType="vm:IsoFileEntryViewModel">
                                         <Border PointerPressed="IsoFilePointerPressed"
                                                 Cursor="Hand"
+                                                HorizontalAlignment="Stretch"
                                                 MinHeight="30"
                                                 Background="{Binding BackgroundBrush}"
                                                 BorderBrush="#000000"
@@ -158,9 +199,9 @@
                         <Grid IsVisible="{Binding ShowIsoExplorer}"
                               Width="350"
                               HorizontalAlignment="Left"
-                              RowDefinitions="Auto,Auto,Auto,Auto,*">
+                              RowDefinitions="220,Auto,*">
                             <Grid ColumnDefinitions="*,*"
-                                  Margin="0,0,0,26">
+                                  Margin="0,0,0,0">
                                 <TextBlock Text="{Binding SelectedIsoFileName}"
                                            Foreground="#000000"
                                            TextTrimming="CharacterEllipsis"/>
@@ -171,63 +212,85 @@
                                            Margin="18,0,0,0"/>
                             </Grid>
 
-                            <Grid Grid.Row="1"
-                                  ColumnDefinitions="*,*"
-                                  RowDefinitions="34,30,30"
-                                  ColumnSpacing="36"
-                                  RowSpacing="6">
-                                <Button Content="Export and decode"
+                            <Canvas>
+                                <Button Classes="LegacyIsoButton"
+                                        Canvas.Left="13"
+                                        Canvas.Top="48"
+                                        Width="144"
+                                        Height="30"
+                                        Content="Export and decode"
                                         Command="{Binding ExportAndDecodeSelectedIsoFileCommand}"
-                                        Foreground="#000000"
-                                        Height="30"/>
-                                <Button Grid.Column="1"
+                                        Foreground="#000000"/>
+                                <Button Classes="LegacyIsoButton"
+                                        Canvas.Left="193"
+                                        Canvas.Top="48"
+                                        Width="144"
+                                        Height="30"
                                         Content="Encode and import"
                                         Command="{Binding ImportSelectedIsoFileCommand}"
-                                        Foreground="#000000"
-                                        Height="30"/>
-                                <Button Grid.Row="1"
+                                        Foreground="#000000"/>
+                                <Button Classes="LegacyIsoButton"
+                                        Canvas.Left="13"
+                                        Canvas.Top="88"
+                                        Width="144"
+                                        Height="24"
                                         Content="Export"
                                         Command="{Binding QuickExportSelectedIsoFileCommand}"
-                                        Foreground="#000000"
-                                        Height="24"/>
-                                <Button Grid.Row="1"
-                                        Grid.Column="1"
+                                        Foreground="#000000"/>
+                                <Button Classes="LegacyIsoButton"
+                                        Canvas.Left="193"
+                                        Canvas.Top="88"
+                                        Width="144"
+                                        Height="24"
                                         Content="Import"
                                         Command="{Binding ImportSelectedIsoFileCommand}"
-                                        Foreground="#000000"
-                                        Height="24"/>
-                                <Button Grid.Row="2"
+                                        Foreground="#000000"/>
+                                <Button Classes="LegacyIsoButton"
+                                        Canvas.Left="13"
+                                        Canvas.Top="122"
+                                        Width="144"
+                                        Height="24"
                                         Content="Decode only"
                                         Command="{Binding DecodeSelectedIsoFileCommand}"
-                                        Foreground="#000000"
-                                        Height="24"/>
-                                <Button Grid.Row="2"
-                                        Grid.Column="1"
+                                        Foreground="#000000"/>
+                                <Button Classes="LegacyIsoButton"
+                                        Canvas.Left="193"
+                                        Canvas.Top="122"
+                                        Width="144"
+                                        Height="24"
                                         Content="Encode only"
                                         Command="{Binding EncodeSelectedIsoFileCommand}"
-                                        Foreground="#000000"
-                                        Height="24"/>
-                            </Grid>
+                                        Foreground="#000000"/>
 
-                            <Button Grid.Row="2"
-                                    Content="Delete"
-                                    IsEnabled="False"
-                                    Foreground="#000000"
-                                    HorizontalAlignment="Center"
-                                    Width="80"
-                                    Height="24"
-                                    Margin="0,16,0,12"/>
+                                <Button Classes="LegacyIsoButton"
+                                        Canvas.Left="128"
+                                        Canvas.Top="162"
+                                        Width="94"
+                                        Height="24"
+                                        Content="Delete"
+                                        IsEnabled="False"
+                                        Foreground="#000000"/>
 
-                            <TextBlock Grid.Row="3"
+                                <TextBlock Canvas.Left="0"
+                                           Canvas.Top="198"
+                                           Width="350"
+                                           Text="Files"
+                                           Foreground="#000000"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"/>
+                            </Canvas>
+
+                            <TextBlock Grid.Row="1"
                                        Text="Files"
+                                       IsVisible="False"
                                        Foreground="#000000"
                                        HorizontalAlignment="Center"
                                        Margin="0,0,0,0"/>
 
-                            <ScrollViewer Grid.Row="4"
+                            <ScrollViewer Grid.Row="2"
                                           VerticalScrollBarVisibility="Auto"
                                           Background="Transparent"
-                                          Margin="0,4,0,0">
+                                          Margin="0,0,0,0">
                                 <TextBlock Text="{Binding IsoExplorerFilesText}"
                                            Foreground="#000000"
                                            TextWrapping="Wrap"/>
