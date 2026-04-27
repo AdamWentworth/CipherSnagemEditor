@@ -2,6 +2,7 @@ using OrreForge.Core.Archives;
 using OrreForge.Core.Files;
 using OrreForge.Core.GameCube;
 using OrreForge.Core.Text;
+using System.Text.Json;
 
 namespace OrreForge.Colosseum;
 
@@ -68,6 +69,73 @@ public sealed class ColosseumProjectContext
         File.WriteAllBytes(targetPath, data);
         LoadedFiles[entry.Name] = data;
         return targetPath;
+    }
+
+    public IsoExportResult ExportIsoFile(
+        GameCubeIsoFileEntry entry,
+        bool extractFsysContents = true,
+        bool decode = true,
+        bool overwrite = false)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        var targetPath = ResolveIsoExtractPath(entry.Name, null);
+        var parent = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(parent))
+        {
+            Directory.CreateDirectory(parent);
+        }
+
+        var data = GameCubeIsoReader.ReadFile(Iso, entry);
+        if (!File.Exists(targetPath) || overwrite)
+        {
+            File.WriteAllBytes(targetPath, data);
+        }
+
+        LoadedFiles[entry.Name] = data;
+
+        var extractedFiles = new List<string>();
+        var decodedFiles = new List<string>();
+        if (GameFileTypes.FromExtension(entry.Name) == GameFileType.Fsys)
+        {
+            var folder = GetIsoExportDirectory(entry.Name);
+            var archive = FsysArchive.Parse(targetPath, data);
+            LoadedFsys[targetPath] = archive;
+
+            if (extractFsysContents)
+            {
+                extractedFiles.AddRange(ExtractFsysFiles(archive, folder, overwrite));
+            }
+
+            if (decode)
+            {
+                decodedFiles.AddRange(DecodeExtractedFsysFiles(archive, folder, overwrite));
+            }
+        }
+
+        return new IsoExportResult(targetPath, extractedFiles, decodedFiles);
+    }
+
+    public FsysArchive ReadIsoFsysArchive(GameCubeIsoFileEntry entry)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        if (GameFileTypes.FromExtension(entry.Name) != GameFileType.Fsys)
+        {
+            throw new InvalidDataException($"{entry.Name} is not an FSYS archive.");
+        }
+
+        var data = GameCubeIsoReader.ReadFile(Iso, entry);
+        var targetPath = ResolveIsoExtractPath(entry.Name, null);
+        var archive = FsysArchive.Parse(targetPath, data);
+        LoadedFsys[targetPath] = archive;
+        return archive;
     }
 
     public string GetIsoExportDirectory(string fileName)
@@ -167,5 +235,64 @@ public sealed class ColosseumProjectContext
     {
         var extensionIndex = fileName.IndexOf('.');
         return extensionIndex < 0 ? fileName : fileName[..extensionIndex];
+    }
+
+    private static IEnumerable<string> ExtractFsysFiles(FsysArchive archive, string folder, bool overwrite)
+    {
+        Directory.CreateDirectory(folder);
+
+        foreach (var entry in archive.Entries)
+        {
+            var outputPath = Path.Combine(folder, SafeFileName(entry.Name));
+            if (File.Exists(outputPath) && !overwrite)
+            {
+                continue;
+            }
+
+            File.WriteAllBytes(outputPath, archive.Extract(entry));
+            yield return outputPath;
+        }
+    }
+
+    private IEnumerable<string> DecodeExtractedFsysFiles(FsysArchive archive, string folder, bool overwrite)
+    {
+        foreach (var entry in archive.Entries)
+        {
+            if (entry.FileType != GameFileType.Message)
+            {
+                continue;
+            }
+
+            var messagePath = Path.Combine(folder, SafeFileName(entry.Name));
+            if (!File.Exists(messagePath))
+            {
+                continue;
+            }
+
+            var jsonPath = messagePath + ".json";
+            if (File.Exists(jsonPath) && !overwrite)
+            {
+                continue;
+            }
+
+            GameStringTable table;
+            try
+            {
+                table = GameStringTable.Load(messagePath);
+            }
+            catch (InvalidDataException)
+            {
+                continue;
+            }
+            catch (EndOfStreamException)
+            {
+                continue;
+            }
+
+            LoadedStringTables[messagePath] = table;
+            var json = JsonSerializer.Serialize(table.Strings, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(jsonPath, json);
+            yield return jsonPath;
+        }
     }
 }

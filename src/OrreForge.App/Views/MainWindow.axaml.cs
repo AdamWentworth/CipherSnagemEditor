@@ -78,6 +78,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void IsoFilePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control { DataContext: IsoFileEntryViewModel file }
+            && DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectedIsoFile = file;
+            e.Handled = true;
+        }
+    }
+
     private Task OpenPathAsync(string path)
     {
         return DataContext is MainWindowViewModel viewModel

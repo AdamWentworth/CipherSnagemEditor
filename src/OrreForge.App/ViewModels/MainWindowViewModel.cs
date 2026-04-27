@@ -37,6 +37,24 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _isoExplorerStatus = "Open a Colosseum ISO to browse its files.";
 
+    [ObservableProperty]
+    private string _leftPanelTitle = "Tools";
+
+    [ObservableProperty]
+    private bool _showHomeTools = true;
+
+    [ObservableProperty]
+    private bool _showToolPlaceholder = true;
+
+    [ObservableProperty]
+    private string _isoExplorerFilesText = "-";
+
+    [ObservableProperty]
+    private string _selectedIsoFileName = "File name: -";
+
+    [ObservableProperty]
+    private string _selectedIsoFileSize = "File size: -";
+
     public MainWindowViewModel()
     {
         Tools = new ObservableCollection<ToolEntryViewModel>(
@@ -92,8 +110,49 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanExtractSelectedIsoFile))]
-    private async Task ExtractSelectedIsoFileAsync()
+    [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
+    private async Task ExportAndDecodeSelectedIsoFileAsync()
+    {
+        await ExportSelectedIsoFileAsync(extractFsysContents: true, decode: true, label: "Export and decode");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
+    private async Task QuickExportSelectedIsoFileAsync()
+    {
+        await ExportSelectedIsoFileAsync(extractFsysContents: true, decode: false, label: "Export");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
+    private async Task DecodeSelectedIsoFileAsync()
+    {
+        await ExportSelectedIsoFileAsync(extractFsysContents: false, decode: true, label: "Decode only");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
+    private void ImportSelectedIsoFile()
+    {
+        IsoExplorerStatus = "Import is not implemented yet.";
+        Logs.Add("Import is not implemented yet.");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
+    private void EncodeSelectedIsoFile()
+    {
+        IsoExplorerStatus = "Encode is not implemented yet.";
+        Logs.Add("Encode is not implemented yet.");
+    }
+
+    [RelayCommand]
+    private void ReturnHome()
+    {
+        SelectedTool = Tools.FirstOrDefault();
+        ShowIsoExplorer = false;
+        ShowHomeTools = true;
+        ShowToolPlaceholder = true;
+        LeftPanelTitle = "Tools";
+    }
+
+    private async Task ExportSelectedIsoFileAsync(bool extractFsysContents, bool decode, string label)
     {
         if (CurrentProject?.Iso is null || SelectedIsoFile is null)
         {
@@ -102,14 +161,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsBusy = true;
         var fileName = SelectedIsoFile.Name;
-        Logs.Add($"Exporting {fileName}");
+        Logs.Add($"{label}: {fileName}");
 
         try
         {
             var selectedFile = SelectedIsoFile;
-            var outputPath = await Task.Run(() => CurrentProject.ExtractIsoFile(selectedFile.Entry));
-            IsoExplorerStatus = $"Exported {fileName} to {outputPath}";
-            Logs.Add($"Exported {fileName}");
+            var result = await Task.Run(() => CurrentProject.ExportIsoFile(
+                selectedFile.Entry,
+                extractFsysContents,
+                decode));
+            IsoExplorerStatus = BuildIsoExportStatus(fileName, result);
+            Logs.Add(IsoExplorerStatus);
+            RefreshSelectedIsoFileDetails(selectedFile);
         }
         catch (Exception ex)
         {
@@ -122,7 +185,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private bool CanExtractSelectedIsoFile()
+    private bool CanExportSelectedIsoFile()
         => CurrentProject?.Iso is not null && SelectedIsoFile is not null && !IsBusy;
 
     partial void OnSelectedToolChanged(ToolEntryViewModel? value)
@@ -135,12 +198,18 @@ public partial class MainWindowViewModel : ViewModelBase
         IsoExplorerStatus = value is null
             ? "Select an ISO file to inspect or export."
             : $"{value.Name} - {value.SizeText} at {value.OffsetHex}";
-        ExtractSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        foreach (var file in IsoFiles)
+        {
+            file.IsSelected = ReferenceEquals(file, value);
+        }
+
+        RefreshSelectedIsoFileDetails(value);
+        NotifyIsoExplorerCommands();
     }
 
     partial void OnIsBusyChanged(bool value)
     {
-        ExtractSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        NotifyIsoExplorerCommands();
     }
 
     private void RefreshSelectedToolView(ToolEntryViewModel? value)
@@ -154,11 +223,17 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             SelectedToolDetail = string.Empty;
             ShowIsoExplorer = false;
+            ShowHomeTools = true;
+            ShowToolPlaceholder = true;
+            LeftPanelTitle = "Tools";
             return;
         }
 
         SelectedToolDetail = $"{value.Title}\nLegacy segue: {value.LegacySegue}\nReference: {value.LegacySource}";
         ShowIsoExplorer = value.Title == "ISO Explorer" && CurrentProject?.Iso is not null;
+        ShowHomeTools = !ShowIsoExplorer;
+        ShowToolPlaceholder = !ShowIsoExplorer;
+        LeftPanelTitle = ShowIsoExplorer ? "Files" : "Tools";
         if (value.Title == "ISO Explorer" && CurrentProject?.Iso is null)
         {
             IsoExplorerStatus = "Open a Colosseum ISO to browse its files.";
@@ -180,7 +255,74 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         SelectedIsoFile = IsoFiles.FirstOrDefault();
-        ExtractSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        NotifyIsoExplorerCommands();
+    }
+
+    private void RefreshSelectedIsoFileDetails(IsoFileEntryViewModel? value)
+    {
+        if (value is null)
+        {
+            SelectedIsoFileName = "File name: -";
+            SelectedIsoFileSize = "File size: -";
+            IsoExplorerFilesText = "-";
+            return;
+        }
+
+        SelectedIsoFileName = value.FileNameText;
+        SelectedIsoFileSize = value.FileSizeText;
+        IsoExplorerFilesText = BuildIsoFileDetails(value);
+    }
+
+    private string BuildIsoFileDetails(IsoFileEntryViewModel value)
+    {
+        if (CurrentProject is null)
+        {
+            return "-";
+        }
+
+        if (!value.IsFsys)
+        {
+            return "-";
+        }
+
+        try
+        {
+            var archive = CurrentProject.ReadIsoFsysArchive(value.Entry);
+
+            return archive.Entries.Count == 0
+                ? "No files found in archive."
+                : string.Join(Environment.NewLine, archive.Entries.Select(entry =>
+                    $"{entry.Index}: {entry.Name} ({entry.Identifier:x8})"));
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private void NotifyIsoExplorerCommands()
+    {
+        ExportAndDecodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        QuickExportSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        DecodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        ImportSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        EncodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
+    }
+
+    private static string BuildIsoExportStatus(string fileName, IsoExportResult result)
+    {
+        var status = $"Exported {fileName} to {result.FilePath}";
+        if (result.ExtractedFiles.Count > 0)
+        {
+            status += $" | extracted {result.ExtractedFiles.Count} files";
+        }
+
+        if (result.DecodedFiles.Count > 0)
+        {
+            status += $" | decoded {result.DecodedFiles.Count} files";
+        }
+
+        return status;
     }
 
     private static string BuildProjectTitle(ColosseumProjectContext context)
