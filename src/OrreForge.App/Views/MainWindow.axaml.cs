@@ -1,5 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Avalonia;
 using Avalonia.Platform.Storage;
 using OrreForge.App.ViewModels;
 
@@ -7,6 +10,9 @@ namespace OrreForge.App.Views;
 
 public partial class MainWindow : Window
 {
+    private readonly Dictionary<string, Window> _toolWindows = [];
+    private int _toolWindowOffset;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -73,7 +79,11 @@ public partial class MainWindow : Window
         if (sender is Control { DataContext: ToolEntryViewModel tool }
             && DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.SelectedTool = tool;
+            if (viewModel.PrepareToolWindow(tool))
+            {
+                OpenToolWindow(tool, viewModel);
+            }
+
             e.Handled = true;
         }
     }
@@ -110,8 +120,104 @@ public partial class MainWindow : Window
 
     private Task OpenPathAsync(string path)
     {
+        CloseToolWindows();
         return DataContext is MainWindowViewModel viewModel
             ? viewModel.OpenPathAsync(path)
             : Task.CompletedTask;
+    }
+
+    private void OpenToolWindow(ToolEntryViewModel tool, MainWindowViewModel viewModel)
+    {
+        if (_toolWindows.TryGetValue(tool.Title, out var existing))
+        {
+            existing.Activate();
+            return;
+        }
+
+        var content = CreateToolContent(tool);
+        content.DataContext = viewModel;
+        var size = ToolWindowSize(tool.Title);
+        var window = new Window
+        {
+            Title = $"{tool.Title} - Colosseum Tool",
+            Width = size.Width,
+            Height = size.Height,
+            MinWidth = Math.Min(size.Width, 900),
+            MinHeight = Math.Min(size.Height, 560),
+            FontFamily = FontFamily,
+            Background = SolidColorBrush.Parse("#F0F0FC"),
+            Content = content,
+            DataContext = viewModel
+        };
+
+        if (Icon is not null)
+        {
+            window.Icon = Icon;
+        }
+
+        var offset = 28 + (_toolWindowOffset++ % 6 * 24);
+        window.Position = new PixelPoint(Position.X + offset, Position.Y + offset);
+        window.Closed += (_, _) => _toolWindows.Remove(tool.Title);
+        _toolWindows[tool.Title] = window;
+        window.Show(this);
+        window.Activate();
+    }
+
+    private static Control CreateToolContent(ToolEntryViewModel tool)
+        => tool.Title switch
+        {
+            "Trainer Editor" => new TrainerEditorView(),
+            "Pokemon Stats Editor" => new PokemonStatsEditorView(),
+            "ISO Explorer" => new IsoExplorerView(),
+            _ => CreatePlaceholderContent(tool)
+        };
+
+    private static Size ToolWindowSize(string title)
+        => title switch
+        {
+            "Trainer Editor" => new Size(1420, 760),
+            "Pokemon Stats Editor" => new Size(1188, 650),
+            "ISO Explorer" => new Size(900, 650),
+            _ => new Size(620, 320)
+        };
+
+    private static Control CreatePlaceholderContent(ToolEntryViewModel tool)
+        => new Border
+        {
+            Background = Brushes.White,
+            BorderBrush = SolidColorBrush.Parse("#C0C0C8"),
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(18),
+            Margin = new Thickness(18),
+            Child = new StackPanel
+            {
+                Spacing = 12,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = tool.Title,
+                        FontSize = 18,
+                        FontWeight = FontWeight.Bold,
+                        Foreground = Brushes.Black
+                    },
+                    new TextBlock
+                    {
+                        Text = $"Legacy segue: {tool.LegacySegue}{Environment.NewLine}Reference: {tool.LegacySource}",
+                        Foreground = Brushes.Black,
+                        TextWrapping = TextWrapping.Wrap
+                    }
+                }
+            }
+        };
+
+    private void CloseToolWindows()
+    {
+        foreach (var window in _toolWindows.Values.ToArray())
+        {
+            window.Close();
+        }
+
+        _toolWindows.Clear();
     }
 }

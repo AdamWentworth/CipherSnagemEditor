@@ -1,0 +1,457 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OrreForge.App.ViewModels"
+             x:Class="OrreForge.App.Views.TrainerEditorView"
+             x:DataType="vm:MainWindowViewModel"
+             FontFamily="Arial"
+             Background="#F0F0FC">
+    <UserControl.Styles>
+        <Style Selector="Button.LegacyIsoButton">
+            <Setter Property="Background" Value="#D4D4D4"/>
+            <Setter Property="BorderBrush" Value="#B8B8B8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="ComboBox.LegacyPokemonField">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="18"/>
+            <Setter Property="Padding" Value="2,0"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#C0C0C8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyPokemonField">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Padding" Value="2,0"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#C0C0C8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="250,*">
+        <Border Grid.Column="0"
+                Background="#000000"
+                BorderBrush="#C0C0C8"
+                BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto,*">
+                <TextBox Text="{Binding TrainerSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Search trainers"
+                         Height="28"
+                         Margin="8,6"
+                         Padding="8,3"
+                         FontSize="12"
+                         Background="#FFFFFF"
+                         Foreground="#000000"
+                         BorderBrush="#808080"
+                         BorderThickness="1"/>
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Trainers}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TrainerEntryViewModel">
+                                <Border PointerPressed="TrainerPointerPressed"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Stretch"
+                                        Height="50"
+                                        Background="{Binding BackgroundBrush}">
+                                    <Grid ColumnDefinitions="50,*">
+                                        <Image Source="{Binding TrainerImage}"
+                                               Width="50"
+                                               Height="50"
+                                               Stretch="Uniform"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding RowText}"
+                                                   HorizontalAlignment="Stretch"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="12"
+                                                   Foreground="#000000"
+                                                   TextWrapping="NoWrap"
+                                                   TextAlignment="Center"
+                                                   MaxLines="2"
+                                                   Margin="4,0"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1"
+              RowDefinitions="80,*"
+              Margin="18">
+            <Border Background="{Binding TrainerDetailBackgroundBrush}"
+                    BorderBrush="#C0C0C8"
+                    BorderThickness="1">
+                <Grid ColumnDefinitions="80,150,150,100,150,100,*"
+                      RowDefinitions="25,25"
+                      Margin="20,10,0,10"
+                      ColumnSpacing="10"
+                      RowSpacing="10">
+                    <Border Width="60"
+                            Height="60"
+                            Background="#FFFFFF"
+                            BorderBrush="#000000"
+                            BorderThickness="1"
+                            Grid.RowSpan="2"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center">
+                        <Image Source="{Binding SelectedTrainer.TrainerImage}"
+                               Stretch="Uniform"/>
+                    </Border>
+
+                    <ComboBox Grid.Column="1"
+                              Height="25"
+                              SelectedIndex="0"
+                              Foreground="#000000">
+                        <ComboBoxItem Content="{Binding SelectedTrainerClass}"/>
+                    </ComboBox>
+                    <TextBox Grid.Column="2"
+                             Height="25"
+                             Text="{Binding SelectedTrainerName}"
+                             IsReadOnly="True"
+                             Foreground="#000000"/>
+                    <TextBox Grid.Column="3"
+                             Height="25"
+                             Text="{Binding SelectedTrainerAi}"
+                             IsReadOnly="True"
+                             Foreground="#000000"/>
+                    <ComboBox Grid.Column="4"
+                              Height="25"
+                              SelectedIndex="0"
+                              Foreground="#000000">
+                        <ComboBoxItem Content="{Binding SelectedTrainerBattleStyle}"/>
+                    </ComboBox>
+                    <TextBox Grid.Column="5"
+                             Height="25"
+                             Text="{Binding SelectedTrainerBattleId}"
+                             IsReadOnly="True"
+                             Foreground="#000000"/>
+
+                    <ComboBox Grid.Row="1"
+                              Grid.Column="1"
+                              Height="25"
+                              SelectedIndex="0"
+                              Foreground="#000000">
+                        <ComboBoxItem Content="{Binding SelectedTrainerModel}"/>
+                    </ComboBox>
+                    <TextBox Grid.Row="1"
+                             Grid.Column="3"
+                             Height="25"
+                             Text="{Binding SelectedTrainerBgm}"
+                             IsReadOnly="True"
+                             Foreground="#000000"/>
+                    <ComboBox Grid.Row="1"
+                              Grid.Column="4"
+                              Height="25"
+                              SelectedIndex="0"
+                              Foreground="#000000">
+                        <ComboBoxItem Content="{Binding SelectedTrainerBattleType}"/>
+                    </ComboBox>
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="6"
+                               Text="{Binding SelectedTrainerStringIds}"
+                               Foreground="#000000"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1"
+                    BorderBrush="#000000"
+                    BorderThickness="1,0,1,1"
+                    Background="#FFFFFF">
+                <Grid RowDefinitions="*,30"
+                      Margin="10">
+                    <ItemsControl ItemsSource="{Binding SelectedTrainerPokemon}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="2" Columns="3"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TrainerPokemonSlotViewModel">
+                                <Border Background="{Binding BackgroundBrush}"
+                                        BorderBrush="#C0C0C8"
+                                        BorderThickness="1"
+                                        CornerRadius="12"
+                                        Margin="5"
+                                        Opacity="{Binding Opacity}"
+                                        ClipToBounds="True">
+                                    <Grid RowDefinitions="18,20,20,20,12,16,12,16,20,11,16"
+                                          ColumnDefinitions="64,*,*"
+                                          Margin="4"
+                                          ColumnSpacing="4"
+                                          RowSpacing="2"
+                                          ClipToBounds="True">
+                                        <TextBlock Text="{Binding DeckIndexText}"
+                                                   Foreground="#000000"
+                                                   FontSize="10"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <ComboBox Grid.Column="1"
+                                                  Grid.ColumnSpan="2"
+                                                  Classes="LegacyPokemonField"
+                                                  ItemsSource="{Binding ShadowOptions}"
+                                                  SelectedItem="{Binding SelectedShadow, Mode=TwoWay}"
+                                                  MaxDropDownHeight="260"/>
+                                        <Border Grid.Row="1"
+                                                Grid.RowSpan="3"
+                                                IsVisible="{Binding IsSet}"
+                                                Width="64"
+                                                Height="64"
+                                                Background="#F0F0FC"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <Image Source="{Binding BodyImage}"
+                                                   Stretch="Uniform"/>
+                                        </Border>
+                                        <ComboBox Grid.Row="1"
+                                                  Grid.RowSpan="3"
+                                                  Grid.ColumnSpan="3"
+                                                  Classes="LegacyPokemonField"
+                                                  IsVisible="{Binding IsEmpty}"
+                                                  ItemsSource="{Binding SpeciesOptions}"
+                                                  SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                                  MaxDropDownHeight="260"
+                                                  HorizontalAlignment="Stretch"
+                                                  VerticalAlignment="Center"
+                                                  Margin="34,0"/>
+
+                                        <Border Grid.Row="1"
+                                                Grid.Column="1"
+                                                IsVisible="{Binding IsSet}"
+                                                Height="20"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <TextBox Classes="LegacyPokemonField"
+                                                     Text="{Binding Level, Mode=TwoWay}"/>
+                                        </Border>
+                                        <Border Grid.Row="1"
+                                                Grid.Column="2"
+                                                IsVisible="{Binding IsSet}"
+                                                Height="20"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <ComboBox Classes="LegacyPokemonField"
+                                                      ItemsSource="{Binding SpeciesOptions}"
+                                                      SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                                      MaxDropDownHeight="260"/>
+                                        </Border>
+
+                                        <Border Grid.Row="2"
+                                                Grid.Column="1"
+                                                IsVisible="{Binding IsSet}"
+                                                Height="20"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <ComboBox Classes="LegacyPokemonField"
+                                                      ItemsSource="{Binding AbilityOptions}"
+                                                      SelectedItem="{Binding SelectedAbility, Mode=TwoWay}"/>
+                                        </Border>
+                                        <Border Grid.Row="2"
+                                                Grid.Column="2"
+                                                IsVisible="{Binding IsSet}"
+                                                Height="20"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <ComboBox Classes="LegacyPokemonField"
+                                                      ItemsSource="{Binding ItemOptions}"
+                                                      SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                                                      MaxDropDownHeight="260"/>
+                                        </Border>
+
+                                        <Border Grid.Row="3"
+                                                Grid.Column="1"
+                                                IsVisible="{Binding IsSet}"
+                                                Height="20"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <ComboBox Classes="LegacyPokemonField"
+                                                      ItemsSource="{Binding NatureOptions}"
+                                                      SelectedItem="{Binding SelectedNature, Mode=TwoWay}"/>
+                                        </Border>
+                                        <Border Grid.Row="3"
+                                                Grid.Column="2"
+                                                IsVisible="{Binding IsSet}"
+                                                Height="20"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <ComboBox Classes="LegacyPokemonField"
+                                                      ItemsSource="{Binding GenderOptions}"
+                                                      SelectedItem="{Binding SelectedGender, Mode=TwoWay}"/>
+                                        </Border>
+
+                                        <Border Grid.Row="4"
+                                                IsVisible="{Binding IsSet}"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#C0C0C8"
+                                                BorderThickness="1">
+                                            <ComboBox Classes="LegacyPokemonField"
+                                                      ItemsSource="{Binding PokeballOptions}"
+                                                      SelectedItem="{Binding SelectedPokeball, Mode=TwoWay}"
+                                                      MaxDropDownHeight="260"/>
+                                        </Border>
+                                        <Grid Grid.Row="4"
+                                              Grid.Column="1"
+                                              Grid.ColumnSpan="2"
+                                              IsVisible="{Binding IsSet}"
+                                              ColumnDefinitions="*,*"
+                                              ColumnSpacing="5">
+                                            <TextBlock Text="IVs"
+                                                       Foreground="#000000"
+                                                       FontSize="10"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="Happiness"
+                                                       Foreground="#000000"
+                                                       FontSize="10"
+                                                       HorizontalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="5"
+                                              Grid.Column="1"
+                                              Grid.ColumnSpan="2"
+                                              IsVisible="{Binding IsSet}"
+                                              ColumnDefinitions="*,*"
+                                              ColumnSpacing="5">
+                                            <Border Background="#FFFFFF"
+                                                    BorderBrush="#C0C0C8"
+                                                    BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField"
+                                                         Text="{Binding Iv, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="1"
+                                                    Background="#FFFFFF"
+                                                    BorderBrush="#C0C0C8"
+                                                    BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField"
+                                                         Text="{Binding Happiness, Mode=TwoWay}"/>
+                                            </Border>
+                                        </Grid>
+
+                                        <Grid Grid.Row="6"
+                                              IsVisible="{Binding IsSet}"
+                                              Grid.ColumnSpan="3"
+                                              ColumnDefinitions="*,*,*,*,*,*"
+                                              ColumnSpacing="5">
+                                            <TextBlock Text="HP" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="Atk" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="Def" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="Sp.A" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="4" Text="Sp.D" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="5" Text="Speed" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="7"
+                                              IsVisible="{Binding IsSet}"
+                                              Grid.ColumnSpan="3"
+                                              ColumnDefinitions="*,*,*,*,*,*"
+                                              ColumnSpacing="5">
+                                            <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding HpEv, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding AttackEv, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding DefenseEv, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="3" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding SpecialAttackEv, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding SpecialDefenseEv, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="5" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding SpeedEv, Mode=TwoWay}"/>
+                                            </Border>
+                                        </Grid>
+
+                                        <Grid Grid.Row="8"
+                                              Grid.ColumnSpan="3"
+                                              IsVisible="{Binding IsSet}"
+                                              ColumnDefinitions="*,*,*,*"
+                                              ColumnSpacing="4"
+                                              ClipToBounds="True">
+                                            <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <ComboBox Classes="LegacyPokemonField" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove1, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <ComboBox Classes="LegacyPokemonField" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove2, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                            </Border>
+                                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <ComboBox Classes="LegacyPokemonField" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove3, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                            </Border>
+                                            <Border Grid.Column="3" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <ComboBox Classes="LegacyPokemonField" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove4, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                            </Border>
+                                        </Grid>
+                                        <Grid Grid.Row="9"
+                                              Grid.ColumnSpan="3"
+                                              IsVisible="{Binding ShowShadowFields}"
+                                              ColumnDefinitions="*,*,*,*"
+                                              ColumnSpacing="4">
+                                            <TextBlock Text="Heart" Foreground="#000000" FontSize="8" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="First" Foreground="#000000" FontSize="8" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="Alt" Foreground="#000000" FontSize="8" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="Catch" Foreground="#000000" FontSize="8" HorizontalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid Grid.Row="10"
+                                              Grid.ColumnSpan="3"
+                                              IsVisible="{Binding ShowShadowFields}"
+                                              ColumnDefinitions="*,*,*,*"
+                                              ColumnSpacing="4">
+                                            <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding ShadowHeartGauge, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding ShadowFirstTrainerId, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding ShadowAlternateFirstTrainerId, Mode=TwoWay}"/>
+                                            </Border>
+                                            <Border Grid.Column="3" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                <TextBox Classes="LegacyPokemonField" Text="{Binding ShadowCatchRate, Mode=TwoWay}"/>
+                                            </Border>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Grid.Row="1"
+                            Classes="LegacyIsoButton"
+                            Width="100"
+                            Height="20"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom"
+                            Content="Save"
+                            Command="{Binding SaveTrainerCommand}"
+                            Foreground="#000000"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

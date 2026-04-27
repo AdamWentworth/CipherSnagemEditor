@@ -1,0 +1,172 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OrreForge.App.ViewModels"
+             x:Class="OrreForge.App.Views.IsoExplorerView"
+             x:DataType="vm:MainWindowViewModel"
+             FontFamily="Arial"
+             Background="#F0F0FC">
+    <UserControl.Styles>
+        <Style Selector="Button.LegacyIsoButton">
+            <Setter Property="Background" Value="#D4D4D4"/>
+            <Setter Property="BorderBrush" Value="#B8B8B8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="220,*">
+        <Border Grid.Column="0"
+                Background="#000000"
+                BorderBrush="#C0C0C8"
+                BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto,*">
+                <TextBlock Text="Files"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           Foreground="#FFFFFF"
+                           Margin="10,8,10,6"/>
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding IsoFiles}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:IsoFileEntryViewModel">
+                                <Border PointerPressed="IsoFilePointerPressed"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Stretch"
+                                        MinHeight="30"
+                                        Background="{Binding BackgroundBrush}"
+                                        Opacity="{Binding Alpha}">
+                                    <TextBlock Text="{Binding Name}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="{Binding TextBrush}"
+                                               FontSize="14"
+                                               Margin="8,0"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1"
+              Margin="18"
+              RowDefinitions="Auto,*">
+            <Border Background="#FFFFFF"
+                    BorderBrush="#C0C0C8"
+                    BorderThickness="1"
+                    CornerRadius="2"
+                    Padding="14">
+                <TextBlock Text="{Binding WorkspaceStatus}"
+                           FontSize="13"
+                           Foreground="#000000"
+                           TextWrapping="Wrap"/>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Background="#FFFFFF"
+                    BorderBrush="#C0C0C8"
+                    BorderThickness="1"
+                    CornerRadius="2"
+                    Padding="18"
+                    Margin="0,14,0,0">
+                <Grid Width="350"
+                      HorizontalAlignment="Left"
+                      RowDefinitions="220,Auto,*">
+                    <Grid ColumnDefinitions="*,*">
+                        <TextBlock Text="{Binding SelectedIsoFileName}"
+                                   Foreground="#000000"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding SelectedIsoFileSize}"
+                                   Foreground="#000000"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="18,0,0,0"/>
+                    </Grid>
+
+                    <Canvas>
+                        <Button Classes="LegacyIsoButton"
+                                Canvas.Left="13"
+                                Canvas.Top="48"
+                                Width="144"
+                                Height="30"
+                                Content="Export and decode"
+                                Command="{Binding ExportAndDecodeSelectedIsoFileCommand}"
+                                Foreground="#000000"/>
+                        <Button Classes="LegacyIsoButton"
+                                Canvas.Left="193"
+                                Canvas.Top="48"
+                                Width="144"
+                                Height="30"
+                                Content="Encode and import"
+                                Command="{Binding ImportSelectedIsoFileCommand}"
+                                Foreground="#000000"/>
+                        <Button Classes="LegacyIsoButton"
+                                Canvas.Left="13"
+                                Canvas.Top="88"
+                                Width="144"
+                                Height="24"
+                                Content="Export"
+                                Command="{Binding QuickExportSelectedIsoFileCommand}"
+                                Foreground="#000000"/>
+                        <Button Classes="LegacyIsoButton"
+                                Canvas.Left="193"
+                                Canvas.Top="88"
+                                Width="144"
+                                Height="24"
+                                Content="Import"
+                                Command="{Binding ImportSelectedIsoFileCommand}"
+                                Foreground="#000000"/>
+                        <Button Classes="LegacyIsoButton"
+                                Canvas.Left="13"
+                                Canvas.Top="122"
+                                Width="144"
+                                Height="24"
+                                Content="Decode only"
+                                Command="{Binding DecodeSelectedIsoFileCommand}"
+                                Foreground="#000000"/>
+                        <Button Classes="LegacyIsoButton"
+                                Canvas.Left="193"
+                                Canvas.Top="122"
+                                Width="144"
+                                Height="24"
+                                Content="Encode only"
+                                Command="{Binding EncodeSelectedIsoFileCommand}"
+                                Foreground="#000000"/>
+                        <Button Classes="LegacyIsoButton"
+                                Canvas.Left="128"
+                                Canvas.Top="162"
+                                Width="94"
+                                Height="24"
+                                Content="Delete"
+                                IsEnabled="False"
+                                Foreground="#000000"/>
+                        <TextBlock Canvas.Left="0"
+                                   Canvas.Top="198"
+                                   Width="350"
+                                   Text="Files"
+                                   Foreground="#000000"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"/>
+                    </Canvas>
+
+                    <ScrollViewer Grid.Row="2"
+                                  VerticalScrollBarVisibility="Auto"
+                                  Background="Transparent">
+                        <TextBlock Text="{Binding IsoExplorerFilesText}"
+                                   Foreground="#000000"
+                                   TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

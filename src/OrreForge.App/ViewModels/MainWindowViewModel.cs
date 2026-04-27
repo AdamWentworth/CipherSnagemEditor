@@ -364,10 +364,32 @@ public partial class MainWindowViewModel : ViewModelBase
         => CurrentProject?.Iso is not null && SelectedIsoFile is not null && !IsBusy;
 
     private bool CanSaveTrainer()
-        => ShowTrainerEditor && CurrentProject?.Iso is not null && SelectedTrainer is not null && !IsBusy;
+        => CurrentProject?.Iso is not null && SelectedTrainer is not null && !IsBusy;
 
     private bool CanSavePokemonStats()
-        => ShowPokemonStatsEditor && CurrentProject?.Iso is not null && SelectedPokemonStatsDetail is not null && !IsBusy;
+        => CurrentProject?.Iso is not null && SelectedPokemonStatsDetail is not null && !IsBusy;
+
+    public bool PrepareToolWindow(ToolEntryViewModel tool)
+    {
+        SelectedTool = tool;
+        if (CurrentProject?.Iso is null)
+        {
+            Logs.Add($"Open a Colosseum ISO before launching {tool.Title}.");
+            return false;
+        }
+
+        switch (tool.Title)
+        {
+            case "Trainer Editor":
+                LoadTrainerRows();
+                return true;
+            case "Pokemon Stats Editor":
+                LoadPokemonStatsRows();
+                return true;
+            default:
+                return true;
+        }
+    }
 
     partial void OnSelectedToolChanged(ToolEntryViewModel? value)
     {
@@ -454,32 +476,17 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         SelectedToolDetail = $"{value.Title}\nLegacy segue: {value.LegacySegue}\nReference: {value.LegacySource}";
-        ShowIsoExplorer = value.Title == "ISO Explorer" && CurrentProject?.Iso is not null;
-        ShowTrainerEditor = value.Title == "Trainer Editor" && CurrentProject?.Iso is not null;
-        ShowPokemonStatsEditor = value.Title == "Pokemon Stats Editor" && CurrentProject?.Iso is not null;
-        var showLegacyEditor = ShowTrainerEditor || ShowPokemonStatsEditor;
-        ShowHomeTools = !ShowIsoExplorer && !showLegacyEditor;
-        ShowToolPlaceholder = !ShowIsoExplorer && !showLegacyEditor;
-        ShowReturnHome = ShowIsoExplorer || showLegacyEditor;
-        LeftPanelTitle = ShowIsoExplorer ? "Files" : showLegacyEditor ? string.Empty : "Tools";
-        ShowLeftPanelTitle = !showLegacyEditor;
-        LeftPanelWidth = new GridLength(showLegacyEditor ? 250 : 220);
-        WorkspacePanelHeight = showLegacyEditor ? new GridLength(0) : GridLength.Auto;
-        LogPanelHeight = showLegacyEditor ? new GridLength(0) : new GridLength(150);
-        if (value.Title == "ISO Explorer" && CurrentProject?.Iso is null)
-        {
-            IsoExplorerStatus = "Open a Colosseum ISO to browse its files.";
-        }
-
-        if (ShowTrainerEditor)
-        {
-            LoadTrainerRows();
-        }
-
-        if (ShowPokemonStatsEditor)
-        {
-            LoadPokemonStatsRows();
-        }
+        ShowIsoExplorer = false;
+        ShowTrainerEditor = false;
+        ShowPokemonStatsEditor = false;
+        ShowHomeTools = true;
+        ShowToolPlaceholder = true;
+        ShowReturnHome = false;
+        LeftPanelTitle = "Tools";
+        ShowLeftPanelTitle = true;
+        LeftPanelWidth = new GridLength(220);
+        WorkspacePanelHeight = GridLength.Auto;
+        LogPanelHeight = new GridLength(150);
     }
 
     private void PopulateIsoFiles(ColosseumProjectContext context)
