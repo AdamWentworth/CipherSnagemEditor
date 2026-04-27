@@ -12,7 +12,7 @@ namespace OrreForge.App.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private static readonly IBrush TrainerNormalBrush = SolidColorBrush.Parse("#FC6848");
-    private static readonly IBrush TrainerShadowBrush = SolidColorBrush.Parse("#A070FF");
+    private static readonly IBrush TrainerShadowBrush = SolidColorBrush.Parse("#A77AF4");
     private readonly List<TrainerEntryViewModel> _allTrainers = [];
     private readonly List<PokemonStatsEntryViewModel> _allPokemonStats = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;

@@ -7,9 +7,20 @@ namespace OrreForge.App.ViewModels;
 
 public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
 {
-    private static readonly IBrush EmptyBrush = SolidColorBrush.Parse("#C0C0C8");
-    private static readonly IBrush ShadowBrush = SolidColorBrush.Parse("#A070FF");
-    private static readonly IBrush NormalBrush = SolidColorBrush.Parse("#FFFFFF");
+    private static readonly IBrush EmptyBrush = SolidColorBrush.Parse("#858585");
+    private static readonly IBrush ShadowBrush = SolidColorBrush.Parse("#A77AF4");
+    private static readonly IBrush NormalBrush = SolidColorBrush.Parse("#202020");
+    private static readonly IBrush NormalFieldBrush = SolidColorBrush.Parse("#666666");
+    private static readonly IBrush NormalFieldBorderBrush = SolidColorBrush.Parse("#747474");
+    private static readonly IBrush ShadowFieldBrush = SolidColorBrush.Parse("#B895FF");
+    private static readonly IBrush ShadowFieldBorderBrush = SolidColorBrush.Parse("#C7AEFF");
+    private static readonly IBrush EmptyFieldBrush = SolidColorBrush.Parse("#9A9A9A");
+    private static readonly IBrush EmptyFieldBorderBrush = SolidColorBrush.Parse("#A6A6A6");
+    private static readonly IBrush NormalImageBrush = SolidColorBrush.Parse("#2A2A2A");
+    private static readonly IBrush ShadowImageBrush = SolidColorBrush.Parse("#B895FF");
+    private static readonly IBrush EmptyImageBrush = SolidColorBrush.Parse("#777777");
+    private static readonly IBrush LightTextBrush = SolidColorBrush.Parse("#FFFFFF");
+    private static readonly IBrush MutedTextBrush = SolidColorBrush.Parse("#D0D0D0");
     private static readonly Dictionary<int, Bitmap?> BodyImageCache = [];
     private readonly TrainerPokemonEditorResources _resources;
     private readonly Action? _changed;
@@ -164,9 +175,17 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
 
     public string ShadowIndexText => $"Shadow ID {ShadowId}";
 
-    public double Opacity => IsSet ? 1 : 0.5;
+    public double Opacity => IsSet ? 1 : 0.68;
 
     public IBrush BackgroundBrush => IsShadow ? ShadowBrush : IsSet ? NormalBrush : EmptyBrush;
+
+    public IBrush FieldBackgroundBrush => IsShadow ? ShadowFieldBrush : IsSet ? NormalFieldBrush : EmptyFieldBrush;
+
+    public IBrush FieldBorderBrush => IsShadow ? ShadowFieldBorderBrush : IsSet ? NormalFieldBorderBrush : EmptyFieldBorderBrush;
+
+    public IBrush ImageBackgroundBrush => IsShadow ? ShadowImageBrush : IsSet ? NormalImageBrush : EmptyImageBrush;
+
+    public IBrush TextBrush => IsSet ? LightTextBrush : MutedTextBrush;
 
     public string Move1Text => MoveText(SelectedMove1?.Value ?? 0);
 
@@ -308,6 +327,10 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowShadowFields));
         OnPropertyChanged(nameof(Opacity));
         OnPropertyChanged(nameof(BackgroundBrush));
+        OnPropertyChanged(nameof(FieldBackgroundBrush));
+        OnPropertyChanged(nameof(FieldBorderBrush));
+        OnPropertyChanged(nameof(ImageBackgroundBrush));
+        OnPropertyChanged(nameof(TextBrush));
         OnPropertyChanged(nameof(SpeciesText));
         OnPropertyChanged(nameof(ShadowIndexText));
     }

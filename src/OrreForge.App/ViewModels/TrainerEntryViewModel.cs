@@ -7,9 +7,9 @@ namespace OrreForge.App.ViewModels;
 
 public sealed partial class TrainerEntryViewModel : ObservableObject
 {
-    private static readonly IBrush StoryBrush = SolidColorBrush.Parse("#80ACFF");
-    private static readonly IBrush ShadowBrush = SolidColorBrush.Parse("#A070FF");
-    private static readonly IBrush SelectedBrush = SolidColorBrush.Parse("#F7B409");
+    private static readonly IBrush StoryBrush = SolidColorBrush.Parse("#8BB9FF");
+    private static readonly IBrush ShadowBrush = SolidColorBrush.Parse("#A77AF4");
+    private static readonly IBrush SelectedBrush = SolidColorBrush.Parse("#F6BC00");
     private static readonly Dictionary<int, Bitmap?> ImageCache = [];
 
     public TrainerEntryViewModel(ColosseumTrainer trainer)
