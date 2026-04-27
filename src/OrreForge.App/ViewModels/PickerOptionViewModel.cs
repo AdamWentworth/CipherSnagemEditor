@@ -12,7 +12,7 @@ public sealed class PickerOptionViewModel
 
     public string Name { get; }
 
-    public string Label => Value == 0 ? Name : $"{Name} ({Value})";
+    public string Label => Name;
 
     public override string ToString() => Label;
 }

@@ -490,6 +490,7 @@
                                                                   MaxDropDownHeight="260"/>
                                                         <Border Grid.Row="1"
                                                                 Grid.RowSpan="3"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Width="64"
                                                                 Height="64"
                                                                 Background="#F0F0FC"
@@ -498,9 +499,21 @@
                                                             <Image Source="{Binding BodyImage}"
                                                                    Stretch="Uniform"/>
                                                         </Border>
+                                                        <ComboBox Grid.Row="1"
+                                                                  Grid.RowSpan="3"
+                                                                  Grid.ColumnSpan="3"
+                                                                  Classes="LegacyPokemonField"
+                                                                  IsVisible="{Binding IsEmpty}"
+                                                                  ItemsSource="{Binding SpeciesOptions}"
+                                                                  SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                                                  MaxDropDownHeight="260"
+                                                                  HorizontalAlignment="Stretch"
+                                                                  VerticalAlignment="Center"
+                                                                  Margin="34,0"/>
 
                                                         <Border Grid.Row="1"
                                                                 Grid.Column="1"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Height="20"
                                                                 Background="#FFFFFF"
                                                                 BorderBrush="#C0C0C8"
@@ -510,6 +523,7 @@
                                                         </Border>
                                                         <Border Grid.Row="1"
                                                                 Grid.Column="2"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Height="20"
                                                                 Background="#FFFFFF"
                                                                 BorderBrush="#C0C0C8"
@@ -522,6 +536,7 @@
 
                                                         <Border Grid.Row="2"
                                                                 Grid.Column="1"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Height="20"
                                                                 Background="#FFFFFF"
                                                                 BorderBrush="#C0C0C8"
@@ -532,6 +547,7 @@
                                                         </Border>
                                                         <Border Grid.Row="2"
                                                                 Grid.Column="2"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Height="20"
                                                                 Background="#FFFFFF"
                                                                 BorderBrush="#C0C0C8"
@@ -544,6 +560,7 @@
 
                                                         <Border Grid.Row="3"
                                                                 Grid.Column="1"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Height="20"
                                                                 Background="#FFFFFF"
                                                                 BorderBrush="#C0C0C8"
@@ -554,6 +571,7 @@
                                                         </Border>
                                                         <Border Grid.Row="3"
                                                                 Grid.Column="2"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Height="20"
                                                                 Background="#FFFFFF"
                                                                 BorderBrush="#C0C0C8"
@@ -564,17 +582,19 @@
                                                         </Border>
 
                                                         <Border Grid.Row="4"
+                                                                IsVisible="{Binding IsSet}"
                                                                 Background="#FFFFFF"
                                                                 BorderBrush="#C0C0C8"
                                                                 BorderThickness="1">
                                                             <ComboBox Classes="LegacyPokemonField"
-                                                                      ItemsSource="{Binding ItemOptions}"
+                                                                      ItemsSource="{Binding PokeballOptions}"
                                                                       SelectedItem="{Binding SelectedPokeball, Mode=TwoWay}"
                                                                       MaxDropDownHeight="260"/>
                                                         </Border>
                                                         <Grid Grid.Row="4"
                                                               Grid.Column="1"
                                                               Grid.ColumnSpan="2"
+                                                              IsVisible="{Binding IsSet}"
                                                               ColumnDefinitions="*,*"
                                                               ColumnSpacing="5">
                                                             <TextBlock Text="IVs"
@@ -590,6 +610,7 @@
                                                         <Grid Grid.Row="5"
                                                               Grid.Column="1"
                                                               Grid.ColumnSpan="2"
+                                                              IsVisible="{Binding IsSet}"
                                                               ColumnDefinitions="*,*"
                                                               ColumnSpacing="5">
                                                             <Border Background="#FFFFFF"
@@ -608,6 +629,7 @@
                                                         </Grid>
 
                                                         <Grid Grid.Row="6"
+                                                              IsVisible="{Binding IsSet}"
                                                               Grid.ColumnSpan="3"
                                                               ColumnDefinitions="*,*,*,*,*,*"
                                                               ColumnSpacing="5">
@@ -619,6 +641,7 @@
                                                             <TextBlock Grid.Column="5" Text="Speed" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
                                                         </Grid>
                                                         <Grid Grid.Row="7"
+                                                              IsVisible="{Binding IsSet}"
                                                               Grid.ColumnSpan="3"
                                                               ColumnDefinitions="*,*,*,*,*,*"
                                                               ColumnSpacing="5">
@@ -644,6 +667,7 @@
 
                                                         <Grid Grid.Row="8"
                                                               Grid.ColumnSpan="3"
+                                                              IsVisible="{Binding IsSet}"
                                                               ColumnDefinitions="*,*,*,*"
                                                               ColumnSpacing="4"
                                                               ClipToBounds="True">
@@ -662,7 +686,7 @@
                                                         </Grid>
                                                         <Grid Grid.Row="9"
                                                               Grid.ColumnSpan="3"
-                                                              IsVisible="{Binding IsShadow}"
+                                                              IsVisible="{Binding ShowShadowFields}"
                                                               ColumnDefinitions="*,*,*,*"
                                                               ColumnSpacing="4">
                                                             <TextBlock Text="Heart" Foreground="#000000" FontSize="8" HorizontalAlignment="Center"/>
@@ -672,7 +696,7 @@
                                                         </Grid>
                                                         <Grid Grid.Row="10"
                                                               Grid.ColumnSpan="3"
-                                                              IsVisible="{Binding IsShadow}"
+                                                              IsVisible="{Binding ShowShadowFields}"
                                                               ColumnDefinitions="*,*,*,*"
                                                               ColumnSpacing="4">
                                                             <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">

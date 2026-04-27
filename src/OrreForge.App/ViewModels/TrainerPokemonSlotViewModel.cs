@@ -27,7 +27,7 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
         _selectedSpecies = resources.SpeciesOption(pokemon.SpeciesId);
         _selectedShadow = resources.ShadowOption(pokemon.ShadowId);
         _selectedItem = resources.ItemOption(pokemon.ItemId);
-        _selectedPokeball = resources.ItemOption(pokemon.PokeballId);
+        _selectedPokeball = resources.PokeballOption(pokemon.PokeballId);
         _selectedNature = resources.NatureOption(pokemon.Nature);
         _selectedGender = resources.GenderOption(pokemon.Gender);
         _selectedMove1 = resources.MoveOption(MoveId(0));
@@ -58,6 +58,8 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     public IReadOnlyList<PickerOptionViewModel> SpeciesOptions => _resources.SpeciesOptions;
 
     public IReadOnlyList<PickerOptionViewModel> ItemOptions => _resources.ItemOptions;
+
+    public IReadOnlyList<PickerOptionViewModel> PokeballOptions => _resources.PokeballOptions;
 
     public IReadOnlyList<PickerOptionViewModel> MoveOptions => _resources.MoveOptions;
 
@@ -150,7 +152,11 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
 
     public bool IsSet => SpeciesId > 0;
 
+    public bool IsEmpty => !IsSet;
+
     public bool IsShadow => ShadowId > 0;
+
+    public bool ShowShadowFields => IsSet && IsShadow;
 
     public string DeckIndexText => $"PKM {Pokemon.Index}";
 
@@ -297,7 +303,9 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     private void NotifyDerivedState()
     {
         OnPropertyChanged(nameof(IsSet));
+        OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(IsShadow));
+        OnPropertyChanged(nameof(ShowShadowFields));
         OnPropertyChanged(nameof(Opacity));
         OnPropertyChanged(nameof(BackgroundBrush));
         OnPropertyChanged(nameof(SpeciesText));

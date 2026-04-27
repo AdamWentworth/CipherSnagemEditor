@@ -15,6 +15,7 @@ public sealed class TrainerPokemonEditorResources
     private TrainerPokemonEditorResources(
         IReadOnlyList<PickerOptionViewModel> speciesOptions,
         IReadOnlyList<PickerOptionViewModel> itemOptions,
+        IReadOnlyList<PickerOptionViewModel> pokeballOptions,
         IReadOnlyList<PickerOptionViewModel> moveOptions,
         IReadOnlyList<PickerOptionViewModel> natureOptions,
         IReadOnlyList<PickerOptionViewModel> genderOptions,
@@ -25,6 +26,7 @@ public sealed class TrainerPokemonEditorResources
     {
         SpeciesOptions = speciesOptions;
         ItemOptions = itemOptions;
+        PokeballOptions = pokeballOptions;
         MoveOptions = moveOptions;
         NatureOptions = natureOptions;
         GenderOptions = genderOptions;
@@ -42,6 +44,7 @@ public sealed class TrainerPokemonEditorResources
         [new PickerOptionViewModel(0, "-")],
         [new PickerOptionViewModel(0, "-")],
         [new PickerOptionViewModel(0, "-")],
+        [new PickerOptionViewModel(0, "-")],
         BuildNatureOptions(),
         BuildGenderOptions(),
         [new PickerOptionViewModel(0, "Shadow ID 0")],
@@ -52,6 +55,8 @@ public sealed class TrainerPokemonEditorResources
     public IReadOnlyList<PickerOptionViewModel> SpeciesOptions { get; }
 
     public IReadOnlyList<PickerOptionViewModel> ItemOptions { get; }
+
+    public IReadOnlyList<PickerOptionViewModel> PokeballOptions { get; }
 
     public IReadOnlyList<PickerOptionViewModel> MoveOptions { get; }
 
@@ -77,6 +82,12 @@ public sealed class TrainerPokemonEditorResources
             : commonRel.Items
                 .Select(item => new PickerOptionViewModel(item.Index, item.Index == 0 ? "-" : item.Name))
                 .ToArray();
+        var pokeballOptions = itemOptions.Where(IsPokeballOption).ToArray();
+        if (pokeballOptions.Length == 0)
+        {
+            pokeballOptions = itemOptions;
+        }
+
         var moveOptions = commonRel.Moves
             .Select(move => new PickerOptionViewModel(move.Index, move.Index == 0 ? "-" : move.Name))
             .ToArray();
@@ -94,6 +105,7 @@ public sealed class TrainerPokemonEditorResources
         return new TrainerPokemonEditorResources(
             speciesOptions,
             itemOptions,
+            pokeballOptions,
             moveOptions,
             BuildNatureOptions(),
             BuildGenderOptions(),
@@ -108,6 +120,10 @@ public sealed class TrainerPokemonEditorResources
 
     public PickerOptionViewModel ItemOption(int value)
         => OptionFor(_itemOptionsByValue, ItemOptions, value, value == 0 ? "-" : $"Item {value}");
+
+    public PickerOptionViewModel PokeballOption(int value)
+        => PokeballOptions.FirstOrDefault(option => option.Value == value)
+            ?? ItemOption(value);
 
     public PickerOptionViewModel MoveOption(int value)
         => OptionFor(_moveOptionsByValue, MoveOptions, value, value == 0 ? "-" : $"Move {value}");
@@ -129,6 +145,9 @@ public sealed class TrainerPokemonEditorResources
 
     public ColosseumShadowPokemonData? ShadowData(int value)
         => _shadowDataByValue.TryGetValue(value, out var shadow) ? shadow : null;
+
+    private static bool IsPokeballOption(PickerOptionViewModel option)
+        => option.Value == 0 || option.Name.Contains("BALL", StringComparison.OrdinalIgnoreCase);
 
     private static PickerOptionViewModel OptionFor(
         IReadOnlyDictionary<int, PickerOptionViewModel> options,
