@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.binlog
+TestResults/
+*.iso
+*.gcm
+*.nkit.iso
+*.fsys
+*.gci
+*.raw
+* CM Tool/

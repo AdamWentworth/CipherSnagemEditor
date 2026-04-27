@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OrreForge.App/OrreForge.App.csproj" />
+    <Project Path="src/OrreForge.Cli/OrreForge.Cli.csproj" />
+    <Project Path="src/OrreForge.Colosseum/OrreForge.Colosseum.csproj" />
+    <Project Path="src/OrreForge.Core/OrreForge.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OrreForge.Tests/OrreForge.Tests.csproj" />
+  </Folder>
+</Solution>

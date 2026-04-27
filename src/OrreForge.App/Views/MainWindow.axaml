@@ -1,0 +1,140 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:OrreForge.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1180" d:DesignHeight="760"
+        x:Class="OrreForge.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="{Binding WindowTitle}"
+        MinWidth="980"
+        MinHeight="640"
+        Background="#f4f7fb">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*">
+        <Border Background="#fdfefe"
+                BorderBrush="#cbd5e1"
+                BorderThickness="0,0,0,1"
+                Padding="10,8">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Open..." Click="OpenFileClick" MinWidth="92"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="14">
+                    <TextBlock Text="Colosseum Tool"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ProjectTitle}"
+                               Foreground="#475569"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="300,*"
+              RowDefinitions="*">
+            <Border Grid.Column="0"
+                    Background="#eef3f8"
+                    BorderBrush="#cbd5e1"
+                    BorderThickness="0,0,1,0"
+                    Padding="10">
+                <Grid RowDefinitions="Auto,*">
+                    <TextBlock Text="Tools"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Margin="4,0,0,8"/>
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding Tools}"
+                             SelectedItem="{Binding SelectedTool}"
+                             Background="Transparent"
+                             BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ToolEntryViewModel">
+                                <Grid ColumnDefinitions="34,*"
+                                      MinHeight="42"
+                                      Margin="0,2">
+                                    <TextBlock Text="{Binding Index}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#64748b"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Title}"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="NoWrap"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Column="1"
+                  RowDefinitions="Auto,*,150"
+                  Margin="18">
+                <Border Background="#ffffff"
+                        BorderBrush="#cbd5e1"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding WorkspaceStatus}"
+                                   FontSize="13"
+                                   Foreground="#334155"
+                                   TextWrapping="Wrap"/>
+                        <ProgressBar IsIndeterminate="True"
+                                     IsVisible="{Binding IsBusy}"
+                                     Height="4"
+                                     Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Background="#ffffff"
+                        BorderBrush="#cbd5e1"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="18"
+                        Margin="0,14,0,14">
+                    <Grid RowDefinitions="Auto,*">
+                        <TextBlock Text="{Binding SelectedTool.Title}"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding SelectedToolDetail}"
+                                   Foreground="#475569"
+                                   TextWrapping="Wrap"
+                                   Margin="0,12,0,0"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Background="#0f172a"
+                        BorderBrush="#1e293b"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Logs}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"
+                                               FontFamily="Consolas"
+                                               FontSize="12"
+                                               Foreground="#dbeafe"
+                                               TextWrapping="Wrap"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
