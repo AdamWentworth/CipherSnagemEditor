@@ -38,12 +38,28 @@ public sealed class ColosseumCommonRel
     private const int PokemonMove4Offset = 0x4e;
 
     private const int PokemonStatsSize = 0x11c;
+    private const int PokemonStatsExpRateOffset = 0x00;
     private const int PokemonStatsCatchRateOffset = 0x01;
+    private const int PokemonStatsGenderRatioOffset = 0x02;
+    private const int PokemonStatsBaseExpOffset = 0x07;
+    private const int PokemonStatsBaseHappinessOffset = 0x09;
+    private const int PokemonStatsHeightOffset = 0x0a;
+    private const int PokemonStatsWeightOffset = 0x0c;
+    private const int PokemonStatsNationalIndexOffset = 0x10;
     private const int PokemonStatsNameIdOffset = 0x18;
     private const int PokemonStatsType1Offset = 0x30;
     private const int PokemonStatsType2Offset = 0x31;
     private const int PokemonStatsAbility1Offset = 0x32;
     private const int PokemonStatsAbility2Offset = 0x33;
+    private const int PokemonStatsHeldItem1Offset = 0x70;
+    private const int PokemonStatsHeldItem2Offset = 0x72;
+    private const int PokemonStatsHpOffset = 0x85;
+    private const int PokemonStatsAttackOffset = 0x87;
+    private const int PokemonStatsDefenseOffset = 0x89;
+    private const int PokemonStatsSpecialAttackOffset = 0x8b;
+    private const int PokemonStatsSpecialDefenseOffset = 0x8d;
+    private const int PokemonStatsSpeedOffset = 0x8f;
+    private const int PokemonStatsFirstEvYieldOffset = 0x90;
 
     private const int MoveSize = 0x38;
     private const int MovePpOffset = 0x01;
@@ -112,6 +128,17 @@ public sealed class ColosseumCommonRel
         => _items.Value
             .OrderBy(item => item.Key)
             .Select(item => new ColosseumNamedResource(item.Key, item.Value))
+            .ToArray();
+
+    public IReadOnlyList<ColosseumNamedResource> Abilities
+        => _abilities.Value
+            .OrderBy(ability => ability.Key)
+            .Select(ability => new ColosseumNamedResource(ability.Key, ability.Value))
+            .ToArray();
+
+    public IReadOnlyList<ColosseumNamedResource> Types
+        => Enumerable.Range(0, 18)
+            .Select(index => new ColosseumNamedResource(index, TypeName(index)))
             .ToArray();
 
     public int ShadowPokemonCount => GetCount(ColosseumCommonIndex.NumberOfShadowPokemon);
@@ -230,7 +257,7 @@ public sealed class ColosseumCommonRel
 
         var species = _pokemonStats.Value.TryGetValue(speciesId, out var stats)
             ? stats
-            : new ColosseumPokemonStats(speciesId, speciesId == 0 ? "-" : $"Pokemon {speciesId}", 0, 0, "Normal", 0, "Normal", 0, "Ability 0", 0, "Ability 0", 0);
+            : UnknownPokemonStats(speciesId);
 
         return new ColosseumTrainerPokemon(
             slot,
@@ -330,34 +357,110 @@ public sealed class ColosseumCommonRel
     private IReadOnlyDictionary<int, ColosseumPokemonStats> LoadPokemonStats()
     {
         var count = GetCount(ColosseumCommonIndex.NumberOfPokemon);
-        var start = PointerFor(ColosseumCommonIndex.PokemonStats);
         var pokemon = new Dictionary<int, ColosseumPokemonStats>();
 
         for (var index = 0; index < count; index++)
         {
-            var offset = start + (index * PokemonStatsSize);
-            var type1 = _data.ReadByte(offset + PokemonStatsType1Offset);
-            var type2 = _data.ReadByte(offset + PokemonStatsType2Offset);
-            var ability1 = _data.ReadByte(offset + PokemonStatsAbility1Offset);
-            var ability2 = _data.ReadByte(offset + PokemonStatsAbility2Offset);
-            var nameId = checked((int)_data.ReadUInt32(offset + PokemonStatsNameIdOffset));
-
-            pokemon[index] = new ColosseumPokemonStats(
-                index,
-                Strings.StringWithId(nameId),
-                nameId,
-                type1,
-                TypeName(type1),
-                type2,
-                TypeName(type2),
-                ability1,
-                NameForAbility(ability1),
-                ability2,
-                NameForAbility(ability2),
-                _data.ReadByte(offset + PokemonStatsCatchRateOffset));
+            pokemon[index] = ReadPokemonStats(index);
         }
 
         return pokemon;
+    }
+
+    private ColosseumPokemonStats ReadPokemonStats(int index)
+    {
+        var offset = PointerFor(ColosseumCommonIndex.PokemonStats) + (index * PokemonStatsSize);
+        var type1 = _data.ReadByte(offset + PokemonStatsType1Offset);
+        var type2 = _data.ReadByte(offset + PokemonStatsType2Offset);
+        var ability1 = _data.ReadByte(offset + PokemonStatsAbility1Offset);
+        var ability2 = _data.ReadByte(offset + PokemonStatsAbility2Offset);
+        var item1 = _data.ReadUInt16(offset + PokemonStatsHeldItem1Offset);
+        var item2 = _data.ReadUInt16(offset + PokemonStatsHeldItem2Offset);
+        var nameId = checked((int)_data.ReadUInt32(offset + PokemonStatsNameIdOffset));
+        var expRate = _data.ReadByte(offset + PokemonStatsExpRateOffset);
+        var genderRatio = _data.ReadByte(offset + PokemonStatsGenderRatioOffset);
+
+        return new ColosseumPokemonStats(
+            index,
+            offset,
+            Strings.StringWithId(nameId),
+            nameId,
+            _data.ReadUInt16(offset + PokemonStatsNationalIndexOffset),
+            expRate,
+            ExpRateName(expRate),
+            genderRatio,
+            GenderRatioName(genderRatio),
+            _data.ReadByte(offset + PokemonStatsBaseExpOffset),
+            _data.ReadByte(offset + PokemonStatsBaseHappinessOffset),
+            _data.ReadUInt16(offset + PokemonStatsHeightOffset) / 10d,
+            _data.ReadUInt16(offset + PokemonStatsWeightOffset) / 10d,
+            type1,
+            TypeName(type1),
+            type2,
+            TypeName(type2),
+            ability1,
+            NameForAbility(ability1),
+            ability2,
+            NameForAbility(ability2),
+            item1,
+            NameForItem(item1),
+            item2,
+            NameForItem(item2),
+            _data.ReadByte(offset + PokemonStatsCatchRateOffset),
+            _data.ReadByte(offset + PokemonStatsHpOffset),
+            _data.ReadByte(offset + PokemonStatsAttackOffset),
+            _data.ReadByte(offset + PokemonStatsDefenseOffset),
+            _data.ReadByte(offset + PokemonStatsSpecialAttackOffset),
+            _data.ReadByte(offset + PokemonStatsSpecialDefenseOffset),
+            _data.ReadByte(offset + PokemonStatsSpeedOffset),
+            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset),
+            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 2),
+            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 4),
+            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 6),
+            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 8),
+            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 10));
+    }
+
+    public void WritePokemonStats(ColosseumPokemonStatsUpdate pokemon)
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberOfPokemon);
+        if (pokemon.Index < 0 || pokemon.Index >= count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pokemon), $"Pokemon stats index {pokemon.Index} is outside the table.");
+        }
+
+        var offset = PointerFor(ColosseumCommonIndex.PokemonStats) + (pokemon.Index * PokemonStatsSize);
+        _data.WriteByte(offset + PokemonStatsExpRateOffset, ClampByte(pokemon.ExpRate));
+        _data.WriteByte(offset + PokemonStatsCatchRateOffset, ClampByte(pokemon.CatchRate));
+        _data.WriteByte(offset + PokemonStatsGenderRatioOffset, ClampByte(pokemon.GenderRatio));
+        _data.WriteByte(offset + PokemonStatsBaseExpOffset, ClampByte(pokemon.BaseExp));
+        _data.WriteByte(offset + PokemonStatsBaseHappinessOffset, ClampByte(pokemon.BaseHappiness));
+        _data.WriteUInt16(offset + PokemonStatsHeightOffset, ClampScaledUInt16(pokemon.Height));
+        _data.WriteUInt16(offset + PokemonStatsWeightOffset, ClampScaledUInt16(pokemon.Weight));
+        _data.WriteUInt32(offset + PokemonStatsNameIdOffset, checked((uint)Math.Clamp(pokemon.NameId, 0, int.MaxValue)));
+        _data.WriteByte(offset + PokemonStatsType1Offset, ClampByte(pokemon.Type1));
+        _data.WriteByte(offset + PokemonStatsType2Offset, ClampByte(pokemon.Type2));
+        _data.WriteByte(offset + PokemonStatsAbility1Offset, ClampByte(pokemon.Ability1));
+        _data.WriteByte(offset + PokemonStatsAbility2Offset, ClampByte(pokemon.Ability2));
+        _data.WriteUInt16(offset + PokemonStatsHeldItem1Offset, ClampUInt16(pokemon.HeldItem1));
+        _data.WriteUInt16(offset + PokemonStatsHeldItem2Offset, ClampUInt16(pokemon.HeldItem2));
+        _data.WriteByte(offset + PokemonStatsHpOffset, ClampByte(pokemon.Hp));
+        _data.WriteByte(offset + PokemonStatsAttackOffset, ClampByte(pokemon.Attack));
+        _data.WriteByte(offset + PokemonStatsDefenseOffset, ClampByte(pokemon.Defense));
+        _data.WriteByte(offset + PokemonStatsSpecialAttackOffset, ClampByte(pokemon.SpecialAttack));
+        _data.WriteByte(offset + PokemonStatsSpecialDefenseOffset, ClampByte(pokemon.SpecialDefense));
+        _data.WriteByte(offset + PokemonStatsSpeedOffset, ClampByte(pokemon.Speed));
+        _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset, ClampUInt16(pokemon.HpYield));
+        _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 2, ClampUInt16(pokemon.AttackYield));
+        _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 4, ClampUInt16(pokemon.DefenseYield));
+        _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 6, ClampUInt16(pokemon.SpecialAttackYield));
+        _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 8, ClampUInt16(pokemon.SpecialDefenseYield));
+        _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 10, ClampUInt16(pokemon.SpeedYield));
+
+        if (_pokemonStats.IsValueCreated && _pokemonStats.Value is Dictionary<int, ColosseumPokemonStats> stats)
+        {
+            stats[pokemon.Index] = ReadPokemonStats(pokemon.Index);
+        }
     }
 
     public ColosseumPokemonStats? PokemonStatsFor(int id)
@@ -501,6 +604,47 @@ public sealed class ColosseumCommonRel
             ? move
             : new ColosseumMove(id, id == 0 ? "-" : $"Move {id}", "-", 0, 0, 0);
 
+    private ColosseumPokemonStats UnknownPokemonStats(int id)
+        => new(
+            id,
+            0,
+            id == 0 ? "-" : $"Pokemon {id}",
+            0,
+            0,
+            0,
+            ExpRateName(0),
+            0xff,
+            GenderRatioName(0xff),
+            0,
+            0,
+            0,
+            0,
+            0,
+            TypeName(0),
+            0,
+            TypeName(0),
+            0,
+            NameForAbility(0),
+            0,
+            NameForAbility(0),
+            0,
+            NameForItem(0),
+            0,
+            NameForItem(0),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0);
+
     private string NameForItem(int id)
     {
         if (id is 0 or 0xffff)
@@ -532,6 +676,9 @@ public sealed class ColosseumCommonRel
 
     private static ushort ClampUInt16(int value)
         => (ushort)Math.Clamp(value, ushort.MinValue, ushort.MaxValue);
+
+    private static ushort ClampScaledUInt16(double value)
+        => (ushort)Math.Clamp((int)Math.Round(value * 10d), ushort.MinValue, ushort.MaxValue);
 
     private static int NormalizeItemIndex(int index)
         => index > ItemCount && index < 0x250 ? index - 151 : index;
@@ -576,6 +723,32 @@ public sealed class ColosseumCommonRel
             0x02 => "Genderless",
             0xff => "Random",
             _ => $"Gender {id}"
+        };
+
+    private static string ExpRateName(int id)
+        => id switch
+        {
+            0 => "Standard",
+            1 => "Very Fast",
+            2 => "Slowest",
+            3 => "Slow",
+            4 => "Fast",
+            5 => "Very Slow",
+            _ => $"Exp Rate {id}"
+        };
+
+    private static string GenderRatioName(int id)
+        => id switch
+        {
+            0x00 => "Male Only",
+            0x1f => "87.5% Male",
+            0x3f => "75% Male",
+            0x7f => "50% Male",
+            0xbf => "75% Female",
+            0xdf => "87.5% Female",
+            0xfe => "Female Only",
+            0xff => "Genderless",
+            _ => $"Gender Ratio {id}"
         };
 
     private static string TypeName(int id)

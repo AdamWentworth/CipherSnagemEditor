@@ -1,31 +1,20 @@
 namespace OrreForge.Colosseum.Data;
 
-public sealed record ColosseumPokemonStats(
+public sealed record ColosseumPokemonStatsUpdate(
     int Index,
-    int StartOffset,
-    string Name,
     int NameId,
-    int NationalIndex,
     int ExpRate,
-    string ExpRateName,
     int GenderRatio,
-    string GenderRatioName,
     int BaseExp,
     int BaseHappiness,
     double Height,
     double Weight,
     int Type1,
-    string Type1Name,
     int Type2,
-    string Type2Name,
     int Ability1,
-    string Ability1Name,
     int Ability2,
-    string Ability2Name,
     int HeldItem1,
-    string HeldItem1Name,
     int HeldItem2,
-    string HeldItem2Name,
     int CatchRate,
     int Hp,
     int Attack,
@@ -38,7 +27,4 @@ public sealed record ColosseumPokemonStats(
     int DefenseYield,
     int SpecialAttackYield,
     int SpecialDefenseYield,
-    int SpeedYield)
-{
-    public int BaseStatTotal => Hp + Attack + Defense + SpecialAttack + SpecialDefense + Speed;
-}
+    int SpeedYield);

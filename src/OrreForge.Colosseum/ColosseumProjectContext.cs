@@ -204,6 +204,9 @@ public sealed class ColosseumProjectContext
     public IReadOnlyList<ColosseumTrainer> LoadStoryTrainers()
         => LoadCommonRel().LoadStoryTrainers();
 
+    public IReadOnlyList<ColosseumPokemonStats> LoadPokemonStats()
+        => LoadCommonRel().PokemonStats;
+
     public string SaveTrainerPokemon(IEnumerable<ColosseumTrainerPokemonUpdate> updates)
     {
         if (Iso is null)
@@ -216,6 +219,24 @@ public sealed class ColosseumProjectContext
         {
             commonRel.WriteTrainerPokemon(update);
         }
+
+        var targetPath = Path.Combine(GetIsoExportDirectory("common.fsys"), "common.rel");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? WorkspaceDirectory!);
+        var bytes = commonRel.ToArray();
+        File.WriteAllBytes(targetPath, bytes);
+        LoadedFiles["common.rel"] = bytes;
+        return targetPath;
+    }
+
+    public string SavePokemonStats(ColosseumPokemonStatsUpdate update)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var commonRel = LoadCommonRel();
+        commonRel.WritePokemonStats(update);
 
         var targetPath = Path.Combine(GetIsoExportDirectory("common.fsys"), "common.rel");
         Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? WorkspaceDirectory!);

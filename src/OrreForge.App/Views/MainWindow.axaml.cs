@@ -98,6 +98,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void PokemonStatsPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control { DataContext: PokemonStatsEntryViewModel pokemon }
+            && DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectedPokemonStats = pokemon;
+            e.Handled = true;
+        }
+    }
+
     private Task OpenPathAsync(string path)
     {
         return DataContext is MainWindowViewModel viewModel
