@@ -4,6 +4,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
+using OrreForge.Colosseum;
 using OrreForge.App.ViewModels;
 using OrreForge.App.Views;
 
@@ -25,12 +26,36 @@ public partial class App : Application
                 DataContext = new MainWindowViewModel(),
             };
 
-            if (desktop.Args is { Length: > 0 } && desktop.MainWindow.DataContext is MainWindowViewModel viewModel)
+            var startupPath = GetStartupPath(desktop.Args);
+            if (startupPath is not null && desktop.MainWindow.DataContext is MainWindowViewModel viewModel)
             {
-                _ = viewModel.OpenPathAsync(desktop.Args[0]);
+                _ = viewModel.OpenPathAsync(startupPath);
             }
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static string? GetStartupPath(string[]? args)
+    {
+        if (args is null || args.Length == 0)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < args.Length; index++)
+        {
+            if (args[index].Equals("--iso", StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+            {
+                return args[index + 1];
+            }
+
+            if (ColosseumProjectContext.IsSupportedPath(args[index]))
+            {
+                return args[index];
+            }
+        }
+
+        return null;
     }
 }
