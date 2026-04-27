@@ -87,12 +87,13 @@ public sealed class FsysArchive
             name = "unknown";
         }
 
+        name = name.Replace("_rel", ".rel", StringComparison.OrdinalIgnoreCase);
         var extension = System.IO.Path.GetExtension(name);
         if (string.IsNullOrWhiteSpace(extension))
         {
             name += GameFileTypes.ExtensionFor(fileType);
         }
 
-        return name.Replace("_rel", ".rel", StringComparison.OrdinalIgnoreCase);
+        return name;
     }
 }

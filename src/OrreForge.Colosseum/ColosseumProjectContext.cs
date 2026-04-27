@@ -2,6 +2,7 @@ using OrreForge.Core.Archives;
 using OrreForge.Core.Files;
 using OrreForge.Core.GameCube;
 using OrreForge.Core.Text;
+using OrreForge.Colosseum.Data;
 using System.Text.Json;
 
 namespace OrreForge.Colosseum;
@@ -45,6 +46,8 @@ public sealed class ColosseumProjectContext
     public Dictionary<string, FsysArchive> LoadedFsys { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Dictionary<string, GameStringTable> LoadedStringTables { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public ColosseumCommonRel? CommonRel { get; private set; }
 
     public string ExtractIsoFile(GameCubeIsoFileEntry entry, string? outputPath = null, bool overwrite = true)
     {
@@ -137,6 +140,45 @@ public sealed class ColosseumProjectContext
         LoadedFsys[targetPath] = archive;
         return archive;
     }
+
+    public ColosseumCommonRel LoadCommonRel()
+    {
+        if (CommonRel is not null)
+        {
+            return CommonRel;
+        }
+
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var commonFsysEntry = Iso.Files.FirstOrDefault(entry =>
+            string.Equals(Path.GetFileName(entry.Name), "common.fsys", StringComparison.OrdinalIgnoreCase));
+        if (commonFsysEntry is null)
+        {
+            throw new InvalidDataException("Could not find common.fsys in the ISO.");
+        }
+
+        var commonFsysBytes = GameCubeIsoReader.ReadFile(Iso, commonFsysEntry);
+        var commonArchive = FsysArchive.Parse(ResolveIsoExtractPath(commonFsysEntry.Name, null), commonFsysBytes);
+        LoadedFsys[commonFsysEntry.Name] = commonArchive;
+
+        var commonRelEntry = commonArchive.Entries.FirstOrDefault(entry =>
+            string.Equals(entry.Name, "common.rel", StringComparison.OrdinalIgnoreCase));
+        if (commonRelEntry is null)
+        {
+            throw new InvalidDataException("Could not find common.rel inside common.fsys.");
+        }
+
+        var commonRelBytes = commonArchive.Extract(commonRelEntry);
+        LoadedFiles["common.rel"] = commonRelBytes;
+        CommonRel = ColosseumCommonRel.Parse(Iso.Region, commonRelBytes);
+        return CommonRel;
+    }
+
+    public IReadOnlyList<ColosseumTrainer> LoadStoryTrainers()
+        => LoadCommonRel().LoadStoryTrainers();
 
     public string GetIsoExportDirectory(string fileName)
     {

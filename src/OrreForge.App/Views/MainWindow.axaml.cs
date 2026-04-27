@@ -88,6 +88,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void TrainerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control { DataContext: TrainerEntryViewModel trainer }
+            && DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectedTrainer = trainer;
+            e.Handled = true;
+        }
+    }
+
     private Task OpenPathAsync(string path)
     {
         return DataContext is MainWindowViewModel viewModel

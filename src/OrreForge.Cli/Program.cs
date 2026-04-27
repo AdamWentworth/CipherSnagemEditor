@@ -4,6 +4,7 @@ if (args.Length == 0)
 {
     Console.WriteLine("OrreForge CLI");
     Console.WriteLine("Usage: orreforge inspect <.iso|.fsys|.msg|.gtx|.atx>");
+    Console.WriteLine("       orreforge trainers <iso>");
     Console.WriteLine("       orreforge extract-iso <iso> <file-name> [output-path]");
     return 1;
 }
@@ -34,6 +35,18 @@ try
         return 0;
     }
 
+    if (args[0].Equals("trainers", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: orreforge trainers <iso>");
+            return 1;
+        }
+
+        PrintTrainers(args[1]);
+        return 0;
+    }
+
     Console.Error.WriteLine($"Unknown command: {args[0]}");
     return 1;
 }
@@ -41,6 +54,17 @@ catch (Exception ex)
 {
     Console.Error.WriteLine(ex.Message);
     return 2;
+}
+
+static void PrintTrainers(string isoPath)
+{
+    var context = ColosseumProjectContext.Open(isoPath);
+    var trainers = context.LoadStoryTrainers();
+    Console.WriteLine($"Trainers: {trainers.Count}");
+    foreach (var trainer in trainers.Take(20))
+    {
+        Console.WriteLine($"{trainer.Index,3}: {trainer.FullName} | model {trainer.TrainerModelId} | pokemon {trainer.FirstPokemonIndex}");
+    }
 }
 
 static void Inspect(string path)

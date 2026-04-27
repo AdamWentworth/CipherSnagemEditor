@@ -17,6 +17,9 @@ public sealed class GameStringTable
 
     public static GameStringTable Load(string path) => Parse(File.ReadAllBytes(path));
 
+    public string StringWithId(int id)
+        => Strings.FirstOrDefault(text => text.Id == id)?.Text ?? $"#{id}";
+
     public static GameStringTable Parse(byte[] bytes)
     {
         var data = new BinaryData(bytes);

@@ -66,7 +66,7 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
                     <Button Content="Home"
                             Command="{Binding ReturnHomeCommand}"
-                            IsVisible="{Binding ShowIsoExplorer}"
+                            IsVisible="{Binding ShowReturnHome}"
                             MinWidth="76"
                             Foreground="#000000"/>
                     <Button Content="Open..." Click="OpenFileClick" MinWidth="92" Foreground="#000000"/>
@@ -85,8 +85,11 @@
         </Border>
 
         <Grid Grid.Row="1"
-              ColumnDefinitions="220,*"
               RowDefinitions="*">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding LeftPanelWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
             <Border Grid.Column="0"
                     Background="#000000"
                     BorderBrush="#C0C0C8"
@@ -96,6 +99,7 @@
                                FontSize="12"
                                FontWeight="Bold"
                                Foreground="#FFFFFF"
+                               IsVisible="{Binding ShowLeftPanelTitle}"
                                Margin="10,8,10,6"/>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                         <Grid>
@@ -146,6 +150,37 @@
                                                        FontSize="14"
                                                        Margin="8,0"
                                                        TextTrimming="CharacterEllipsis"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Trainers}"
+                                          IsVisible="{Binding ShowTrainerEditor}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TrainerEntryViewModel">
+                                        <Border PointerPressed="TrainerPointerPressed"
+                                                Cursor="Hand"
+                                                HorizontalAlignment="Stretch"
+                                                Height="50"
+                                                Background="{Binding BackgroundBrush}">
+                                            <Grid ColumnDefinitions="50,*">
+                                                <Image Source="{Binding TrainerImage}"
+                                                       Width="50"
+                                                       Height="50"
+                                                       Stretch="Uniform"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding RowText}"
+                                                           HorizontalAlignment="Stretch"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="12"
+                                                           Foreground="#000000"
+                                                           TextWrapping="NoWrap"
+                                                           TextAlignment="Center"
+                                                           MaxLines="2"
+                                                           Margin="4,0"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -295,6 +330,195 @@
                                            Foreground="#000000"
                                            TextWrapping="Wrap"/>
                             </ScrollViewer>
+                        </Grid>
+
+                        <Grid IsVisible="{Binding ShowTrainerEditor}"
+                              RowDefinitions="80,*"
+                              Margin="-18">
+                            <Border Background="{Binding TrainerDetailBackgroundBrush}"
+                                    BorderBrush="#C0C0C8"
+                                    BorderThickness="1">
+                                <Grid ColumnDefinitions="80,150,150,100,150,100,*"
+                                      RowDefinitions="25,25"
+                                      Margin="20,10,0,10"
+                                      ColumnSpacing="10"
+                                      RowSpacing="10">
+                                    <Border Width="60"
+                                            Height="60"
+                                            Background="#FFFFFF"
+                                            BorderBrush="#000000"
+                                            BorderThickness="1"
+                                            Grid.RowSpan="2"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                        <Image Source="{Binding SelectedTrainer.TrainerImage}"
+                                               Stretch="Uniform"/>
+                                    </Border>
+
+                                    <ComboBox Grid.Column="1"
+                                              Height="25"
+                                              SelectedIndex="0"
+                                              Foreground="#000000">
+                                        <ComboBoxItem Content="{Binding SelectedTrainerClass}"/>
+                                    </ComboBox>
+                                    <TextBox Grid.Column="2"
+                                             Height="25"
+                                             Text="{Binding SelectedTrainerName}"
+                                             IsReadOnly="True"
+                                             Foreground="#000000"/>
+                                    <TextBox Grid.Column="3"
+                                             Height="25"
+                                             Text="{Binding SelectedTrainerAi}"
+                                             IsReadOnly="True"
+                                             Foreground="#000000"/>
+                                    <ComboBox Grid.Column="4"
+                                              Height="25"
+                                              SelectedIndex="0"
+                                              Foreground="#000000">
+                                        <ComboBoxItem Content="{Binding SelectedTrainerBattleStyle}"/>
+                                    </ComboBox>
+                                    <TextBox Grid.Column="5"
+                                             Height="25"
+                                             Text="{Binding SelectedTrainerBattleId}"
+                                             IsReadOnly="True"
+                                             Foreground="#000000"/>
+
+                                    <ComboBox Grid.Row="1"
+                                              Grid.Column="1"
+                                              Height="25"
+                                              SelectedIndex="0"
+                                              Foreground="#000000">
+                                        <ComboBoxItem Content="{Binding SelectedTrainerModel}"/>
+                                    </ComboBox>
+                                    <TextBox Grid.Row="1"
+                                             Grid.Column="3"
+                                             Height="25"
+                                             Text="{Binding SelectedTrainerBgm}"
+                                             IsReadOnly="True"
+                                             Foreground="#000000"/>
+                                    <ComboBox Grid.Row="1"
+                                              Grid.Column="4"
+                                              Height="25"
+                                              SelectedIndex="0"
+                                              Foreground="#000000">
+                                        <ComboBoxItem Content="{Binding SelectedTrainerBattleType}"/>
+                                    </ComboBox>
+                                    <TextBlock Grid.Row="1"
+                                               Grid.Column="6"
+                                               Text="{Binding SelectedTrainerStringIds}"
+                                               Foreground="#000000"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Row="1"
+                                    BorderBrush="#000000"
+                                    BorderThickness="1,0,1,1"
+                                    Background="#FFFFFF">
+                                <Grid RowDefinitions="*,30"
+                                      Margin="10">
+                                    <ItemsControl ItemsSource="{Binding SelectedTrainerPokemon}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Rows="2" Columns="3"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:TrainerPokemonSlotViewModel">
+                                                <Border Background="{Binding BackgroundBrush}"
+                                                        BorderBrush="#C0C0C8"
+                                                        BorderThickness="1"
+                                                        CornerRadius="12"
+                                                        Margin="5"
+                                                        Opacity="{Binding Opacity}">
+                                                    <Grid RowDefinitions="20,80,20,20,20,20,20,*"
+                                                          ColumnDefinitions="80,*,*"
+                                                          Margin="5"
+                                                          ColumnSpacing="5"
+                                                          RowSpacing="5">
+                                                        <TextBlock Text="{Binding DeckIndexText}"
+                                                                   Foreground="#000000"
+                                                                   FontSize="10"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Text="{Binding ShadowIndexText}"
+                                                                   Foreground="#000000"
+                                                                   FontSize="10"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <Border Grid.Row="1"
+                                                                Grid.RowSpan="3"
+                                                                Width="80"
+                                                                Height="80"
+                                                                Background="#F0F0FC"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1"/>
+                                                        <TextBlock Grid.Row="1"
+                                                                   Grid.Column="1"
+                                                                   Text="{Binding LevelText}"
+                                                                   Foreground="#000000"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Row="1"
+                                                                   Grid.Column="2"
+                                                                   Text="{Binding SpeciesText}"
+                                                                   Foreground="#000000"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Row="2"
+                                                                   Grid.Column="1"
+                                                                   Text="{Binding AbilityText}"
+                                                                   Foreground="#000000"
+                                                                   FontSize="12"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Row="2"
+                                                                   Grid.Column="2"
+                                                                   Text="{Binding ItemText}"
+                                                                   Foreground="#000000"
+                                                                   FontSize="12"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Row="3"
+                                                                   Grid.Column="1"
+                                                                   Text="{Binding NatureText}"
+                                                                   Foreground="#000000"
+                                                                   FontSize="12"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Row="3"
+                                                                   Grid.Column="2"
+                                                                   Text="{Binding GenderText}"
+                                                                   Foreground="#000000"
+                                                                   FontSize="12"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Row="4"
+                                                                   Grid.ColumnSpan="3"
+                                                                   Text="{Binding MovesText}"
+                                                                   Foreground="#000000"
+                                                                   FontSize="12"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Button Grid.Row="1"
+                                            Classes="LegacyIsoButton"
+                                            Width="100"
+                                            Height="20"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Bottom"
+                                            Content="Save"
+                                            IsEnabled="False"
+                                            Foreground="#000000"/>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </Grid>
                 </Border>
