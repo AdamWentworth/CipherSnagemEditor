@@ -141,6 +141,30 @@ public sealed class ColosseumProjectContext
         return archive;
     }
 
+    public byte[] LoadStartDol()
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        if (LoadedFiles.TryGetValue("Start.dol", out var cached))
+        {
+            return cached;
+        }
+
+        var dolEntry = Iso.Files.FirstOrDefault(entry =>
+            string.Equals(Path.GetFileName(entry.Name), "Start.dol", StringComparison.OrdinalIgnoreCase));
+        if (dolEntry is null)
+        {
+            throw new InvalidDataException("Could not find Start.dol in the ISO.");
+        }
+
+        var bytes = GameCubeIsoReader.ReadFile(Iso, dolEntry);
+        LoadedFiles["Start.dol"] = bytes;
+        return bytes;
+    }
+
     public ColosseumCommonRel LoadCommonRel()
     {
         if (CommonRel is not null)
@@ -173,7 +197,7 @@ public sealed class ColosseumProjectContext
 
         var commonRelBytes = commonArchive.Extract(commonRelEntry);
         LoadedFiles["common.rel"] = commonRelBytes;
-        CommonRel = ColosseumCommonRel.Parse(Iso.Region, commonRelBytes);
+        CommonRel = ColosseumCommonRel.Parse(Iso.Region, commonRelBytes, LoadStartDol());
         return CommonRel;
     }
 

@@ -10,6 +10,10 @@ public enum ColosseumCommonIndex
     NumberOfTrainers = 45,
     TrainerPokemonData = 48,
     NumberOfTrainerPokemonData = 49,
+    Moves = 62,
+    NumberOfMoves = 63,
+    PokemonStats = 68,
+    NumberOfPokemon = 69,
     ShadowData = 80,
     NumberOfShadowPokemon = 81,
     StringTable1 = 98

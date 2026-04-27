@@ -67,6 +67,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private GridLength _leftPanelWidth = new(220);
 
     [ObservableProperty]
+    private GridLength _workspacePanelHeight = GridLength.Auto;
+
+    [ObservableProperty]
+    private GridLength _logPanelHeight = new(150);
+
+    [ObservableProperty]
     private string _isoExplorerFilesText = "-";
 
     [ObservableProperty]
@@ -212,6 +218,8 @@ public partial class MainWindowViewModel : ViewModelBase
         LeftPanelTitle = "Tools";
         ShowLeftPanelTitle = true;
         LeftPanelWidth = new GridLength(220);
+        WorkspacePanelHeight = GridLength.Auto;
+        LogPanelHeight = new GridLength(150);
     }
 
     private async Task ExportSelectedIsoFileAsync(bool extractFsysContents, bool decode, string label)
@@ -302,6 +310,8 @@ public partial class MainWindowViewModel : ViewModelBase
             LeftPanelTitle = "Tools";
             ShowLeftPanelTitle = true;
             LeftPanelWidth = new GridLength(220);
+            WorkspacePanelHeight = GridLength.Auto;
+            LogPanelHeight = new GridLength(150);
             return;
         }
 
@@ -314,6 +324,8 @@ public partial class MainWindowViewModel : ViewModelBase
         LeftPanelTitle = ShowIsoExplorer ? "Files" : ShowTrainerEditor ? string.Empty : "Tools";
         ShowLeftPanelTitle = !ShowTrainerEditor;
         LeftPanelWidth = new GridLength(ShowTrainerEditor ? 250 : 220);
+        WorkspacePanelHeight = ShowTrainerEditor ? new GridLength(0) : GridLength.Auto;
+        LogPanelHeight = ShowTrainerEditor ? new GridLength(0) : new GridLength(150);
         if (value.Title == "ISO Explorer" && CurrentProject?.Iso is null)
         {
             IsoExplorerStatus = "Open a Colosseum ISO to browse its files.";

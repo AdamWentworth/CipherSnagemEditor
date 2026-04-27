@@ -63,7 +63,13 @@ static void PrintTrainers(string isoPath)
     Console.WriteLine($"Trainers: {trainers.Count}");
     foreach (var trainer in trainers.Take(20))
     {
-        Console.WriteLine($"{trainer.Index,3}: {trainer.FullName} | model {trainer.TrainerModelId} | pokemon {trainer.FirstPokemonIndex}");
+        var firstPokemon = trainer.Pokemon.FirstOrDefault(pokemon => pokemon.IsSet);
+        var firstMove = firstPokemon?.Moves.FirstOrDefault(move => move.Index > 0);
+        Console.WriteLine(
+            $"{trainer.Index,3}: {trainer.FullName} | model {trainer.TrainerModelId} | pokemon {trainer.FirstPokemonIndex}"
+            + (firstPokemon is null
+                ? string.Empty
+                : $" | first: {firstPokemon.SpeciesName} Lv.{firstPokemon.Level}, {firstPokemon.ItemName}, {firstMove?.Name ?? "-"}"));
     }
 }
 

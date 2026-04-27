@@ -191,8 +191,12 @@
             </Border>
 
             <Grid Grid.Column="1"
-                  RowDefinitions="Auto,*,150"
                   Margin="18">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="{Binding WorkspacePanelHeight}"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="{Binding LogPanelHeight}"/>
+                </Grid.RowDefinitions>
                 <Border Background="#FFFFFF"
                         BorderBrush="#C0C0C8"
                         BorderThickness="1"
@@ -432,20 +436,22 @@
                                                         CornerRadius="12"
                                                         Margin="5"
                                                         Opacity="{Binding Opacity}">
-                                                    <Grid RowDefinitions="20,80,20,20,20,20,20,*"
+                                                    <Grid RowDefinitions="20,80,20,15,15,20,20,20,*"
                                                           ColumnDefinitions="80,*,*"
                                                           Margin="5"
                                                           ColumnSpacing="5"
-                                                          RowSpacing="5">
+                                                          RowSpacing="4">
                                                         <TextBlock Text="{Binding DeckIndexText}"
                                                                    Foreground="#000000"
                                                                    FontSize="10"
                                                                    VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis"/>
                                                         <TextBlock Grid.Column="1"
+                                                                   Grid.ColumnSpan="2"
                                                                    Text="{Binding ShadowIndexText}"
                                                                    Foreground="#000000"
                                                                    FontSize="10"
+                                                                   HorizontalAlignment="Right"
                                                                    VerticalAlignment="Center"
                                                                    TextTrimming="CharacterEllipsis"/>
                                                         <Border Grid.Row="1"
@@ -454,54 +460,223 @@
                                                                 Height="80"
                                                                 Background="#F0F0FC"
                                                                 BorderBrush="#C0C0C8"
-                                                                BorderThickness="1"/>
-                                                        <TextBlock Grid.Row="1"
-                                                                   Grid.Column="1"
-                                                                   Text="{Binding LevelText}"
-                                                                   Foreground="#000000"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Grid.Row="1"
-                                                                   Grid.Column="2"
-                                                                   Text="{Binding SpeciesText}"
-                                                                   Foreground="#000000"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Grid.Row="2"
-                                                                   Grid.Column="1"
-                                                                   Text="{Binding AbilityText}"
-                                                                   Foreground="#000000"
-                                                                   FontSize="12"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Grid.Row="2"
-                                                                   Grid.Column="2"
-                                                                   Text="{Binding ItemText}"
-                                                                   Foreground="#000000"
-                                                                   FontSize="12"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Grid.Row="3"
-                                                                   Grid.Column="1"
-                                                                   Text="{Binding NatureText}"
-                                                                   Foreground="#000000"
-                                                                   FontSize="12"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Grid.Row="3"
-                                                                   Grid.Column="2"
-                                                                   Text="{Binding GenderText}"
-                                                                   Foreground="#000000"
-                                                                   FontSize="12"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Grid.Row="4"
-                                                                   Grid.ColumnSpan="3"
-                                                                   Text="{Binding MovesText}"
-                                                                   Foreground="#000000"
-                                                                   FontSize="12"
-                                                                   VerticalAlignment="Center"
-                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                BorderThickness="1">
+                                                            <Image Source="{Binding BodyImage}"
+                                                                   Stretch="Uniform"/>
+                                                        </Border>
+
+                                                        <Border Grid.Row="1"
+                                                                Grid.Column="1"
+                                                                Height="20"
+                                                                Background="#FFFFFF"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding LevelText}"
+                                                                       Foreground="#000000"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       FontSize="12"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+                                                        <Border Grid.Row="1"
+                                                                Grid.Column="2"
+                                                                Height="20"
+                                                                Background="#FFFFFF"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding SpeciesText}"
+                                                                       Foreground="#000000"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       FontSize="12"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+
+                                                        <Border Grid.Row="2"
+                                                                Grid.Column="1"
+                                                                Height="20"
+                                                                Background="#FFFFFF"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding AbilityText}"
+                                                                       Foreground="#000000"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       FontSize="11"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+                                                        <Border Grid.Row="2"
+                                                                Grid.Column="2"
+                                                                Height="20"
+                                                                Background="#FFFFFF"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding ItemText}"
+                                                                       Foreground="#000000"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       FontSize="11"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+
+                                                        <Border Grid.Row="3"
+                                                                Grid.Column="1"
+                                                                Height="20"
+                                                                Background="#FFFFFF"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding NatureText}"
+                                                                       Foreground="#000000"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       FontSize="11"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+                                                        <Border Grid.Row="3"
+                                                                Grid.Column="2"
+                                                                Height="20"
+                                                                Background="#FFFFFF"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding GenderText}"
+                                                                       Foreground="#000000"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       FontSize="11"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+
+                                                        <Border Grid.Row="4"
+                                                                Background="#FFFFFF"
+                                                                BorderBrush="#C0C0C8"
+                                                                BorderThickness="1">
+                                                            <TextBlock Text="{Binding PokeballText}"
+                                                                       Foreground="#000000"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       FontSize="10"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Border>
+                                                        <Grid Grid.Row="4"
+                                                              Grid.Column="1"
+                                                              Grid.ColumnSpan="2"
+                                                              ColumnDefinitions="*,*"
+                                                              ColumnSpacing="5">
+                                                            <TextBlock Text="IVs"
+                                                                       Foreground="#000000"
+                                                                       FontSize="10"
+                                                                       HorizontalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="Happiness"
+                                                                       Foreground="#000000"
+                                                                       FontSize="10"
+                                                                       HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                        <Grid Grid.Row="5"
+                                                              Grid.Column="1"
+                                                              Grid.ColumnSpan="2"
+                                                              ColumnDefinitions="*,*"
+                                                              ColumnSpacing="5">
+                                                            <Border Background="#FFFFFF"
+                                                                    BorderBrush="#C0C0C8"
+                                                                    BorderThickness="1">
+                                                                <TextBlock Text="{Binding IvText}"
+                                                                           Foreground="#000000"
+                                                                           FontSize="10"
+                                                                           HorizontalAlignment="Right"
+                                                                           Margin="0,0,4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Column="1"
+                                                                    Background="#FFFFFF"
+                                                                    BorderBrush="#C0C0C8"
+                                                                    BorderThickness="1">
+                                                                <TextBlock Text="{Binding HappinessText}"
+                                                                           Foreground="#000000"
+                                                                           FontSize="10"
+                                                                           HorizontalAlignment="Right"
+                                                                           Margin="0,0,4,0"/>
+                                                            </Border>
+                                                        </Grid>
+
+                                                        <Grid Grid.Row="6"
+                                                              Grid.ColumnSpan="3"
+                                                              ColumnDefinitions="*,*,*,*,*,*"
+                                                              ColumnSpacing="5">
+                                                            <TextBlock Text="HP" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="Atk" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="2" Text="Def" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="3" Text="Sp.A" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="4" Text="Sp.D" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="5" Text="Speed" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                        <Grid Grid.Row="7"
+                                                              Grid.ColumnSpan="3"
+                                                              ColumnDefinitions="*,*,*,*,*,*"
+                                                              ColumnSpacing="5">
+                                                            <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding HpEvText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding AttackEvText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding DefenseEvText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Column="3" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding SpecialAttackEvText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding SpecialDefenseEvText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Column="5" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding SpeedEvText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                            </Border>
+                                                        </Grid>
+
+                                                        <Grid Grid.Row="8"
+                                                              Grid.ColumnSpan="3"
+                                                              RowDefinitions="20,20,20,20,15,20"
+                                                              ColumnDefinitions="*"
+                                                              RowSpacing="5">
+                                                            <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding Move1Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding Move2Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding Move3Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
+                                                            </Border>
+                                                            <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                <TextBlock Text="{Binding Move4Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
+                                                            </Border>
+                                                            <Grid Grid.Row="4"
+                                                                  IsVisible="{Binding IsShadow}"
+                                                                  ColumnDefinitions="*,*,*,*"
+                                                                  ColumnSpacing="5">
+                                                                <TextBlock Text="Heart Gauge" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="1" Text="First TID" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="2" Text="Alt TID" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="3" Text="Catch" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                            </Grid>
+                                                            <Grid Grid.Row="5"
+                                                                  IsVisible="{Binding IsShadow}"
+                                                                  ColumnDefinitions="*,*,*,*"
+                                                                  ColumnSpacing="5">
+                                                                <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                    <TextBlock Text="{Binding ShadowHeartGaugeText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                                </Border>
+                                                                <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                    <TextBlock Text="{Binding ShadowFirstTrainerText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                                </Border>
+                                                                <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                    <TextBlock Text="{Binding ShadowAlternateTrainerText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                                </Border>
+                                                                <Border Grid.Column="3" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                                    <TextBlock Text="{Binding ShadowCatchRateText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
+                                                                </Border>
+                                                            </Grid>
+                                                        </Grid>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>
