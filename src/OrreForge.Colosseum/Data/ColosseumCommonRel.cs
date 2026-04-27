@@ -29,6 +29,7 @@ public sealed class ColosseumCommonRel
     private const int PokemonSpeciesOffset = 0x0a;
     private const int PokemonPokeballOffset = 0x0d;
     private const int PokemonItemOffset = 0x12;
+    private const int PokemonNameIdOffset = 0x14;
     private const int PokemonIvOffset = 0x1c;
     private const int PokemonFirstEvOffset = 0x23;
     private const int PokemonMove1Offset = 0x36;
@@ -65,6 +66,11 @@ public sealed class ColosseumCommonRel
     private const int ItemCount = 0x18d;
     private const int ItemSize = 0x28;
     private const int ItemNameIdOffset = 0x10;
+    private static readonly int[] PokemonUnsetFillOffsets =
+    [
+        0x00, 0x01, 0x02, 0x08, 0x09, 0x10, 0x11, 0x10, 0x13, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
+        0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d
+    ];
 
     private const int DolTableToRamOffsetDifference = 0x3000;
     private const int CommonRelToRamOffsetDifferenceUs = 0x7628a0;
@@ -95,6 +101,22 @@ public sealed class ColosseumCommonRel
     public RelocationTable RelocationTable { get; }
 
     public GameStringTable Strings { get; }
+
+    public IReadOnlyList<ColosseumPokemonStats> PokemonStats
+        => _pokemonStats.Value.Values.OrderBy(pokemon => pokemon.Index).ToArray();
+
+    public IReadOnlyList<ColosseumMove> Moves
+        => _moves.Value.Values.OrderBy(move => move.Index).ToArray();
+
+    public IReadOnlyList<ColosseumNamedResource> Items
+        => _items.Value
+            .OrderBy(item => item.Key)
+            .Select(item => new ColosseumNamedResource(item.Key, item.Value))
+            .ToArray();
+
+    public int ShadowPokemonCount => GetCount(ColosseumCommonIndex.NumberOfShadowPokemon);
+
+    public byte[] ToArray() => _data.ToArray();
 
     public static ColosseumCommonRel Parse(GameCubeRegion region, byte[] bytes, byte[]? startDolBytes = null)
     {
@@ -208,7 +230,7 @@ public sealed class ColosseumCommonRel
 
         var species = _pokemonStats.Value.TryGetValue(speciesId, out var stats)
             ? stats
-            : new ColosseumPokemonStats(speciesId, speciesId == 0 ? "-" : $"Pokemon {speciesId}", 0, "Normal", 0, "Normal", 0, "Ability 0", 0, "Ability 0", 0);
+            : new ColosseumPokemonStats(speciesId, speciesId == 0 ? "-" : $"Pokemon {speciesId}", 0, 0, "Normal", 0, "Normal", 0, "Ability 0", 0, "Ability 0", 0);
 
         return new ColosseumTrainerPokemon(
             slot,
@@ -227,11 +249,82 @@ public sealed class ColosseumCommonRel
             NatureName(nature),
             gender,
             GenderName(gender),
-            _data.ReadUInt16(start + PokemonHappinessOffset),
+            _data.ReadByte(start + PokemonHappinessOffset),
             _data.ReadByte(start + PokemonIvOffset),
             evs,
             moveIds.Select(id => MoveFor(id)).ToArray(),
             ReadShadowData(shadowId));
+    }
+
+    public void WriteTrainerPokemon(ColosseumTrainerPokemonUpdate pokemon)
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberOfTrainerPokemonData);
+        if (pokemon.Index < 0 || pokemon.Index >= count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pokemon), $"Trainer Pokemon index {pokemon.Index} is outside the table.");
+        }
+
+        var species = PokemonStatsFor(pokemon.SpeciesId);
+        var speciesId = ClampUInt16(pokemon.SpeciesId);
+        var shadowId = ClampByte(pokemon.ShadowId);
+
+        if (shadowId > 0 && shadowId < ShadowPokemonCount)
+        {
+            var shadowStart = PointerFor(ColosseumCommonIndex.ShadowData) + (shadowId * ShadowDataSize);
+            _data.WriteByte(shadowStart + ShadowCatchRateOffset, ClampByte(pokemon.ShadowCatchRate));
+            _data.WriteUInt16(shadowStart + ShadowHeartGaugeOffset, ClampUInt16(pokemon.ShadowHeartGauge));
+            _data.WriteUInt16(shadowStart + ShadowFirstTrainerOffset, ClampUInt16(pokemon.ShadowFirstTrainerId));
+            _data.WriteUInt16(shadowStart + ShadowAlternateFirstTrainerOffset, ClampUInt16(pokemon.ShadowAlternateFirstTrainerId));
+            _data.WriteUInt16(shadowStart + ShadowSpeciesOffset, speciesId);
+        }
+
+        var start = PointerFor(ColosseumCommonIndex.TrainerPokemonData) + (pokemon.Index * TrainerPokemonSize);
+        if (pokemon.SpeciesId > 0)
+        {
+            _data.WriteByte(start + PokemonPokeballOffset, ClampByte(pokemon.PokeballId));
+            foreach (var offset in PokemonUnsetFillOffsets)
+            {
+                _data.WriteByte(start + offset, 0);
+            }
+        }
+
+        _data.WriteByte(start + PokemonShadowIdOffset, shadowId);
+        _data.WriteUInt16(start + PokemonSpeciesOffset, speciesId);
+        _data.WriteUInt32(start + PokemonNameIdOffset, checked((uint)(species?.NameId ?? 0)));
+        _data.WriteUInt16(start + PokemonItemOffset, ClampUInt16(pokemon.ItemId));
+        _data.WriteByte(start + PokemonHappinessOffset, ClampByte(pokemon.Happiness));
+        _data.WriteByte(start + PokemonLevelOffset, ClampByte(pokemon.Level));
+        _data.WriteByte(start + PokemonAbilityOffset, ClampByte(NormalizeAbility(pokemon.Ability)));
+        _data.WriteByte(start + PokemonNatureOffset, ClampByte(pokemon.Nature));
+        _data.WriteByte(start + PokemonGenderOffset, ClampByte(pokemon.Gender));
+
+        var iv = ClampByte(pokemon.Iv > 31 ? 31 : pokemon.Iv);
+        for (var index = 0; index < 6; index++)
+        {
+            _data.WriteByte(start + PokemonIvOffset + index, iv);
+        }
+
+        for (var evIndex = 0; evIndex < 6; evIndex++)
+        {
+            var value = evIndex < pokemon.Evs.Count ? pokemon.Evs[evIndex] : 0;
+            _data.WriteByte(start + PokemonFirstEvOffset + (evIndex * 2), ClampByte(value));
+        }
+
+        var moveOffsets = new[] { PokemonMove1Offset, PokemonMove2Offset, PokemonMove3Offset, PokemonMove4Offset };
+        for (var moveIndex = 0; moveIndex < moveOffsets.Length; moveIndex++)
+        {
+            var moveId = moveIndex < pokemon.MoveIds.Count ? pokemon.MoveIds[moveIndex] : 0;
+            _data.WriteUInt16(start + moveOffsets[moveIndex], ClampUInt16(moveId));
+        }
+
+        if (pokemon.SpeciesId == 0)
+        {
+            _data.WriteByte(start + PokemonPokeballOffset, 0);
+            foreach (var offset in PokemonUnsetFillOffsets)
+            {
+                _data.WriteByte(start + offset, 0xff);
+            }
+        }
     }
 
     private IReadOnlyDictionary<int, ColosseumPokemonStats> LoadPokemonStats()
@@ -252,6 +345,7 @@ public sealed class ColosseumCommonRel
             pokemon[index] = new ColosseumPokemonStats(
                 index,
                 Strings.StringWithId(nameId),
+                nameId,
                 type1,
                 TypeName(type1),
                 type2,
@@ -265,6 +359,18 @@ public sealed class ColosseumCommonRel
 
         return pokemon;
     }
+
+    public ColosseumPokemonStats? PokemonStatsFor(int id)
+        => _pokemonStats.Value.TryGetValue(id, out var pokemon) ? pokemon : null;
+
+    public ColosseumMove MoveById(int id)
+        => MoveFor(id);
+
+    public string ItemNameById(int id)
+        => NameForItem(id);
+
+    public ColosseumShadowPokemonData? ShadowDataById(int id)
+        => ReadShadowData(id);
 
     private IReadOnlyDictionary<int, ColosseumMove> LoadMoves()
     {
@@ -417,6 +523,15 @@ public sealed class ColosseumCommonRel
             0xff => "Random",
             _ => "Random"
         };
+
+    private static int NormalizeAbility(int ability)
+        => ability is 0 or 1 ? ability : 0xff;
+
+    private static byte ClampByte(int value)
+        => (byte)Math.Clamp(value, byte.MinValue, byte.MaxValue);
+
+    private static ushort ClampUInt16(int value)
+        => (ushort)Math.Clamp(value, ushort.MinValue, ushort.MaxValue);
 
     private static int NormalizeItemIndex(int index)
         => index > ItemCount && index < 0x250 ? index - 151 : index;

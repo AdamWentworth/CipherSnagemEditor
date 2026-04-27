@@ -3,6 +3,7 @@ namespace OrreForge.Colosseum.Data;
 public sealed record ColosseumPokemonStats(
     int Index,
     string Name,
+    int NameId,
     int Type1,
     string Type1Name,
     int Type2,

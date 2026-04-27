@@ -13,6 +13,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private static readonly IBrush TrainerNormalBrush = SolidColorBrush.Parse("#FC6848");
     private static readonly IBrush TrainerShadowBrush = SolidColorBrush.Parse("#A070FF");
     private readonly List<TrainerEntryViewModel> _allTrainers = [];
+    private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
 
     [ObservableProperty]
     private ToolEntryViewModel? _selectedTool;
@@ -155,9 +156,11 @@ public partial class MainWindowViewModel : ViewModelBase
             ProjectTitle = BuildProjectTitle(context);
             WorkspaceStatus = BuildWorkspaceStatus(context);
             _allTrainers.Clear();
+            _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
             Trainers.Clear();
             TrainerSearchText = string.Empty;
             SelectedTrainer = null;
+            SelectedTrainerPokemon.Clear();
             PopulateIsoFiles(context);
             RefreshSelectedToolView(SelectedTool);
             Logs.Add(BuildLogSummary(context));
@@ -170,10 +173,12 @@ public partial class MainWindowViewModel : ViewModelBase
             WorkspaceStatus = ex.Message;
             IsoFiles.Clear();
             _allTrainers.Clear();
+            _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
             Trainers.Clear();
             TrainerSearchText = string.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
+            SelectedTrainerPokemon.Clear();
             RefreshSelectedToolView(SelectedTool);
             Logs.Add($"Error: {ex.Message}");
         }
@@ -213,6 +218,38 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         IsoExplorerStatus = "Encode is not implemented yet.";
         Logs.Add("Encode is not implemented yet.");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveTrainer))]
+    private async Task SaveTrainerAsync()
+    {
+        if (CurrentProject is null || SelectedTrainer is null || SelectedTrainerPokemon.Count == 0)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        Logs.Add($"Saving trainer {SelectedTrainer.Trainer.Index}: {SelectedTrainer.Trainer.FullName}");
+
+        try
+        {
+            var updates = SelectedTrainerPokemon.Select(pokemon => pokemon.ToUpdate()).ToArray();
+            var path = await Task.Run(() => CurrentProject.SaveTrainerPokemon(updates));
+            foreach (var pokemon in SelectedTrainerPokemon)
+            {
+                pokemon.MarkSaved();
+            }
+
+            Logs.Add($"Trainer Pokemon saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"Trainer save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -267,6 +304,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanExportSelectedIsoFile()
         => CurrentProject?.Iso is not null && SelectedIsoFile is not null && !IsBusy;
 
+    private bool CanSaveTrainer()
+        => ShowTrainerEditor && CurrentProject?.Iso is not null && SelectedTrainer is not null && !IsBusy;
+
     partial void OnSelectedToolChanged(ToolEntryViewModel? value)
     {
         RefreshSelectedToolView(value);
@@ -294,6 +334,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         RefreshSelectedTrainerDetails(value);
+        SaveTrainerCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnTrainerSearchTextChanged(string value)
@@ -304,6 +345,7 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnIsBusyChanged(bool value)
     {
         NotifyIsoExplorerCommands();
+        SaveTrainerCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSelectedToolView(ToolEntryViewModel? value)
@@ -374,6 +416,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (CurrentProject?.Iso is null)
         {
             _allTrainers.Clear();
+            _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
             Trainers.Clear();
             SelectedTrainer = null;
             return;
@@ -387,7 +430,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var trainers = CurrentProject.LoadStoryTrainers();
+            var commonRel = CurrentProject.LoadCommonRel();
+            _trainerPokemonResources = TrainerPokemonEditorResources.FromCommonRel(commonRel);
+            var trainers = commonRel.LoadStoryTrainers();
             foreach (var trainer in trainers)
             {
                 _allTrainers.Add(new TrainerEntryViewModel(trainer));
@@ -509,8 +554,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         foreach (var pokemon in trainer.Pokemon)
         {
-            SelectedTrainerPokemon.Add(new TrainerPokemonSlotViewModel(pokemon));
+            SelectedTrainerPokemon.Add(new TrainerPokemonSlotViewModel(pokemon, _trainerPokemonResources, OnTrainerPokemonChanged));
         }
+
+        SaveTrainerCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnTrainerPokemonChanged()
+    {
+        SaveTrainerCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSelectedIsoFileDetails(IsoFileEntryViewModel? value)
