@@ -34,6 +34,27 @@ public static class GameCubeIsoReader
         return new GameCubeIso(path, gameId, region, files);
     }
 
+    public static byte[] ReadFile(GameCubeIso iso, GameCubeIsoFileEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(iso);
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (entry.Size > int.MaxValue)
+        {
+            throw new InvalidDataException($"ISO file {entry.Name} is too large to load into memory.");
+        }
+
+        using var stream = File.Open(iso.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var endOffset = (long)entry.Offset + entry.Size;
+        if (endOffset > stream.Length)
+        {
+            throw new EndOfStreamException(
+                $"ISO file {entry.Name} extends past the end of the image: 0x{entry.Offset:x8}+0x{entry.Size:x}.");
+        }
+
+        return ReadExactAt(stream, entry.Offset, checked((int)entry.Size));
+    }
+
     private static IReadOnlyList<GameCubeIsoFileEntry> ReadFileSystemTable(FileStream stream)
     {
         if (stream.Length < TocFileSizeLocation + 4)

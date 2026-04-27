@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using OrreForge.Colosseum;
 
 namespace OrreForge.App.ViewModels;
@@ -27,6 +28,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _selectedToolDetail = "Trainer Editor is the first parity target.";
 
+    [ObservableProperty]
+    private IsoFileEntryViewModel? _selectedIsoFile;
+
+    [ObservableProperty]
+    private bool _showIsoExplorer;
+
+    [ObservableProperty]
+    private string _isoExplorerStatus = "Open a Colosseum ISO to browse its files.";
+
     public MainWindowViewModel()
     {
         Tools = new ObservableCollection<ToolEntryViewModel>(
@@ -39,6 +49,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<ToolEntryViewModel> Tools { get; }
 
     public ObservableCollection<string> Logs { get; } = [];
+
+    public ObservableCollection<IsoFileEntryViewModel> IsoFiles { get; } = [];
 
     public ColosseumProjectContext? CurrentProject { get; private set; }
 
@@ -59,6 +71,8 @@ public partial class MainWindowViewModel : ViewModelBase
             HasProject = true;
             ProjectTitle = BuildProjectTitle(context);
             WorkspaceStatus = BuildWorkspaceStatus(context);
+            PopulateIsoFiles(context);
+            RefreshSelectedToolView(SelectedTool);
             Logs.Add(BuildLogSummary(context));
         }
         catch (Exception ex)
@@ -67,6 +81,9 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentProject = null;
             ProjectTitle = "Open failed";
             WorkspaceStatus = ex.Message;
+            IsoFiles.Clear();
+            SelectedIsoFile = null;
+            RefreshSelectedToolView(SelectedTool);
             Logs.Add($"Error: {ex.Message}");
         }
         finally
@@ -75,7 +92,58 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanExtractSelectedIsoFile))]
+    private async Task ExtractSelectedIsoFileAsync()
+    {
+        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var fileName = SelectedIsoFile.Name;
+        Logs.Add($"Exporting {fileName}");
+
+        try
+        {
+            var selectedFile = SelectedIsoFile;
+            var outputPath = await Task.Run(() => CurrentProject.ExtractIsoFile(selectedFile.Entry));
+            IsoExplorerStatus = $"Exported {fileName} to {outputPath}";
+            Logs.Add($"Exported {fileName}");
+        }
+        catch (Exception ex)
+        {
+            IsoExplorerStatus = ex.Message;
+            Logs.Add($"Export failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private bool CanExtractSelectedIsoFile()
+        => CurrentProject?.Iso is not null && SelectedIsoFile is not null && !IsBusy;
+
     partial void OnSelectedToolChanged(ToolEntryViewModel? value)
+    {
+        RefreshSelectedToolView(value);
+    }
+
+    partial void OnSelectedIsoFileChanged(IsoFileEntryViewModel? value)
+    {
+        IsoExplorerStatus = value is null
+            ? "Select an ISO file to inspect or export."
+            : $"{value.Name} - {value.SizeText} at {value.OffsetHex}";
+        ExtractSelectedIsoFileCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        ExtractSelectedIsoFileCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshSelectedToolView(ToolEntryViewModel? value)
     {
         foreach (var tool in Tools)
         {
@@ -85,10 +153,34 @@ public partial class MainWindowViewModel : ViewModelBase
         if (value is null)
         {
             SelectedToolDetail = string.Empty;
+            ShowIsoExplorer = false;
             return;
         }
 
         SelectedToolDetail = $"{value.Title}\nLegacy segue: {value.LegacySegue}\nReference: {value.LegacySource}";
+        ShowIsoExplorer = value.Title == "ISO Explorer" && CurrentProject?.Iso is not null;
+        if (value.Title == "ISO Explorer" && CurrentProject?.Iso is null)
+        {
+            IsoExplorerStatus = "Open a Colosseum ISO to browse its files.";
+        }
+    }
+
+    private void PopulateIsoFiles(ColosseumProjectContext context)
+    {
+        IsoFiles.Clear();
+        if (context.Iso is null)
+        {
+            SelectedIsoFile = null;
+            return;
+        }
+
+        foreach (var entry in context.Iso.Files.OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            IsoFiles.Add(new IsoFileEntryViewModel(entry));
+        }
+
+        SelectedIsoFile = IsoFiles.FirstOrDefault();
+        ExtractSelectedIsoFileCommand.NotifyCanExecuteChanged();
     }
 
     private static string BuildProjectTitle(ColosseumProjectContext context)

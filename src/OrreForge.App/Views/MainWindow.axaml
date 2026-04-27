@@ -119,7 +119,7 @@
                         CornerRadius="2"
                         Padding="18"
                         Margin="0,14,0,14">
-                    <Grid RowDefinitions="Auto,*">
+                    <Grid RowDefinitions="Auto,Auto,*">
                         <TextBlock Text="{Binding SelectedTool.Title}"
                                    FontSize="18"
                                    FontWeight="Bold"
@@ -129,6 +129,58 @@
                                    Foreground="#000000"
                                    TextWrapping="Wrap"
                                    Margin="0,12,0,0"/>
+                        <Grid Grid.Row="2"
+                              IsVisible="{Binding ShowIsoExplorer}"
+                              ColumnDefinitions="*,280"
+                              Margin="0,16,0,0">
+                            <Border Background="#FFFFFF"
+                                    BorderBrush="#C0C0C8"
+                                    BorderThickness="1">
+                                <ListBox ItemsSource="{Binding IsoFiles}"
+                                         SelectedItem="{Binding SelectedIsoFile}"
+                                         Background="#FFFFFF"
+                                         BorderThickness="0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:IsoFileEntryViewModel">
+                                            <Grid ColumnDefinitions="*,96,110"
+                                                  Height="28"
+                                                  Margin="4,0">
+                                                <TextBlock Text="{Binding Name}"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="#000000"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding OffsetHex}"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="#000000"
+                                                           FontFamily="Consolas"
+                                                           FontSize="12"/>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding SizeText}"
+                                                           VerticalAlignment="Center"
+                                                           HorizontalAlignment="Right"
+                                                           Foreground="#000000"
+                                                           FontFamily="Consolas"
+                                                           FontSize="12"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+
+                            <StackPanel Grid.Column="1"
+                                        Margin="16,0,0,0"
+                                        Spacing="10">
+                                <TextBlock Text="{Binding IsoExplorerStatus}"
+                                           Foreground="#000000"
+                                           TextWrapping="Wrap"/>
+                                <Button Content="Export Selected"
+                                        Command="{Binding ExtractSelectedIsoFileCommand}"
+                                        Foreground="#000000"
+                                        HorizontalAlignment="Left"
+                                        MinWidth="128"/>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
 

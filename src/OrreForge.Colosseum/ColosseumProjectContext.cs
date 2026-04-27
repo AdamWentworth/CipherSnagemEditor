@@ -45,6 +45,48 @@ public sealed class ColosseumProjectContext
 
     public Dictionary<string, GameStringTable> LoadedStringTables { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public string ExtractIsoFile(GameCubeIsoFileEntry entry, string? outputPath = null, bool overwrite = true)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        var targetPath = ResolveIsoExtractPath(entry.Name, outputPath);
+        if (!overwrite && File.Exists(targetPath))
+        {
+            throw new IOException($"Refusing to overwrite existing file: {targetPath}");
+        }
+
+        var parent = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(parent))
+        {
+            Directory.CreateDirectory(parent);
+        }
+
+        var data = GameCubeIsoReader.ReadFile(Iso, entry);
+        File.WriteAllBytes(targetPath, data);
+        LoadedFiles[entry.Name] = data;
+        return targetPath;
+    }
+
+    public string GetIsoExportDirectory(string fileName)
+    {
+        if (WorkspaceDirectory is null)
+        {
+            throw new InvalidOperationException("No Colosseum workspace is available.");
+        }
+
+        var safeFileName = SafeFileName(fileName);
+        var folderName = RemoveFileExtensionsLikeLegacy(safeFileName);
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            folderName = safeFileName;
+        }
+
+        return Path.Combine(WorkspaceDirectory, "Game Files", folderName);
+    }
+
     public static bool IsSupportedPath(string path)
     {
         var type = GameFileTypes.FromExtension(path);
@@ -96,4 +138,34 @@ public sealed class ColosseumProjectContext
 
     private static ColosseumProjectContext OpenTexture(string path)
         => new(path, ColosseumSourceKind.Texture, null, null, null, null, new ColosseumSettings());
+
+    private string ResolveIsoExtractPath(string fileName, string? outputPath)
+    {
+        var safeFileName = SafeFileName(fileName);
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            return Path.Combine(GetIsoExportDirectory(safeFileName), safeFileName);
+        }
+
+        if (Directory.Exists(outputPath)
+            || outputPath.EndsWith(Path.DirectorySeparatorChar)
+            || outputPath.EndsWith(Path.AltDirectorySeparatorChar))
+        {
+            return Path.Combine(outputPath, safeFileName);
+        }
+
+        return outputPath;
+    }
+
+    private static string SafeFileName(string fileName)
+    {
+        var safeFileName = Path.GetFileName(fileName);
+        return string.IsNullOrWhiteSpace(safeFileName) ? fileName : safeFileName;
+    }
+
+    private static string RemoveFileExtensionsLikeLegacy(string fileName)
+    {
+        var extensionIndex = fileName.IndexOf('.');
+        return extensionIndex < 0 ? fileName : fileName[..extensionIndex];
+    }
 }
