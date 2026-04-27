@@ -56,35 +56,27 @@
                         <ItemsControl ItemsSource="{Binding Tools}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ToolEntryViewModel">
-                                    <Button Click="ToolClick"
+                                    <Border PointerPressed="ToolPointerPressed"
+                                            Cursor="Hand"
                                             HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch"
-                                            Padding="0"
-                                            Margin="0"
                                             MinHeight="50"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Foreground="#000000">
-                                        <Grid ColumnDefinitions="34,*"
-                                              MinHeight="50">
-                                            <Image Grid.ColumnSpan="2"
-                                                   Source="{Binding CurrentBackgroundAsset}"
+                                            Margin="0"
+                                            Background="{Binding CurrentFallbackBrush}">
+                                        <Grid MinHeight="50">
+                                            <Border Background="{Binding CurrentFallbackBrush}"/>
+                                            <Image
+                                                   Source="{Binding CurrentBackgroundImage}"
                                                    Stretch="Fill"/>
-                                            <TextBlock Text="{Binding Index}"
+                                            <TextBlock Text="{Binding Title}"
                                                        HorizontalAlignment="Center"
                                                        VerticalAlignment="Center"
                                                        FontSize="12"
-                                                       Foreground="#000000"/>
-                                            <TextBlock Grid.Column="1"
-                                                       Text="{Binding Title}"
-                                                       VerticalAlignment="Center"
-                                                       FontSize="12"
-                                                       FontWeight="Bold"
                                                        Foreground="#000000"
                                                        TextWrapping="NoWrap"
-                                                       Margin="4,0,8,0"/>
+                                                       Margin="8,0"
+                                                       TextTrimming="CharacterEllipsis"/>
                                         </Grid>
-                                    </Button>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

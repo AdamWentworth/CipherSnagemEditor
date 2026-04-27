@@ -1,3 +1,6 @@
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using OrreForge.Colosseum;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -5,19 +8,27 @@ namespace OrreForge.App.ViewModels;
 
 public sealed partial class ToolEntryViewModel : ObservableObject
 {
+    private static readonly IBrush ItemCellFallback = SolidColorBrush.Parse("#eadde5");
+    private static readonly IBrush ToolCellFallback = SolidColorBrush.Parse("#e7c995");
+    private static readonly IBrush SelectedCellFallback = SolidColorBrush.Parse("#b8d9f0");
+
+    private static readonly IImage? ItemCellImage = LoadImage("avares://OrreForge.App/Assets/LegacyCells/ItemCell.png");
+    private static readonly IImage? ToolCellImage = LoadImage("avares://OrreForge.App/Assets/LegacyCells/ToolCell.png");
+    private static readonly IImage? SelectedCellImage = LoadImage("avares://OrreForge.App/Assets/LegacyCells/SelectedCell.png");
+
     public ToolEntryViewModel(int index, ColosseumToolDefinition definition)
     {
         Index = index;
         Title = definition.Title;
         LegacySegue = definition.LegacySegue;
         LegacySource = definition.LegacySource;
-        BackgroundAsset = index % 2 == 1
-            ? "/Assets/LegacyCells/ItemCell.png"
-            : "/Assets/LegacyCells/ToolCell.png";
+        BackgroundImage = index % 2 == 1 ? ItemCellImage : ToolCellImage;
+        FallbackBrush = index % 2 == 1 ? ItemCellFallback : ToolCellFallback;
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CurrentBackgroundAsset))]
+    [NotifyPropertyChangedFor(nameof(CurrentBackgroundImage))]
+    [NotifyPropertyChangedFor(nameof(CurrentFallbackBrush))]
     private bool _isSelected;
 
     public int Index { get; }
@@ -28,9 +39,24 @@ public sealed partial class ToolEntryViewModel : ObservableObject
 
     public string LegacySource { get; }
 
-    public string BackgroundAsset { get; }
+    public IImage? BackgroundImage { get; }
 
-    public string CurrentBackgroundAsset => IsSelected
-        ? "/Assets/LegacyCells/SelectedCell.png"
-        : BackgroundAsset;
+    public IBrush FallbackBrush { get; }
+
+    public IImage? CurrentBackgroundImage => IsSelected ? SelectedCellImage : BackgroundImage;
+
+    public IBrush CurrentFallbackBrush => IsSelected ? SelectedCellFallback : FallbackBrush;
+
+    private static IImage? LoadImage(string uri)
+    {
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri(uri));
+            return new Bitmap(stream);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

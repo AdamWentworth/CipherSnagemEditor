@@ -6,6 +6,7 @@ obj/
 *.suo
 *.binlog
 TestResults/
+artifacts/
 *.iso
 *.gcm
 *.nkit.iso
@@ -13,3 +14,4 @@ TestResults/
 *.gci
 *.raw
 * CM Tool/
+legacy-assets/
