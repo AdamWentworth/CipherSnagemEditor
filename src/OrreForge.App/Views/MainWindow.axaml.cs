@@ -68,6 +68,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ToolClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: ToolEntryViewModel tool }
+            && DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.SelectedTool = tool;
+        }
+    }
+
     private Task OpenPathAsync(string path)
     {
         return DataContext is MainWindowViewModel viewModel

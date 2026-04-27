@@ -77,6 +77,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedToolChanged(ToolEntryViewModel? value)
     {
+        foreach (var tool in Tools)
+        {
+            tool.IsSelected = ReferenceEquals(tool, value);
+        }
+
         if (value is null)
         {
             SelectedToolDetail = string.Empty;

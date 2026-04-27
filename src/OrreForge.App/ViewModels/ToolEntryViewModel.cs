@@ -1,8 +1,9 @@
 using OrreForge.Colosseum;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace OrreForge.App.ViewModels;
 
-public sealed class ToolEntryViewModel
+public sealed partial class ToolEntryViewModel : ObservableObject
 {
     public ToolEntryViewModel(int index, ColosseumToolDefinition definition)
     {
@@ -10,7 +11,14 @@ public sealed class ToolEntryViewModel
         Title = definition.Title;
         LegacySegue = definition.LegacySegue;
         LegacySource = definition.LegacySource;
+        BackgroundAsset = index % 2 == 1
+            ? "/Assets/LegacyCells/ItemCell.png"
+            : "/Assets/LegacyCells/ToolCell.png";
     }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentBackgroundAsset))]
+    private bool _isSelected;
 
     public int Index { get; }
 
@@ -19,4 +27,10 @@ public sealed class ToolEntryViewModel
     public string LegacySegue { get; }
 
     public string LegacySource { get; }
+
+    public string BackgroundAsset { get; }
+
+    public string CurrentBackgroundAsset => IsSelected
+        ? "/Assets/LegacyCells/SelectedCell.png"
+        : BackgroundAsset;
 }

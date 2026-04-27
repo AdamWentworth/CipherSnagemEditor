@@ -8,85 +8,102 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="{Binding WindowTitle}"
-        MinWidth="980"
-        MinHeight="640"
-        Background="#f4f7fb">
+        MinWidth="900"
+        MinHeight="620"
+        FontFamily="Arial"
+        Background="#F0F0FC">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
     <Grid RowDefinitions="Auto,*">
-        <Border Background="#fdfefe"
-                BorderBrush="#cbd5e1"
+        <Border Background="#FFFFFF"
+                BorderBrush="#C0C0C8"
                 BorderThickness="0,0,0,1"
-                Padding="10,8">
+                Padding="10,7">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Open..." Click="OpenFileClick" MinWidth="92"/>
+                    <Button Content="Open..." Click="OpenFileClick" MinWidth="92" Foreground="#000000"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="14">
+                <StackPanel Orientation="Horizontal" Spacing="16">
                     <TextBlock Text="Colosseum Tool"
-                               FontSize="18"
-                               FontWeight="SemiBold"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="#000000"
                                VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding ProjectTitle}"
-                               Foreground="#475569"
+                               Foreground="#000000"
                                VerticalAlignment="Center"/>
                 </StackPanel>
             </DockPanel>
         </Border>
 
         <Grid Grid.Row="1"
-              ColumnDefinitions="300,*"
+              ColumnDefinitions="220,*"
               RowDefinitions="*">
             <Border Grid.Column="0"
-                    Background="#eef3f8"
-                    BorderBrush="#cbd5e1"
-                    BorderThickness="0,0,1,0"
-                    Padding="10">
+                    Background="#000000"
+                    BorderBrush="#C0C0C8"
+                    BorderThickness="0,0,1,0">
                 <Grid RowDefinitions="Auto,*">
                     <TextBlock Text="Tools"
-                               FontSize="13"
-                               FontWeight="SemiBold"
-                               Margin="4,0,0,8"/>
-                    <ListBox Grid.Row="1"
-                             ItemsSource="{Binding Tools}"
-                             SelectedItem="{Binding SelectedTool}"
-                             Background="Transparent"
-                             BorderThickness="0">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ToolEntryViewModel">
-                                <Grid ColumnDefinitions="34,*"
-                                      MinHeight="42"
-                                      Margin="0,2">
-                                    <TextBlock Text="{Binding Index}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Foreground="#64748b"/>
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding Title}"
-                                               VerticalAlignment="Center"
-                                               TextWrapping="NoWrap"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="#FFFFFF"
+                               Margin="10,8,10,6"/>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Tools}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ToolEntryViewModel">
+                                    <Button Click="ToolClick"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Padding="0"
+                                            Margin="0"
+                                            MinHeight="50"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Foreground="#000000">
+                                        <Grid ColumnDefinitions="34,*"
+                                              MinHeight="50">
+                                            <Image Grid.ColumnSpan="2"
+                                                   Source="{Binding CurrentBackgroundAsset}"
+                                                   Stretch="Fill"/>
+                                            <TextBlock Text="{Binding Index}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="12"
+                                                       Foreground="#000000"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Title}"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="12"
+                                                       FontWeight="Bold"
+                                                       Foreground="#000000"
+                                                       TextWrapping="NoWrap"
+                                                       Margin="4,0,8,0"/>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </Grid>
             </Border>
 
             <Grid Grid.Column="1"
                   RowDefinitions="Auto,*,150"
                   Margin="18">
-                <Border Background="#ffffff"
-                        BorderBrush="#cbd5e1"
+                <Border Background="#FFFFFF"
+                        BorderBrush="#C0C0C8"
                         BorderThickness="1"
-                        CornerRadius="4"
+                        CornerRadius="2"
                         Padding="14">
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding WorkspaceStatus}"
                                    FontSize="13"
-                                   Foreground="#334155"
+                                   Foreground="#000000"
                                    TextWrapping="Wrap"/>
                         <ProgressBar IsIndeterminate="True"
                                      IsVisible="{Binding IsBusy}"
@@ -96,29 +113,30 @@
                 </Border>
 
                 <Border Grid.Row="1"
-                        Background="#ffffff"
-                        BorderBrush="#cbd5e1"
+                        Background="#FFFFFF"
+                        BorderBrush="#C0C0C8"
                         BorderThickness="1"
-                        CornerRadius="4"
+                        CornerRadius="2"
                         Padding="18"
                         Margin="0,14,0,14">
                     <Grid RowDefinitions="Auto,*">
                         <TextBlock Text="{Binding SelectedTool.Title}"
-                                   FontSize="22"
-                                   FontWeight="SemiBold"/>
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="#000000"/>
                         <TextBlock Grid.Row="1"
                                    Text="{Binding SelectedToolDetail}"
-                                   Foreground="#475569"
+                                   Foreground="#000000"
                                    TextWrapping="Wrap"
                                    Margin="0,12,0,0"/>
                     </Grid>
                 </Border>
 
                 <Border Grid.Row="2"
-                        Background="#0f172a"
-                        BorderBrush="#1e293b"
+                        Background="#B8F0FF"
+                        BorderBrush="#80ACFF"
                         BorderThickness="1"
-                        CornerRadius="4"
+                        CornerRadius="2"
                         Padding="10">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding Logs}">
@@ -127,7 +145,7 @@
                                     <TextBlock Text="{Binding}"
                                                FontFamily="Consolas"
                                                FontSize="12"
-                                               Foreground="#dbeafe"
+                                               Foreground="#000000"
                                                TextWrapping="Wrap"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
