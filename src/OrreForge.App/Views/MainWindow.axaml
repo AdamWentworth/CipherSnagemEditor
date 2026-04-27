@@ -94,14 +94,26 @@
                     Background="#000000"
                     BorderBrush="#C0C0C8"
                     BorderThickness="0,0,1,0">
-                <Grid RowDefinitions="Auto,*">
+                <Grid RowDefinitions="Auto,Auto,*">
                     <TextBlock Text="{Binding LeftPanelTitle}"
                                FontSize="12"
                                FontWeight="Bold"
                                Foreground="#FFFFFF"
                                IsVisible="{Binding ShowLeftPanelTitle}"
                                Margin="10,8,10,6"/>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <TextBox Grid.Row="1"
+                             IsVisible="{Binding ShowTrainerEditor}"
+                             Text="{Binding TrainerSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             PlaceholderText="Search trainers"
+                             Height="28"
+                             Margin="8,6"
+                             Padding="8,3"
+                             FontSize="12"
+                             Background="#FFFFFF"
+                             Foreground="#000000"
+                             BorderBrush="#808080"
+                             BorderThickness="1"/>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                         <Grid>
                             <ItemsControl ItemsSource="{Binding Tools}"
                                           IsVisible="{Binding ShowHomeTools}">
@@ -435,12 +447,14 @@
                                                         BorderThickness="1"
                                                         CornerRadius="12"
                                                         Margin="5"
-                                                        Opacity="{Binding Opacity}">
-                                                    <Grid RowDefinitions="20,80,20,15,15,20,20,20,*"
-                                                          ColumnDefinitions="80,*,*"
-                                                          Margin="5"
-                                                          ColumnSpacing="5"
-                                                          RowSpacing="4">
+                                                        Opacity="{Binding Opacity}"
+                                                        ClipToBounds="True">
+                                                    <Grid RowDefinitions="14,60,20,20,12,16,12,16,*"
+                                                          ColumnDefinitions="60,*,*"
+                                                          Margin="4"
+                                                          ColumnSpacing="4"
+                                                          RowSpacing="2"
+                                                          ClipToBounds="True">
                                                         <TextBlock Text="{Binding DeckIndexText}"
                                                                    Foreground="#000000"
                                                                    FontSize="10"
@@ -456,8 +470,8 @@
                                                                    TextTrimming="CharacterEllipsis"/>
                                                         <Border Grid.Row="1"
                                                                 Grid.RowSpan="3"
-                                                                Width="80"
-                                                                Height="80"
+                                                                Width="60"
+                                                                Height="60"
                                                                 Background="#F0F0FC"
                                                                 BorderBrush="#C0C0C8"
                                                                 BorderThickness="1">
@@ -635,34 +649,38 @@
 
                                                         <Grid Grid.Row="8"
                                                               Grid.ColumnSpan="3"
-                                                              RowDefinitions="20,20,20,20,15,20"
-                                                              ColumnDefinitions="*"
-                                                              RowSpacing="5">
+                                                              RowDefinitions="16,16,12,16"
+                                                              ColumnDefinitions="*,*"
+                                                              RowSpacing="2"
+                                                              ColumnSpacing="4"
+                                                              ClipToBounds="True">
                                                             <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
                                                                 <TextBlock Text="{Binding Move1Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
                                                             </Border>
-                                                            <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
                                                                 <TextBlock Text="{Binding Move2Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
                                                             </Border>
-                                                            <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                            <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
                                                                 <TextBlock Text="{Binding Move3Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
                                                             </Border>
-                                                            <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
+                                                            <Border Grid.Row="1" Grid.Column="1" Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
                                                                 <TextBlock Text="{Binding Move4Text}" Foreground="#000000" FontSize="10" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="4,0"/>
                                                             </Border>
-                                                            <Grid Grid.Row="4"
+                                                            <Grid Grid.Row="2"
+                                                                  Grid.ColumnSpan="2"
                                                                   IsVisible="{Binding IsShadow}"
                                                                   ColumnDefinitions="*,*,*,*"
-                                                                  ColumnSpacing="5">
-                                                                <TextBlock Text="Heart Gauge" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
-                                                                <TextBlock Grid.Column="1" Text="First TID" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
-                                                                <TextBlock Grid.Column="2" Text="Alt TID" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
-                                                                <TextBlock Grid.Column="3" Text="Catch" Foreground="#000000" FontSize="10" HorizontalAlignment="Center"/>
+                                                                  ColumnSpacing="4">
+                                                                <TextBlock Text="Heart" Foreground="#000000" FontSize="9" HorizontalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="1" Text="First" Foreground="#000000" FontSize="9" HorizontalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="2" Text="Alt" Foreground="#000000" FontSize="9" HorizontalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="3" Text="Catch" Foreground="#000000" FontSize="9" HorizontalAlignment="Center"/>
                                                             </Grid>
-                                                            <Grid Grid.Row="5"
+                                                            <Grid Grid.Row="3"
+                                                                  Grid.ColumnSpan="2"
                                                                   IsVisible="{Binding IsShadow}"
                                                                   ColumnDefinitions="*,*,*,*"
-                                                                  ColumnSpacing="5">
+                                                                  ColumnSpacing="4">
                                                                 <Border Background="#FFFFFF" BorderBrush="#C0C0C8" BorderThickness="1">
                                                                     <TextBlock Text="{Binding ShadowHeartGaugeText}" Foreground="#000000" FontSize="10" HorizontalAlignment="Right" Margin="0,0,4,0"/>
                                                                 </Border>

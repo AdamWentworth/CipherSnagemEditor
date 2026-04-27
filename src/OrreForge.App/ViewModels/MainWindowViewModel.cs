@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text;
 using Avalonia.Controls;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -11,6 +12,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private static readonly IBrush TrainerNormalBrush = SolidColorBrush.Parse("#FC6848");
     private static readonly IBrush TrainerShadowBrush = SolidColorBrush.Parse("#A070FF");
+    private readonly List<TrainerEntryViewModel> _allTrainers = [];
 
     [ObservableProperty]
     private ToolEntryViewModel? _selectedTool;
@@ -38,6 +40,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private TrainerEntryViewModel? _selectedTrainer;
+
+    [ObservableProperty]
+    private string _trainerSearchText = string.Empty;
 
     [ObservableProperty]
     private bool _showIsoExplorer;
@@ -149,7 +154,9 @@ public partial class MainWindowViewModel : ViewModelBase
             HasProject = true;
             ProjectTitle = BuildProjectTitle(context);
             WorkspaceStatus = BuildWorkspaceStatus(context);
+            _allTrainers.Clear();
             Trainers.Clear();
+            TrainerSearchText = string.Empty;
             SelectedTrainer = null;
             PopulateIsoFiles(context);
             RefreshSelectedToolView(SelectedTool);
@@ -162,7 +169,9 @@ public partial class MainWindowViewModel : ViewModelBase
             ProjectTitle = "Open failed";
             WorkspaceStatus = ex.Message;
             IsoFiles.Clear();
+            _allTrainers.Clear();
             Trainers.Clear();
+            TrainerSearchText = string.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
             RefreshSelectedToolView(SelectedTool);
@@ -279,12 +288,17 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedTrainerChanged(TrainerEntryViewModel? value)
     {
-        foreach (var trainer in Trainers)
+        foreach (var trainer in _allTrainers)
         {
             trainer.IsSelected = ReferenceEquals(trainer, value);
         }
 
         RefreshSelectedTrainerDetails(value);
+    }
+
+    partial void OnTrainerSearchTextChanged(string value)
+    {
+        ApplyTrainerFilter(value);
     }
 
     partial void OnIsBusyChanged(bool value)
@@ -359,14 +373,15 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (CurrentProject?.Iso is null)
         {
+            _allTrainers.Clear();
             Trainers.Clear();
             SelectedTrainer = null;
             return;
         }
 
-        if (Trainers.Count > 0)
+        if (_allTrainers.Count > 0)
         {
-            SelectedTrainer ??= Trainers.FirstOrDefault();
+            ApplyTrainerFilter(TrainerSearchText);
             return;
         }
 
@@ -375,11 +390,12 @@ public partial class MainWindowViewModel : ViewModelBase
             var trainers = CurrentProject.LoadStoryTrainers();
             foreach (var trainer in trainers)
             {
-                Trainers.Add(new TrainerEntryViewModel(trainer));
+                _allTrainers.Add(new TrainerEntryViewModel(trainer));
             }
 
+            ApplyTrainerFilter(TrainerSearchText);
             SelectedTrainer = Trainers.FirstOrDefault();
-            Logs.Add($"Trainer Editor loaded: {Trainers.Count} story trainers.");
+            Logs.Add($"Trainer Editor loaded: {_allTrainers.Count} story trainers.");
         }
         catch (Exception ex)
         {
@@ -387,6 +403,77 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedToolDetail = $"Trainer Editor\n{ex.Message}";
             Logs.Add($"Trainer load failed: {ex.Message}");
         }
+    }
+
+    private void ApplyTrainerFilter(string? filterText)
+    {
+        if (_allTrainers.Count == 0)
+        {
+            Trainers.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allTrainers
+            : _allTrainers.Where(trainer => TrainerMatchesFilter(trainer, filter)).ToList();
+
+        Trainers.Clear();
+        foreach (var trainer in filtered)
+        {
+            Trainers.Add(trainer);
+        }
+
+        if (SelectedTrainer is null || !Trainers.Contains(SelectedTrainer))
+        {
+            SelectedTrainer = Trainers.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var trainer in _allTrainers)
+            {
+                trainer.IsSelected = ReferenceEquals(trainer, SelectedTrainer);
+            }
+        }
+    }
+
+    private static bool TrainerMatchesFilter(TrainerEntryViewModel entry, string filter)
+    {
+        var trainer = entry.Trainer;
+        if (filter == "shadow" && trainer.HasShadow)
+        {
+            return true;
+        }
+
+        return Contains(trainer.Index.ToString(), filter)
+            || Contains(trainer.Name, filter)
+            || Contains(trainer.TrainerClassName, filter)
+            || Contains(trainer.FullName, filter)
+            || trainer.Pokemon.Any(pokemon =>
+                Contains(pokemon.SpeciesName, filter)
+                || pokemon.Moves.Any(move => Contains(move.Name, filter)));
+    }
+
+    private static bool Contains(string value, string filter)
+        => SimplifySearchText(value).Contains(filter, StringComparison.Ordinal);
+
+    private static string SimplifySearchText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(char.ToLowerInvariant(character));
+            }
+        }
+
+        return builder.ToString();
     }
 
     private void RefreshSelectedTrainerDetails(TrainerEntryViewModel? value)

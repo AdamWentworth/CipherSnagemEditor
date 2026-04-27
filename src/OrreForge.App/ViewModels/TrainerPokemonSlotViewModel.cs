@@ -96,7 +96,7 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
             return "-";
         }
 
-        return $"{move.Name} ({move.Index})  {move.TypeName}  Pow {move.Power}  Acc {move.Accuracy}  PP {move.Pp}";
+        return $"{move.Name} ({move.Index}) {move.TypeName} {move.Power}/{move.Accuracy}/{move.Pp}";
     }
 
     private static string FormatByte(int value)
