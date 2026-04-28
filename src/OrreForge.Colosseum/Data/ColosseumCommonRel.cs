@@ -111,7 +111,19 @@ public sealed class ColosseumCommonRel
 
     private const int ItemCount = 0x18d;
     private const int ItemSize = 0x28;
+    private const int ItemBagSlotOffset = 0x00;
+    private const int ItemCantBeHeldOffset = 0x01;
+    private const int ItemInBattleUseIdOffset = 0x04;
+    private const int ItemPriceOffset = 0x06;
+    private const int ItemCouponCostOffset = 0x08;
+    private const int ItemBattleHoldIdOffset = 0x0b;
     private const int ItemNameIdOffset = 0x10;
+    private const int ItemDescriptionIdOffset = 0x14;
+    private const int ItemParameterOffset = 0x1b;
+    private const int ItemFriendshipEffectOffset = 0x24;
+    private const int ItemFriendshipEffectCount = 3;
+    private const int FirstTmItemIndex = 0x121;
+    private const int ItemEditorTmCount = 0x32;
 
     private const int BattleSize = 0x38;
     private const int BattleTypeOffset = 0x00;
@@ -141,8 +153,10 @@ public sealed class ColosseumCommonRel
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumMove>> _moves;
     private readonly Lazy<IReadOnlyList<ColosseumTmMove>> _tmMoves;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _items;
+    private readonly Lazy<IReadOnlyDictionary<int, ColosseumItem>> _itemData;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _abilities;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumBattle>> _battles;
+    private readonly GameStringTable? _pocketMenuStrings;
     private readonly IReadOnlyDictionary<int, string> _trainerModelNames;
 
     private ColosseumCommonRel(
@@ -151,6 +165,7 @@ public sealed class ColosseumCommonRel
         byte[]? startDolBytes,
         RelocationTable table,
         GameStringTable strings,
+        GameStringTable? pocketMenuStrings,
         IReadOnlyDictionary<int, string>? trainerModelNames)
     {
         _region = region;
@@ -159,12 +174,14 @@ public sealed class ColosseumCommonRel
         _dolStrings = startDolBytes is null ? null : LoadDolStringTable(region, startDolBytes);
         RelocationTable = table;
         Strings = strings;
+        _pocketMenuStrings = pocketMenuStrings;
         _trainerModelNames = trainerModelNames ?? new Dictionary<int, string>();
         _trainerClasses = new Lazy<IReadOnlyDictionary<int, ColosseumTrainerClass>>(LoadTrainerClasses);
         _pokemonStats = new Lazy<IReadOnlyDictionary<int, ColosseumPokemonStats>>(LoadPokemonStats);
         _moves = new Lazy<IReadOnlyDictionary<int, ColosseumMove>>(LoadMoves);
         _tmMoves = new Lazy<IReadOnlyList<ColosseumTmMove>>(LoadTmMoves);
         _items = new Lazy<IReadOnlyDictionary<int, string>>(LoadItems);
+        _itemData = new Lazy<IReadOnlyDictionary<int, ColosseumItem>>(LoadItemData);
         _abilities = new Lazy<IReadOnlyDictionary<int, string>>(LoadAbilities);
         _battles = new Lazy<IReadOnlyDictionary<int, ColosseumBattle>>(LoadBattles);
     }
@@ -180,6 +197,9 @@ public sealed class ColosseumCommonRel
         => _moves.Value.Values.OrderBy(move => move.Index).ToArray();
 
     public IReadOnlyList<ColosseumTmMove> TmMoves => _tmMoves.Value;
+
+    public IReadOnlyList<ColosseumItem> ItemData
+        => _itemData.Value.Values.OrderBy(item => item.Index).ToArray();
 
     public IReadOnlyList<ColosseumNamedResource> Items
         => _items.Value
@@ -202,10 +222,14 @@ public sealed class ColosseumCommonRel
 
     public byte[] ToArray() => _data.ToArray();
 
+    public byte[] StartDolToArray()
+        => _dol?.ToArray() ?? throw new InvalidOperationException("Start.dol was not loaded.");
+
     public static ColosseumCommonRel Parse(
         GameCubeRegion region,
         byte[] bytes,
         byte[]? startDolBytes = null,
+        GameStringTable? pocketMenuStrings = null,
         IReadOnlyDictionary<int, string>? trainerModelNames = null)
     {
         var table = RelocationTable.Parse(bytes);
@@ -216,7 +240,14 @@ public sealed class ColosseumCommonRel
             throw new InvalidDataException("Could not locate the Colosseum common.rel string table.");
         }
 
-        return new ColosseumCommonRel(region, bytes, startDolBytes, table, GameStringTable.Parse(stringBytes), trainerModelNames);
+        return new ColosseumCommonRel(
+            region,
+            bytes,
+            startDolBytes,
+            table,
+            GameStringTable.Parse(stringBytes),
+            pocketMenuStrings,
+            trainerModelNames);
     }
 
     public IReadOnlyList<ColosseumTrainer> LoadStoryTrainers()
@@ -599,11 +630,61 @@ public sealed class ColosseumCommonRel
         }
     }
 
+    public void WriteItem(ColosseumItemUpdate item)
+    {
+        var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
+        var start = FirstItemOffset(_region);
+        if (item.Index <= 0 || item.Index >= ItemCount || start <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(item), $"Item index {item.Index} is outside the editable table.");
+        }
+
+        var offset = start + (item.Index * ItemSize);
+        if (offset + ItemSize > dol.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(item), $"Item index {item.Index} is outside Start.dol.");
+        }
+
+        dol.WriteByte(offset + ItemBagSlotOffset, ClampByte(item.BagSlotId));
+        dol.WriteByte(offset + ItemCantBeHeldOffset, item.CanBeHeld ? (byte)0 : (byte)1);
+        dol.WriteByte(offset + ItemInBattleUseIdOffset, ClampByte(item.InBattleUseId));
+        dol.WriteUInt16(offset + ItemPriceOffset, ClampUInt16(item.Price));
+        dol.WriteUInt16(offset + ItemCouponCostOffset, ClampUInt16(item.CouponPrice));
+        dol.WriteByte(offset + ItemBattleHoldIdOffset, ClampByte(item.HoldItemId));
+        dol.WriteUInt32(offset + ItemNameIdOffset, checked((uint)Math.Clamp(item.NameId, 0, int.MaxValue)));
+        dol.WriteUInt32(offset + ItemDescriptionIdOffset, checked((uint)Math.Clamp(item.DescriptionId, 0, int.MaxValue)));
+        dol.WriteByte(offset + ItemParameterOffset, ClampByte(item.Parameter));
+
+        for (var index = 0; index < ItemFriendshipEffectCount; index++)
+        {
+            var value = index < item.FriendshipEffects.Count ? item.FriendshipEffects[index] : 0;
+            dol.WriteByte(offset + ItemFriendshipEffectOffset + index, ClampByte(value));
+        }
+
+        if (item.TmIndex is >= 1 and <= ItemEditorTmCount && item.TmMoveId > 0)
+        {
+            WriteTmMove(item.TmIndex, item.TmMoveId);
+        }
+
+        if (_itemData.IsValueCreated && _itemData.Value is Dictionary<int, ColosseumItem> itemData)
+        {
+            itemData[item.Index] = ReadItem(item.Index);
+        }
+
+        if (_items.IsValueCreated && _items.Value is Dictionary<int, string> items)
+        {
+            items[item.Index] = ReadItem(item.Index).Name;
+        }
+    }
+
     public ColosseumPokemonStats? PokemonStatsFor(int id)
         => _pokemonStats.Value.TryGetValue(id, out var pokemon) ? pokemon : null;
 
     public ColosseumMove MoveById(int id)
         => MoveFor(id);
+
+    public ColosseumItem? ItemById(int id)
+        => _itemData.Value.TryGetValue(NormalizeItemIndex(id), out var item) ? item : null;
 
     public string ItemNameById(int id)
         => NameForItem(id);
@@ -725,6 +806,68 @@ public sealed class ColosseumCommonRel
         }
 
         return items;
+    }
+
+    private IReadOnlyDictionary<int, ColosseumItem> LoadItemData()
+    {
+        var dol = _dol;
+        var itemStart = FirstItemOffset(_region);
+        if (dol is null || itemStart <= 0 || itemStart + ItemSize > dol.Length)
+        {
+            return new Dictionary<int, ColosseumItem>();
+        }
+
+        var items = new Dictionary<int, ColosseumItem>();
+        for (var index = 0; index < ItemCount; index++)
+        {
+            var offset = itemStart + (index * ItemSize);
+            if (offset + ItemSize > dol.Length)
+            {
+                break;
+            }
+
+            items[index] = ReadItem(index);
+        }
+
+        return items;
+    }
+
+    private ColosseumItem ReadItem(int index)
+    {
+        var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
+        var offset = FirstItemOffset(_region) + (index * ItemSize);
+        var nameId = checked((int)dol.ReadUInt32(offset + ItemNameIdOffset));
+        var descriptionId = checked((int)dol.ReadUInt32(offset + ItemDescriptionIdOffset));
+        var bagSlot = dol.ReadByte(offset + ItemBagSlotOffset);
+        var tmIndex = ItemToTmIndex(index);
+        var tmMove = tmIndex > 0
+            ? TmMoveFor(tmIndex)
+            : null;
+        var friendship = new int[ItemFriendshipEffectCount];
+        for (var friendshipIndex = 0; friendshipIndex < friendship.Length; friendshipIndex++)
+        {
+            friendship[friendshipIndex] = dol.ReadByte(offset + ItemFriendshipEffectOffset + friendshipIndex);
+        }
+
+        return new ColosseumItem(
+            index,
+            offset,
+            Strings.StringWithId(nameId),
+            nameId,
+            ItemDescriptionStringWithId(descriptionId),
+            descriptionId,
+            bagSlot,
+            BagSlotName(bagSlot),
+            dol.ReadByte(offset + ItemCantBeHeldOffset) == 0,
+            dol.ReadUInt16(offset + ItemPriceOffset),
+            dol.ReadUInt16(offset + ItemCouponCostOffset),
+            dol.ReadByte(offset + ItemParameterOffset),
+            dol.ReadByte(offset + ItemBattleHoldIdOffset),
+            dol.ReadByte(offset + ItemInBattleUseIdOffset),
+            friendship,
+            tmIndex,
+            tmMove?.MoveId ?? 0,
+            tmMove?.MoveName ?? "-");
     }
 
     private IReadOnlyDictionary<int, string> LoadAbilities()
@@ -942,6 +1085,49 @@ public sealed class ColosseumCommonRel
         return _items.Value.TryGetValue(normalized, out var name) ? name : normalized == 0 ? "-" : $"Item {normalized}";
     }
 
+    private string ItemDescriptionStringWithId(int id)
+    {
+        if (id == 0)
+        {
+            return "-";
+        }
+
+        return _pocketMenuStrings?.StringWithId(id)
+            ?? _dolStrings?.StringWithId(id)
+            ?? $"#{id}";
+    }
+
+    private ColosseumTmMove? TmMoveFor(int tmIndex)
+        => _tmMoves.Value.FirstOrDefault(tm => tm.Index == tmIndex);
+
+    private void WriteTmMove(int tmIndex, int moveId)
+    {
+        var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
+        var start = FirstTmListOffset(_region);
+        if (tmIndex <= 0 || start <= 0)
+        {
+            return;
+        }
+
+        var offset = start + TmMoveOffset + ((tmIndex - 1) * TmEntrySize);
+        if (offset + 2 > dol.Length)
+        {
+            return;
+        }
+
+        dol.WriteUInt16(offset, ClampUInt16(moveId));
+
+        if (_tmMoves.IsValueCreated && _tmMoves.Value is List<ColosseumTmMove> tmMoves)
+        {
+            var listIndex = tmMoves.FindIndex(tm => tm.Index == tmIndex);
+            if (listIndex >= 0)
+            {
+                var move = MoveFor(moveId);
+                tmMoves[listIndex] = new ColosseumTmMove(tmIndex, moveId, move.Name, move.TypeId, move.TypeName);
+            }
+        }
+    }
+
     private string NameForAbility(int id)
         => _abilities.Value.TryGetValue(id, out var name) ? name : $"Ability {id}";
 
@@ -993,6 +1179,26 @@ public sealed class ColosseumCommonRel
 
     private static int NormalizeItemIndex(int index)
         => index > ItemCount && index < 0x250 ? index - 151 : index;
+
+    private static int ItemToTmIndex(int itemIndex)
+    {
+        var tmIndex = itemIndex - FirstTmItemIndex + 1;
+        return tmIndex is >= 1 and <= ItemEditorTmCount ? tmIndex : -1;
+    }
+
+    private static string BagSlotName(int id)
+        => id switch
+        {
+            0 => "None",
+            1 => "Pokeballs",
+            2 => "Items",
+            3 => "Berries",
+            4 => "TMs",
+            5 => "Key Items",
+            6 => "Colognes",
+            7 => "Battle CDs",
+            _ => $"Pocket {id}"
+        };
 
     private static string NatureName(int id)
         => id switch

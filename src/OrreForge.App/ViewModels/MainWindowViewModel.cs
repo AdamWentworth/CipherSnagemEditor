@@ -16,9 +16,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<TrainerEntryViewModel> _allTrainers = [];
     private readonly List<PokemonStatsEntryViewModel> _allPokemonStats = [];
     private readonly List<MoveEntryViewModel> _allMoves = [];
+    private readonly List<ItemEntryViewModel> _allItems = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
     private PokemonStatsEditorResources _pokemonStatsResources = PokemonStatsEditorResources.Empty;
     private MoveEditorResources _moveEditorResources = MoveEditorResources.Empty;
+    private ItemEditorResources _itemEditorResources = ItemEditorResources.Empty;
 
     [ObservableProperty]
     private ToolEntryViewModel? _selectedTool;
@@ -60,6 +62,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private MoveEditorViewModel? _selectedMoveDetail;
 
     [ObservableProperty]
+    private ItemEntryViewModel? _selectedItem;
+
+    [ObservableProperty]
+    private ItemEditorViewModel? _selectedItemDetail;
+
+    [ObservableProperty]
     private string _trainerSearchText = string.Empty;
 
     [ObservableProperty]
@@ -67,6 +75,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _moveSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _itemSearchText = string.Empty;
 
     [ObservableProperty]
     private bool _showIsoExplorer;
@@ -164,6 +175,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<MoveEntryViewModel> MoveEntries { get; } = [];
 
+    public ObservableCollection<ItemEntryViewModel> ItemEntries { get; } = [];
+
     public ObservableCollection<TrainerPokemonSlotViewModel> SelectedTrainerPokemon { get; } = [];
 
     public ColosseumProjectContext? CurrentProject { get; private set; }
@@ -191,17 +204,23 @@ public partial class MainWindowViewModel : ViewModelBase
             _pokemonStatsResources = PokemonStatsEditorResources.Empty;
             _allMoves.Clear();
             _moveEditorResources = MoveEditorResources.Empty;
+            _allItems.Clear();
+            _itemEditorResources = ItemEditorResources.Empty;
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
+            ItemEntries.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
+            ItemSearchText = string.Empty;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
             SelectedPokemonStatsDetail = null;
             SelectedMove = null;
             SelectedMoveDetail = null;
+            SelectedItem = null;
+            SelectedItemDetail = null;
             SelectedTrainerPokemon.Clear();
             PopulateIsoFiles(context);
             RefreshSelectedToolView(SelectedTool);
@@ -220,18 +239,24 @@ public partial class MainWindowViewModel : ViewModelBase
             _pokemonStatsResources = PokemonStatsEditorResources.Empty;
             _allMoves.Clear();
             _moveEditorResources = MoveEditorResources.Empty;
+            _allItems.Clear();
+            _itemEditorResources = ItemEditorResources.Empty;
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
+            ItemEntries.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
+            ItemSearchText = string.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
             SelectedPokemonStatsDetail = null;
             SelectedMove = null;
             SelectedMoveDetail = null;
+            SelectedItem = null;
+            SelectedItemDetail = null;
             SelectedTrainerPokemon.Clear();
             RefreshSelectedToolView(SelectedTool);
             Logs.Add($"Error: {ex.Message}");
@@ -364,6 +389,35 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSaveItem))]
+    private async Task SaveItemAsync()
+    {
+        if (CurrentProject is null || SelectedItemDetail is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var index = SelectedItemDetail.Item.Index;
+        Logs.Add($"Saving item {index}: {SelectedItemDetail.Name}");
+
+        try
+        {
+            var update = SelectedItemDetail.ToUpdate();
+            var path = await Task.Run(() => CurrentProject.SaveItem(update));
+            RefreshSavedItemEntry(index);
+            Logs.Add($"Item saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"Item save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     [RelayCommand]
     private void ReturnHome()
     {
@@ -426,6 +480,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanSaveMove()
         => CurrentProject?.Iso is not null && SelectedMoveDetail is not null && !IsBusy;
 
+    private bool CanSaveItem()
+        => CurrentProject?.Iso is not null && SelectedItemDetail is not null && !IsBusy;
+
     public bool PrepareToolWindow(ToolEntryViewModel tool)
     {
         SelectedTool = tool;
@@ -445,6 +502,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 return true;
             case "Move Editor":
                 LoadMoveRows();
+                return true;
+            case "Item Editor":
+                LoadItemRows();
                 return true;
             default:
                 return true;
@@ -507,6 +567,19 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveMoveCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedItemChanged(ItemEntryViewModel? value)
+    {
+        foreach (var item in _allItems)
+        {
+            item.IsSelected = ReferenceEquals(item, value);
+        }
+
+        SelectedItemDetail = value is null
+            ? null
+            : new ItemEditorViewModel(value.Item, _itemEditorResources, OnItemChanged);
+        SaveItemCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnTrainerSearchTextChanged(string value)
     {
         ApplyTrainerFilter(value);
@@ -522,12 +595,18 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyMoveFilter(value);
     }
 
+    partial void OnItemSearchTextChanged(string value)
+    {
+        ApplyItemFilter(value);
+    }
+
     partial void OnIsBusyChanged(bool value)
     {
         NotifyIsoExplorerCommands();
         SaveTrainerCommand.NotifyCanExecuteChanged();
         SavePokemonStatsCommand.NotifyCanExecuteChanged();
         SaveMoveCommand.NotifyCanExecuteChanged();
+        SaveItemCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSelectedToolView(ToolEntryViewModel? value)
@@ -705,6 +784,46 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void LoadItemRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allItems.Clear();
+            _itemEditorResources = ItemEditorResources.Empty;
+            ItemEntries.Clear();
+            SelectedItem = null;
+            SelectedItemDetail = null;
+            return;
+        }
+
+        if (_allItems.Count > 0)
+        {
+            ApplyItemFilter(ItemSearchText);
+            return;
+        }
+
+        try
+        {
+            var commonRel = CurrentProject.LoadCommonRel();
+            _itemEditorResources = ItemEditorResources.FromCommonRel(commonRel);
+            foreach (var item in commonRel.ItemData)
+            {
+                _allItems.Add(new ItemEntryViewModel(item));
+            }
+
+            ApplyItemFilter(ItemSearchText);
+            SelectedItem = ItemEntries.FirstOrDefault();
+            Logs.Add($"Item Editor loaded: {_allItems.Count} items.");
+        }
+        catch (Exception ex)
+        {
+            SelectedItem = null;
+            SelectedItemDetail = null;
+            SelectedToolDetail = $"Item Editor\n{ex.Message}";
+            Logs.Add($"Item load failed: {ex.Message}");
+        }
+    }
+
     private void ApplyTrainerFilter(string? filterText)
     {
         if (_allTrainers.Count == 0)
@@ -801,6 +920,38 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void ApplyItemFilter(string? filterText)
+    {
+        if (_allItems.Count == 0)
+        {
+            ItemEntries.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allItems
+            : _allItems.Where(item => ItemMatchesFilter(item, filter)).ToList();
+
+        ItemEntries.Clear();
+        foreach (var item in filtered)
+        {
+            ItemEntries.Add(item);
+        }
+
+        if (SelectedItem is null || !ItemEntries.Contains(SelectedItem))
+        {
+            SelectedItem = ItemEntries.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var item in _allItems)
+            {
+                item.IsSelected = ReferenceEquals(item, SelectedItem);
+            }
+        }
+    }
+
     private static bool TrainerMatchesFilter(TrainerEntryViewModel entry, string filter)
     {
         var trainer = entry.Trainer;
@@ -835,6 +986,21 @@ public partial class MainWindowViewModel : ViewModelBase
         var move = entry.Move;
         if (int.TryParse(filter, out var numericFilter)
             && (move.Index == numericFilter || move.EffectId == numericFilter))
+        {
+            return true;
+        }
+
+        return Contains(entry.SearchText, filter);
+    }
+
+    private static bool ItemMatchesFilter(ItemEntryViewModel entry, string filter)
+    {
+        var item = entry.Item;
+        if (int.TryParse(filter, out var numericFilter)
+            && (item.Index == numericFilter
+                || item.TmIndex == numericFilter
+                || item.InBattleUseId == numericFilter
+                || item.HoldItemId == numericFilter))
         {
             return true;
         }
@@ -918,6 +1084,11 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveMoveCommand.NotifyCanExecuteChanged();
     }
 
+    private void OnItemChanged()
+    {
+        SaveItemCommand.NotifyCanExecuteChanged();
+    }
+
     private void RefreshSavedPokemonStatsEntry(int index)
     {
         var updated = CurrentProject?.LoadCommonRel().PokemonStatsFor(index);
@@ -956,6 +1127,26 @@ public partial class MainWindowViewModel : ViewModelBase
 
         ApplyMoveFilter(MoveSearchText);
         SelectedMove = MoveEntries.FirstOrDefault(entry => entry.Move.Index == index) ?? replacement;
+    }
+
+    private void RefreshSavedItemEntry(int index)
+    {
+        var updated = CurrentProject?.LoadCommonRel().ItemById(index);
+        if (updated is null)
+        {
+            SelectedItemDetail?.MarkSaved();
+            return;
+        }
+
+        var replacement = new ItemEntryViewModel(updated);
+        var listIndex = _allItems.FindIndex(entry => entry.Item.Index == index);
+        if (listIndex >= 0)
+        {
+            _allItems[listIndex] = replacement;
+        }
+
+        ApplyItemFilter(ItemSearchText);
+        SelectedItem = ItemEntries.FirstOrDefault(entry => entry.Item.Index == index) ?? replacement;
     }
 
     private void RefreshSelectedIsoFileDetails(IsoFileEntryViewModel? value)

@@ -203,7 +203,12 @@ public sealed class ColosseumProjectContext
 
         var commonRelBytes = commonArchive.Extract(commonRelEntry);
         LoadedFiles["common.rel"] = commonRelBytes;
-        CommonRel = ColosseumCommonRel.Parse(Iso.Region, commonRelBytes, LoadStartDol(), BuildTrainerModelNames());
+        CommonRel = ColosseumCommonRel.Parse(
+            Iso.Region,
+            commonRelBytes,
+            LoadStartDol(),
+            LoadPocketMenuStringTable(),
+            BuildTrainerModelNames());
         return CommonRel;
     }
 
@@ -215,6 +220,9 @@ public sealed class ColosseumProjectContext
 
     public IReadOnlyList<ColosseumMove> LoadMoves()
         => LoadCommonRel().Moves;
+
+    public IReadOnlyList<ColosseumItem> LoadItems()
+        => LoadCommonRel().ItemData;
 
     private IReadOnlyDictionary<int, string> BuildTrainerModelNames()
     {
@@ -345,6 +353,64 @@ public sealed class ColosseumProjectContext
         File.WriteAllBytes(targetPath, bytes);
         LoadedFiles["common.rel"] = bytes;
         return targetPath;
+    }
+
+    public string SaveItem(ColosseumItemUpdate update)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var commonRel = LoadCommonRel();
+        commonRel.WriteItem(update);
+
+        var targetPath = ResolveIsoExtractPath("Start.dol", null);
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? WorkspaceDirectory!);
+        var bytes = commonRel.StartDolToArray();
+        File.WriteAllBytes(targetPath, bytes);
+        LoadedFiles["Start.dol"] = bytes;
+        return targetPath;
+    }
+
+    private GameStringTable? LoadPocketMenuStringTable()
+    {
+        if (Iso is null)
+        {
+            return null;
+        }
+
+        var pocketEntry = Iso.Files.FirstOrDefault(entry =>
+            string.Equals(Path.GetFileName(entry.Name), "pocket_menu.fsys", StringComparison.OrdinalIgnoreCase));
+        if (pocketEntry is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var archive = FsysArchive.Parse(pocketEntry.Name, GameCubeIsoReader.ReadFile(Iso, pocketEntry));
+            var messageEntry = archive.Entries.FirstOrDefault(entry =>
+                string.Equals(entry.Name, "pocket_menu.msg", StringComparison.OrdinalIgnoreCase));
+            if (messageEntry is null)
+            {
+                return null;
+            }
+
+            return GameStringTable.Parse(archive.Extract(messageEntry));
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return null;
+        }
+        catch (EndOfStreamException)
+        {
+            return null;
+        }
     }
 
     public string GetIsoExportDirectory(string fileName)

@@ -202,6 +202,7 @@ public partial class MainWindow : Window
             "Trainer Editor" => new TrainerEditorView(),
             "Pokemon Stats Editor" => new PokemonStatsEditorView(),
             "Move Editor" => new MoveEditorView(),
+            "Item Editor" => new ItemEditorView(),
             "ISO Explorer" => new IsoExplorerView(),
             _ => CreatePlaceholderContent(tool)
         };
@@ -355,6 +356,7 @@ public partial class MainWindow : Window
             "Trainer Editor" => new Size(1420, 760),
             "Pokemon Stats Editor" => new Size(910, 571),
             "Move Editor" => new Size(874, 504),
+            "Item Editor" => new Size(860, 504),
             "ISO Explorer" => new Size(900, 650),
             _ => new Size(620, 320)
         };
