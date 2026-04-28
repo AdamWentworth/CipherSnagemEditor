@@ -113,27 +113,13 @@
                     <Button Classes="TitleBarButton TitleBarClose"
                             chrome:WindowDecorationProperties.ElementRole="CloseButton"
                             Click="MainCloseClick">
-                        <Grid Width="10"
-                              Height="10">
-                            <Border Width="8"
-                                    Height="1"
-                                    Background="#DCDCDC"
-                                    VerticalAlignment="Center"
-                                    RenderTransformOrigin="0.5,0.5">
-                                <Border.RenderTransform>
-                                    <RotateTransform Angle="45"/>
-                                </Border.RenderTransform>
-                            </Border>
-                            <Border Width="8"
-                                    Height="1"
-                                    Background="#DCDCDC"
-                                    VerticalAlignment="Center"
-                                    RenderTransformOrigin="0.5,0.5">
-                                <Border.RenderTransform>
-                                    <RotateTransform Angle="-45"/>
-                                </Border.RenderTransform>
-                            </Border>
-                        </Grid>
+                        <Path Width="10"
+                              Height="10"
+                              Stretch="None"
+                              Stroke="#DCDCDC"
+                              StrokeThickness="1"
+                              StrokeLineCap="Square"
+                              Data="M 2,2 L 8,8 M 8,2 L 2,8"/>
                     </Button>
                 </StackPanel>
             </Grid>

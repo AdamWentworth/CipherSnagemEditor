@@ -330,27 +330,15 @@ public partial class MainWindow : Window
     }
 
     private static Control CreateCloseIcon(IBrush foreground)
-    {
-        var icon = new Grid
+        => new Avalonia.Controls.Shapes.Path
         {
             Width = 10,
-            Height = 10
-        };
-
-        icon.Children.Add(CreateCloseStroke(foreground, 45));
-        icon.Children.Add(CreateCloseStroke(foreground, -45));
-        return icon;
-    }
-
-    private static Border CreateCloseStroke(IBrush foreground, double angle)
-        => new()
-        {
-            Width = 8,
-            Height = 1,
-            Background = foreground,
-            VerticalAlignment = VerticalAlignment.Center,
-            RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
-            RenderTransform = new RotateTransform(angle)
+            Height = 10,
+            Stretch = Stretch.None,
+            Stroke = foreground,
+            StrokeThickness = 1,
+            StrokeLineCap = PenLineCap.Square,
+            Data = Geometry.Parse("M 2,2 L 8,8 M 8,2 L 2,8")
         };
 
     private enum TitleButtonKind
