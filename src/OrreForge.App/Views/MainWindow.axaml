@@ -145,7 +145,7 @@
                                           ClipToBounds="True">
                                         <Border Background="{Binding CurrentFallbackBrush}"/>
                                         <Image Source="{Binding CurrentBackgroundImage}"
-                                               Stretch="Fill"/>
+                                               Stretch="UniformToFill"/>
                                         <TextBlock Text="{Binding Title}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
