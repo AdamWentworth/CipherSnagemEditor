@@ -85,6 +85,29 @@
             <Setter Property="Foreground" Value="#E6E6E6"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <Style Selector="TextBox.LegacyMoveSearch">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="4,4"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#5C5C5C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="PlaceholderForeground" Value="#A8A8A8"/>
+        </Style>
+        <Style Selector="TextBox.LegacyMoveSearch:pointerover">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+        <Style Selector="TextBox.LegacyMoveSearch:focus">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="200,674"
@@ -94,19 +117,10 @@
         <Border Grid.Column="0"
                 Background="#222222">
             <Grid RowDefinitions="Auto,*">
-                <TextBox Text="{Binding MoveSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox Classes="LegacyMoveSearch"
+                         Text="{Binding MoveSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          PlaceholderText="Search"
-                         PlaceholderForeground="#A8A8A8"
-                         Height="28"
-                         Margin="4,4"
-                         Padding="8,3"
-                         FontSize="12"
-                         Background="#333333"
-                         Foreground="#FFFFFF"
-                         CaretBrush="#FFFFFF"
-                         SelectionBrush="#80ACFF"
-                         BorderBrush="#5C5C5C"
-                         BorderThickness="1"/>
+                         IsTabStop="False"/>
                 <ScrollViewer Grid.Row="1"
                               VerticalScrollBarVisibility="Visible">
                     <ItemsControl ItemsSource="{Binding MoveEntries}">

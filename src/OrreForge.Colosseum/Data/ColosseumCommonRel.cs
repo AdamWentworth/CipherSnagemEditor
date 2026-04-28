@@ -134,6 +134,7 @@ public sealed class ColosseumCommonRel
 
     private readonly BinaryData _data;
     private readonly BinaryData? _dol;
+    private readonly GameStringTable? _dolStrings;
     private readonly GameCubeRegion _region;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumTrainerClass>> _trainerClasses;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumPokemonStats>> _pokemonStats;
@@ -155,6 +156,7 @@ public sealed class ColosseumCommonRel
         _region = region;
         _data = new BinaryData(bytes);
         _dol = startDolBytes is null ? null : new BinaryData(startDolBytes);
+        _dolStrings = startDolBytes is null ? null : LoadDolStringTable(region, startDolBytes);
         RelocationTable = table;
         Strings = strings;
         _trainerModelNames = trainerModelNames ?? new Dictionary<int, string>();
@@ -644,7 +646,7 @@ public sealed class ColosseumCommonRel
             offset,
             Strings.StringWithId(nameId),
             nameId,
-            descriptionId == 0 ? "-" : $"String {descriptionId}",
+            DescriptionStringWithId(descriptionId),
             descriptionId,
             typeId,
             TypeName(typeId),
@@ -1321,6 +1323,49 @@ public sealed class ColosseumCommonRel
         var nameId = checked((int)_data.ReadUInt32(offset + PokemonStatsNameIdOffset));
         return Strings.StringWithId(nameId);
     }
+
+    private string DescriptionStringWithId(int id)
+    {
+        if (id == 0)
+        {
+            return "-";
+        }
+
+        return _dolStrings?.StringWithId(id) ?? $"String {id}";
+    }
+
+    private static GameStringTable? LoadDolStringTable(GameCubeRegion region, byte[] startDolBytes)
+    {
+        var start = DolStringTableOffset(region);
+        var size = DolStringTableSize(region);
+        if (start < 0 || size <= 0 || start >= startDolBytes.Length)
+        {
+            return null;
+        }
+
+        var safeSize = Math.Min(size, startDolBytes.Length - start);
+        var tableBytes = new byte[safeSize];
+        Array.Copy(startDolBytes, start, tableBytes, 0, safeSize);
+        return GameStringTable.Parse(tableBytes);
+    }
+
+    private static int DolStringTableOffset(GameCubeRegion region)
+        => region switch
+        {
+            GameCubeRegion.Japan => 0x2bece0,
+            GameCubeRegion.UnitedStates => 0x2cc810,
+            GameCubeRegion.Europe => 0x2c1b20,
+            _ => -1
+        };
+
+    private static int DolStringTableSize(GameCubeRegion region)
+        => region switch
+        {
+            GameCubeRegion.Japan => 0x0d850,
+            GameCubeRegion.UnitedStates => 0x124e0,
+            GameCubeRegion.Europe => 0x124e0,
+            _ => 0
+        };
 
     private int PointerFor(ColosseumCommonIndex index)
         => RelocationTable.GetPointer(ColosseumCommonIndexes.IndexFor(index, _region));

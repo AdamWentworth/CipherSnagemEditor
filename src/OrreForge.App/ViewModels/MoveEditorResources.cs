@@ -58,7 +58,7 @@ public sealed class MoveEditorResources
     {
         var moves = commonRel.Moves;
         var typeOptions = commonRel.Types
-            .Select(type => new PickerOptionViewModel(type.Index, type.Name))
+            .Select(type => new PickerOptionViewModel(type.Index, $"{type.Name.ToUpperInvariant()} ({type.Index})"))
             .ToArray();
 
         var maxEffect = Math.Max(0, moves.Count == 0 ? 0 : moves.Max(move => move.EffectId));
@@ -68,19 +68,19 @@ public sealed class MoveEditorResources
             typeOptions,
             BuildCategoryOptions(),
             BuildTargetOptions(),
-            BuildJsonBackedOptions("Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}"),
-            BuildJsonBackedOptions("Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}"),
+            BuildJsonBackedOptions("Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}", appendIndex: true),
+            BuildJsonBackedOptions("Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}", appendIndex: true),
             BuildEffectTypeOptions());
     }
 
     public PickerOptionViewModel TypeOption(int value)
-        => OptionFor(_typeOptionsByValue, value, $"Type {value}");
+        => OptionFor(_typeOptionsByValue, value, $"TYPE ({value})");
 
     public PickerOptionViewModel CategoryOption(int value)
-        => OptionFor(_categoryOptionsByValue, value, $"Category {value}");
+        => OptionFor(_categoryOptionsByValue, value, $"Category ({value})");
 
     public PickerOptionViewModel TargetOption(int value)
-        => OptionFor(_targetOptionsByValue, value, $"Target {value}");
+        => OptionFor(_targetOptionsByValue, value, $"Target ({value})");
 
     public PickerOptionViewModel AnimationOption(int value)
         => OptionFor(_animationOptionsByValue, value, value == 0 ? "-" : $"Animation {value}");
@@ -102,16 +102,20 @@ public sealed class MoveEditorResources
     private static IReadOnlyList<PickerOptionViewModel> BuildJsonBackedOptions(
         string fileName,
         int minimumMaximumIndex,
-        Func<int, string> fallbackName)
+        Func<int, string> fallbackName,
+        bool appendIndex)
     {
         var labels = LoadJsonLabels(fileName);
         var count = Math.Max(minimumMaximumIndex + 1, labels.Count);
         var options = new PickerOptionViewModel[count];
         for (var index = 0; index < count; index++)
         {
-            var label = index < labels.Count && !string.IsNullOrWhiteSpace(labels[index])
+            var baseLabel = index < labels.Count && !string.IsNullOrWhiteSpace(labels[index])
                 ? labels[index]
                 : fallbackName(index);
+            var label = appendIndex && index > 0 && !EndsWithNumericSuffix(baseLabel, index)
+                ? $"{baseLabel} {index}"
+                : baseLabel;
             options[index] = new PickerOptionViewModel(index, label);
         }
 
@@ -144,43 +148,47 @@ public sealed class MoveEditorResources
     private static IReadOnlyList<PickerOptionViewModel> BuildCategoryOptions()
         =>
         [
-            new(0, "Neither"),
-            new(1, "Physical"),
-            new(2, "Special")
+            new(0, "Neither (0)"),
+            new(1, "Physical (1)"),
+            new(2, "Special (2)")
         ];
 
     private static IReadOnlyList<PickerOptionViewModel> BuildTargetOptions()
         =>
         [
-            new(0, "Selected Target"),
-            new(1, "Depends On Move"),
-            new(2, "All Pokemon"),
-            new(3, "Random"),
-            new(4, "Both Foes"),
-            new(5, "User"),
-            new(6, "Both Foes and Ally"),
-            new(7, "Opponent's Feet")
+            new(0, "Selected Target (0)"),
+            new(1, "Depends On Move (1)"),
+            new(2, "All Pokemon (2)"),
+            new(3, "Random (3)"),
+            new(4, "Both Foes (4)"),
+            new(5, "User (5)"),
+            new(6, "Both Foes and Ally (6)"),
+            new(7, "Opponent's Feet (7)")
         ];
 
     private static IReadOnlyList<PickerOptionViewModel> BuildEffectTypeOptions()
         =>
         [
-            new(0x00, "None"),
-            new(0x01, "Attack"),
-            new(0x02, "Healing"),
-            new(0x03, "Stat Nerf"),
-            new(0x04, "Stat Buff"),
-            new(0x05, "Status Effect"),
-            new(0x06, "Field Effect"),
-            new(0x07, "Affects Incoming Move"),
-            new(0x08, "OHKO"),
-            new(0x09, "Multi-Turn"),
-            new(0x0a, "Misc"),
-            new(0x0b, "Misc2"),
-            new(0x0c, "Misc3"),
-            new(0x0d, "Misc4"),
-            new(0x0e, "Unknown")
+            new(0x00, "None (0)"),
+            new(0x01, "Attack (1)"),
+            new(0x02, "Healing (2)"),
+            new(0x03, "Stat Nerf (3)"),
+            new(0x04, "Stat Buff (4)"),
+            new(0x05, "Status Effect (5)"),
+            new(0x06, "Field Effect (6)"),
+            new(0x07, "Affects Incoming Move (7)"),
+            new(0x08, "OHKO (8)"),
+            new(0x09, "Multi-Turn (9)"),
+            new(0x0a, "Misc (10)"),
+            new(0x0b, "Misc2 (11)"),
+            new(0x0c, "Misc3 (12)"),
+            new(0x0d, "Misc4 (13)"),
+            new(0x0e, "Unknown (14)")
         ];
+
+    private static bool EndsWithNumericSuffix(string label, int index)
+        => label.EndsWith($" {index}", StringComparison.Ordinal)
+            || label.EndsWith($"({index})", StringComparison.Ordinal);
 
     private static IEnumerable<string> CandidateAssetRoots()
     {

@@ -65,9 +65,9 @@ public sealed partial class MoveEditorViewModel : ObservableObject
 
     public string IndexText => Move.Index.ToString();
 
-    public string HexText => $"0x{Move.Index:x}";
+    public string HexText => $"0x{Move.Index:X}";
 
-    public string StartOffsetText => $"0x{Move.StartOffset:x}";
+    public string StartOffsetText => $"0x{Move.StartOffset:X}";
 
     public string Animation2Text => $"Anim 2: {Animation2Id}";
 
