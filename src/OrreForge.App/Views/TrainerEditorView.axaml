@@ -32,6 +32,9 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <Style Selector="ComboBox.LegacyPokemonField /template/ PathIcon#DropDownGlyph">
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
         <Style Selector="TextBox.LegacyPokemonField">
             <Setter Property="MinHeight" Value="0"/>
             <Setter Property="Height" Value="17"/>
