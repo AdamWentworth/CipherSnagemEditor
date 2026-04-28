@@ -24,10 +24,10 @@ public sealed partial class TypeEditorViewModel : ObservableObject
         ];
         EffectivenessOptions =
         [
-            new PickerOptionViewModel(0x41, "Super Effective"),
-            new PickerOptionViewModel(0x3f, "Neutral"),
-            new PickerOptionViewModel(0x42, "Not Very Effective"),
-            new PickerOptionViewModel(0x43, "No Effect")
+            new PickerOptionViewModel(0x41, "Super Effective (65)"),
+            new PickerOptionViewModel(0x3f, "Neutral (63)"),
+            new PickerOptionViewModel(0x42, "Not Very Effective (66)"),
+            new PickerOptionViewModel(0x43, "No Effect (67)")
         ];
 
         _nameId = type.NameId;
@@ -66,6 +66,42 @@ public sealed partial class TypeEditorViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasChanges;
 
+    public bool IsPhysicalCategory
+    {
+        get => SelectedCategory?.Value == 1;
+        set
+        {
+            if (value)
+            {
+                SelectCategory(1);
+            }
+        }
+    }
+
+    public bool IsSpecialCategory
+    {
+        get => SelectedCategory?.Value == 2;
+        set
+        {
+            if (value)
+            {
+                SelectCategory(2);
+            }
+        }
+    }
+
+    public bool IsNeitherCategory
+    {
+        get => SelectedCategory?.Value == 0;
+        set
+        {
+            if (value)
+            {
+                SelectCategory(0);
+            }
+        }
+    }
+
     public ColosseumTypeUpdate ToUpdate()
         => new(
             Type.Index,
@@ -80,7 +116,23 @@ public sealed partial class TypeEditorViewModel : ObservableObject
 
     partial void OnNameIdChanged(int value) => MarkChanged();
 
-    partial void OnSelectedCategoryChanged(PickerOptionViewModel? value) => MarkChanged();
+    partial void OnSelectedCategoryChanged(PickerOptionViewModel? value)
+    {
+        OnPropertyChanged(nameof(IsPhysicalCategory));
+        OnPropertyChanged(nameof(IsSpecialCategory));
+        OnPropertyChanged(nameof(IsNeitherCategory));
+        MarkChanged();
+    }
+
+    private void SelectCategory(int value)
+    {
+        if (SelectedCategory?.Value == value)
+        {
+            return;
+        }
+
+        SelectedCategory = CategoryOptions.First(option => option.Value == value);
+    }
 
     private void MarkChanged()
     {
