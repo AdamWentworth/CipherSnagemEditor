@@ -40,8 +40,23 @@
             <Setter Property="BorderBrush" Value="#666666"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyMoveField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+        <Style Selector="TextBox.LegacyMoveField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#7D7D7D"/>
         </Style>
         <Style Selector="TextBox.LegacyMoveReadout">
             <Setter Property="MinWidth" Value="0"/>
@@ -52,8 +67,21 @@
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Background" Value="#303030"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyMoveReadout:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="TextBox.LegacyMoveReadout:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
         </Style>
         <Style Selector="ComboBox.LegacyMoveCombo">
             <Setter Property="MinHeight" Value="0"/>
@@ -143,11 +171,14 @@
         <Style Selector="TextBox.LegacyMoveSearch:pointerover">
             <Setter Property="Background" Value="#333333"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
             <Setter Property="BorderBrush" Value="#666666"/>
         </Style>
         <Style Selector="TextBox.LegacyMoveSearch:focus">
             <Setter Property="Background" Value="#333333"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="BorderBrush" Value="#777777"/>
         </Style>
     </UserControl.Styles>

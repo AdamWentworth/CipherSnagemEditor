@@ -41,9 +41,24 @@
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Background" Value="#666666"/>
             <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyPokemonField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+        </Style>
+        <Style Selector="TextBox.LegacyPokemonField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#8A8A8A"/>
         </Style>
         <Style Selector="ComboBox.LegacyHeaderField">
             <Setter Property="Height" Value="22"/>
@@ -64,8 +79,23 @@
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Background" Value="#B895FF"/>
             <Setter Property="BorderBrush" Value="#C7AEFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyHeaderField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#B895FF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#D4C1FF"/>
+        </Style>
+        <Style Selector="TextBox.LegacyHeaderField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#B895FF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#E1D2FF"/>
         </Style>
         <Style Selector="Border.LegacyHeaderField">
             <Setter Property="Height" Value="22"/>
@@ -83,6 +113,19 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
+        <Style Selector="TextBox.LegacyTrainerSearch:pointerover">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTrainerSearch:focus">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="246,*">
@@ -91,7 +134,8 @@
                 BorderBrush="#111111"
                 BorderThickness="0,0,1,0">
             <Grid RowDefinitions="Auto,*">
-                <TextBox Text="{Binding TrainerSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox Classes="LegacyTrainerSearch"
+                         Text="{Binding TrainerSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          PlaceholderText="Search"
                          PlaceholderForeground="#D8D8D8"
                          Height="28"
