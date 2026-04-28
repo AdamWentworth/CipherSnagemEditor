@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using OrreForge.Colosseum.Data;
 
 namespace OrreForge.App.ViewModels;
@@ -134,7 +135,15 @@ public sealed class MoveEditorResources
 
             try
             {
-                return JsonSerializer.Deserialize<string[]>(File.ReadAllText(path)) ?? [];
+                var text = File.ReadAllText(path);
+                try
+                {
+                    return JsonSerializer.Deserialize<string[]>(text) ?? [];
+                }
+                catch (JsonException)
+                {
+                    return ExtractQuotedLabels(text);
+                }
             }
             catch
             {
@@ -144,6 +153,21 @@ public sealed class MoveEditorResources
 
         return [];
     }
+
+    private static IReadOnlyList<string> ExtractQuotedLabels(string text)
+        => Regex.Matches(text, "\"(?:\\\\.|[^\"])*\"")
+            .Select(match =>
+            {
+                try
+                {
+                    return JsonSerializer.Deserialize<string>(match.Value) ?? string.Empty;
+                }
+                catch (JsonException)
+                {
+                    return match.Value.Trim('"');
+                }
+            })
+            .ToArray();
 
     private static IReadOnlyList<PickerOptionViewModel> BuildCategoryOptions()
         =>
