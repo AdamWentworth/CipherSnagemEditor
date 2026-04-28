@@ -2,6 +2,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using OrreForge.Colosseum.Data;
+using OrreForge.App.Services;
 
 namespace OrreForge.App.ViewModels;
 
@@ -21,7 +22,7 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     private static readonly IBrush EmptyImageBrush = SolidColorBrush.Parse("#777777");
     private static readonly IBrush LightTextBrush = SolidColorBrush.Parse("#FFFFFF");
     private static readonly IBrush MutedTextBrush = SolidColorBrush.Parse("#D0D0D0");
-    private static readonly Dictionary<int, Bitmap?> BodyImageCache = [];
+    private static readonly Dictionary<int, IReadOnlyList<PokemonBodyFrame>> BodyFrameCache = [];
     private static readonly IReadOnlyList<int> LevelValues = Enumerable.Range(0, 101).ToArray();
     private readonly TrainerPokemonEditorResources _resources;
     private readonly Action? _changed;
@@ -61,7 +62,8 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
         _shadowCatchRate = pokemon.ShadowData?.CatchRate ?? 0;
 
         RefreshAbilityOptions(pokemon.Ability);
-        BodyImage = LoadBodyImage(SpeciesId);
+        BodyFrames = LoadBodyFrames(SpeciesId);
+        BodyImage = BodyFrames.FirstOrDefault()?.Image;
         _isInitializing = false;
     }
 
@@ -121,6 +123,9 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
 
     [ObservableProperty]
     private Bitmap? _bodyImage;
+
+    [ObservableProperty]
+    private IReadOnlyList<PokemonBodyFrame> _bodyFrames = [];
 
     [ObservableProperty]
     private int _level;
@@ -231,7 +236,8 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
 
     partial void OnSelectedSpeciesChanged(PickerOptionViewModel? value)
     {
-        BodyImage = LoadBodyImage(SpeciesId);
+        BodyFrames = LoadBodyFrames(SpeciesId);
+        BodyImage = BodyFrames.FirstOrDefault()?.Image;
         RefreshAbilityOptions(SelectedAbility?.Value ?? Pokemon.Ability);
         NotifyDerivedState();
         MarkChanged();
@@ -366,9 +372,9 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
             : $"{move.Name} ({move.Index}) {move.TypeName} {move.Power}/{move.Accuracy}/{move.Pp}";
     }
 
-    private static Bitmap? LoadBodyImage(int speciesId)
+    private static IReadOnlyList<PokemonBodyFrame> LoadBodyFrames(int speciesId)
     {
-        if (BodyImageCache.TryGetValue(speciesId, out var cached))
+        if (BodyFrameCache.TryGetValue(speciesId, out var cached))
         {
             return cached;
         }
@@ -376,25 +382,21 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
         var path = ResolveBodyImagePath(speciesId);
         if (path is null)
         {
-            BodyImageCache[speciesId] = null;
-            return null;
+            BodyFrameCache[speciesId] = [];
+            return [];
         }
 
         try
         {
-            var image = new Bitmap(path);
-            BodyImageCache[speciesId] = image;
-            return image;
+            var frames = ApngImageLoader.Load(path);
+            BodyFrameCache[speciesId] = frames;
+            return frames;
         }
-        catch (IOException)
+        catch (Exception) when (File.Exists(path))
         {
-            BodyImageCache[speciesId] = null;
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            BodyImageCache[speciesId] = null;
-            return null;
+            var fallback = new[] { new PokemonBodyFrame(new Bitmap(path), TimeSpan.FromMilliseconds(100)) };
+            BodyFrameCache[speciesId] = fallback;
+            return fallback;
         }
     }
 

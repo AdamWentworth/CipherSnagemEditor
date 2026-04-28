@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using OrreForge.App.Services;
 using OrreForge.App.ViewModels;
 
 namespace OrreForge.App.Views;
@@ -11,13 +12,13 @@ namespace OrreForge.App.Views;
 public partial class TrainerEditorView : UserControl
 {
     private readonly DispatcherTimer _spriteTimer;
-    private double _spritePhase;
+    private TimeSpan _spriteClock = TimeSpan.Zero;
 
     public TrainerEditorView()
     {
         InitializeComponent();
 
-        _spriteTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(70) };
+        _spriteTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
         _spriteTimer.Tick += AnimatePokemonBodies;
         AttachedToVisualTree += (_, _) => _spriteTimer.Start();
         DetachedFromVisualTree += (_, _) => _spriteTimer.Stop();
@@ -35,23 +36,44 @@ public partial class TrainerEditorView : UserControl
 
     private void AnimatePokemonBodies(object? sender, EventArgs e)
     {
-        _spritePhase = (_spritePhase + 0.18) % (Math.PI * 2);
-        var offset = -1.5 + Math.Sin(_spritePhase) * 1.5;
-        var scale = 1.0 + ((Math.Sin(_spritePhase + 0.9) + 1.0) * 0.007);
+        _spriteClock += _spriteTimer.Interval;
 
         foreach (var image in this.GetVisualDescendants().OfType<Image>())
         {
-            if (!image.Classes.Contains("PokemonBodyImage") || !image.IsVisible || image.Source is null)
+            if (!image.Classes.Contains("PokemonBodyImage") || !image.IsVisible)
             {
                 continue;
             }
 
-            var transforms = new TransformGroup();
-            transforms.Children.Add(new ScaleTransform(scale, scale));
-            transforms.Children.Add(new TranslateTransform(0, offset));
+            if (image.DataContext is not TrainerPokemonSlotViewModel slot || slot.BodyFrames.Count == 0)
+            {
+                continue;
+            }
 
-            image.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
-            image.RenderTransform = transforms;
+            image.Source = SelectFrame(slot.BodyFrames, _spriteClock);
+            image.RenderTransform = null;
         }
+    }
+
+    private static IImage SelectFrame(IReadOnlyList<PokemonBodyFrame> frames, TimeSpan clock)
+    {
+        if (frames.Count == 1)
+        {
+            return frames[0].Image;
+        }
+
+        var totalMilliseconds = frames.Sum(frame => Math.Max(1, frame.Duration.TotalMilliseconds));
+        var position = clock.TotalMilliseconds % totalMilliseconds;
+
+        foreach (var frame in frames)
+        {
+            position -= Math.Max(1, frame.Duration.TotalMilliseconds);
+            if (position <= 0)
+            {
+                return frame.Image;
+            }
+        }
+
+        return frames[^1].Image;
     }
 }
