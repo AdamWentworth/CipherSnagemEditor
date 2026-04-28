@@ -401,7 +401,7 @@ public partial class MainWindow : Window
             "Interaction Editor" => new Size(530, 449),
             "Vertex Filters" => new Size(580, 690),
             "Table Editor" => new Size(560, 590),
-            "ISO Explorer" => new Size(900, 650),
+            "ISO Explorer" => new Size(570, 424),
             _ => new Size(620, 320)
         };
 

@@ -7,6 +7,7 @@ namespace OrreForge.Core.Archives;
 public sealed class FsysArchive
 {
     public const uint Magic = 0x46535953;
+    private const int GroupIdOffset = 0x08;
     private const int NumberOfEntriesOffset = 0x0c;
     private const int UsesFileExtensionsOffset = 0x13;
     private const int FirstFileDetailsPointerOffset = 0x60;
@@ -19,14 +20,17 @@ public sealed class FsysArchive
 
     private readonly BinaryData _data;
 
-    private FsysArchive(string? path, BinaryData data, IReadOnlyList<FsysEntry> entries)
+    private FsysArchive(string? path, BinaryData data, uint groupId, IReadOnlyList<FsysEntry> entries)
     {
         Path = path;
         _data = data;
+        GroupId = groupId;
         Entries = entries;
     }
 
     public string? Path { get; }
+
+    public uint GroupId { get; }
 
     public IReadOnlyList<FsysEntry> Entries { get; }
 
@@ -42,6 +46,7 @@ public sealed class FsysArchive
             throw new InvalidDataException("File is not an FSYS archive.");
         }
 
+        var groupId = data.ReadUInt32(GroupIdOffset);
         var count = checked((int)data.ReadUInt32(NumberOfEntriesOffset));
         var usesFileExtensions = data.ReadByte(UsesFileExtensionsOffset) == 1;
         var entries = new List<FsysEntry>(count);
@@ -71,7 +76,7 @@ public sealed class FsysArchive
                 isCompressed));
         }
 
-        return new FsysArchive(path, data, entries);
+        return new FsysArchive(path, data, groupId, entries);
     }
 
     public byte[] Extract(FsysEntry entry)

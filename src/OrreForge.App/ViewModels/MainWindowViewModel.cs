@@ -13,6 +13,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private static readonly IBrush TrainerNormalBrush = SolidColorBrush.Parse("#FC6848");
     private static readonly IBrush TrainerShadowBrush = SolidColorBrush.Parse("#A77AF4");
+    private readonly List<IsoFileEntryViewModel> _allIsoFiles = [];
     private readonly List<TrainerEntryViewModel> _allTrainers = [];
     private readonly List<PokemonStatsEntryViewModel> _allPokemonStats = [];
     private readonly List<MoveEntryViewModel> _allMoves = [];
@@ -141,6 +142,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _messageSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _isoSearchText = string.Empty;
 
     [ObservableProperty]
     private string _tableEditorSearchText = string.Empty;
@@ -284,6 +288,7 @@ public partial class MainWindowViewModel : ViewModelBase
             HasProject = true;
             ProjectTitle = BuildProjectTitle(context);
             WorkspaceStatus = BuildWorkspaceStatus(context);
+            _allIsoFiles.Clear();
             _allTrainers.Clear();
             _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
             _allPokemonStats.Clear();
@@ -320,6 +325,7 @@ public partial class MainWindowViewModel : ViewModelBase
             TypeSearchText = string.Empty;
             TreasureSearchText = string.Empty;
             MessageSearchText = string.Empty;
+            IsoSearchText = string.Empty;
             TableEditorSearchText = string.Empty;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
@@ -352,6 +358,7 @@ public partial class MainWindowViewModel : ViewModelBase
             CurrentProject = null;
             ProjectTitle = "Open failed";
             WorkspaceStatus = ex.Message;
+            _allIsoFiles.Clear();
             IsoFiles.Clear();
             _allTrainers.Clear();
             _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
@@ -389,6 +396,7 @@ public partial class MainWindowViewModel : ViewModelBase
             TypeSearchText = string.Empty;
             TreasureSearchText = string.Empty;
             MessageSearchText = string.Empty;
+            IsoSearchText = string.Empty;
             TableEditorSearchText = string.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
@@ -451,6 +459,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         IsoExplorerStatus = "Encode is not implemented yet.";
         Logs.Add("Encode is not implemented yet.");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
+    private void DeleteSelectedIsoFile()
+    {
+        IsoExplorerStatus = "Delete is not implemented yet.";
+        Logs.Add("Delete is not implemented yet.");
     }
 
     [RelayCommand(CanExecute = nameof(CanSaveTrainer))]
@@ -898,7 +913,7 @@ public partial class MainWindowViewModel : ViewModelBase
         IsoExplorerStatus = value is null
             ? "Select an ISO file to inspect or export."
             : $"{value.Name} - {value.SizeText} at {value.OffsetHex}";
-        foreach (var file in IsoFiles)
+        foreach (var file in _allIsoFiles)
         {
             file.IsSelected = ReferenceEquals(file, value);
         }
@@ -1090,6 +1105,11 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyMessageFilter(value);
     }
 
+    partial void OnIsoSearchTextChanged(string value)
+    {
+        ApplyIsoFileFilter(value);
+    }
+
     partial void OnTableEditorSearchTextChanged(string value)
     {
         ApplyTableEditorFilter(value);
@@ -1153,6 +1173,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void PopulateIsoFiles(ColosseumProjectContext context)
     {
+        _allIsoFiles.Clear();
         IsoFiles.Clear();
         if (context.Iso is null)
         {
@@ -1162,10 +1183,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         foreach (var entry in context.Iso.Files.OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase))
         {
-            IsoFiles.Add(new IsoFileEntryViewModel(entry));
+            _allIsoFiles.Add(new IsoFileEntryViewModel(entry));
         }
 
-        SelectedIsoFile = IsoFiles.FirstOrDefault();
+        ApplyIsoFileFilter(IsoSearchText);
+        SelectedIsoFile = IsoFiles.FirstOrDefault(file =>
+                string.Equals(Path.GetFileName(file.Name), "Start.dol", StringComparison.OrdinalIgnoreCase))
+            ?? IsoFiles.FirstOrDefault();
         NotifyIsoExplorerCommands();
     }
 
@@ -1603,6 +1627,42 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var trainer in _allTrainers)
             {
                 trainer.IsSelected = ReferenceEquals(trainer, SelectedTrainer);
+            }
+        }
+    }
+
+    private void ApplyIsoFileFilter(string? filterText)
+    {
+        if (_allIsoFiles.Count == 0)
+        {
+            IsoFiles.Clear();
+            return;
+        }
+
+        var filters = (filterText ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(SimplifySearchText)
+            .Where(filter => filter.Length > 0)
+            .ToArray();
+        var filtered = filters.Length == 0
+            ? _allIsoFiles
+            : _allIsoFiles.Where(file => filters.Any(filter => Contains(file.Name, filter))).ToList();
+
+        IsoFiles.Clear();
+        foreach (var file in filtered)
+        {
+            IsoFiles.Add(file);
+        }
+
+        if (SelectedIsoFile is null || !IsoFiles.Contains(SelectedIsoFile))
+        {
+            SelectedIsoFile = IsoFiles.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var file in _allIsoFiles)
+            {
+                file.IsSelected = ReferenceEquals(file, SelectedIsoFile);
             }
         }
     }
@@ -2430,13 +2490,16 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        SelectedIsoFileName = value.FileNameText;
         SelectedIsoFileSize = value.FileSizeText;
-        IsoExplorerFilesText = BuildIsoFileDetails(value);
+        IsoExplorerFilesText = BuildIsoFileDetails(value, out var groupId);
+        SelectedIsoFileName = groupId is null
+            ? value.FileNameText
+            : $"{value.FileNameText} GID: {groupId.Value}";
     }
 
-    private string BuildIsoFileDetails(IsoFileEntryViewModel value)
+    private string BuildIsoFileDetails(IsoFileEntryViewModel value, out uint? groupId)
     {
+        groupId = null;
         if (CurrentProject is null)
         {
             return "-";
@@ -2450,10 +2513,11 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var archive = CurrentProject.ReadIsoFsysArchive(value.Entry);
+            groupId = archive.GroupId;
 
             return archive.Entries.Count == 0
                 ? "No files found in archive."
-                : string.Join(Environment.NewLine, archive.Entries.Select(entry =>
+                : Environment.NewLine + string.Join(Environment.NewLine, archive.Entries.Select(entry =>
                     $"{entry.Index}: {entry.Name} ({entry.Identifier:x8})"));
         }
         catch (Exception ex)
@@ -2469,6 +2533,7 @@ public partial class MainWindowViewModel : ViewModelBase
         DecodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
         ImportSelectedIsoFileCommand.NotifyCanExecuteChanged();
         EncodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        DeleteSelectedIsoFileCommand.NotifyCanExecuteChanged();
     }
 
     private static string BuildIsoExportStatus(string fileName, IsoExportResult result)
