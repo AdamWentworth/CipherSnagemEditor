@@ -22,6 +22,7 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     private static readonly IBrush LightTextBrush = SolidColorBrush.Parse("#FFFFFF");
     private static readonly IBrush MutedTextBrush = SolidColorBrush.Parse("#D0D0D0");
     private static readonly Dictionary<int, Bitmap?> BodyImageCache = [];
+    private static readonly IReadOnlyList<int> LevelValues = Enumerable.Range(0, 101).ToArray();
     private readonly TrainerPokemonEditorResources _resources;
     private readonly Action? _changed;
     private bool _isInitializing = true;
@@ -79,6 +80,8 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     public IReadOnlyList<PickerOptionViewModel> GenderOptions => _resources.GenderOptions;
 
     public IReadOnlyList<PickerOptionViewModel> ShadowOptions => _resources.ShadowOptions;
+
+    public IReadOnlyList<int> LevelOptions => LevelValues;
 
     [ObservableProperty]
     private PickerOptionViewModel? _selectedSpecies;
@@ -168,6 +171,8 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     public bool IsShadow => ShadowId > 0;
 
     public bool ShowShadowFields => IsSet && IsShadow;
+
+    public bool ShowShadowPicker => IsSet;
 
     public string DeckIndexText => $"PKM {Pokemon.Index}";
 
@@ -325,6 +330,7 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(IsShadow));
         OnPropertyChanged(nameof(ShowShadowFields));
+        OnPropertyChanged(nameof(ShowShadowPicker));
         OnPropertyChanged(nameof(Opacity));
         OnPropertyChanged(nameof(BackgroundBrush));
         OnPropertyChanged(nameof(FieldBackgroundBrush));

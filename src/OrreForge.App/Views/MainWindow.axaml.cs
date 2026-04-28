@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Chrome;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -177,7 +178,7 @@ public partial class MainWindow : Window
             MinHeight = Math.Min(size.Height, 560),
             FontFamily = FontFamily,
             Background = SolidColorBrush.Parse("#F0F0FC"),
-            WindowDecorations = Avalonia.Controls.WindowDecorations.None,
+            WindowDecorations = Avalonia.Controls.WindowDecorations.BorderOnly,
             DataContext = viewModel
         };
         window.Content = CreateToolWindowShell(window, tool.Title, content);
@@ -217,6 +218,7 @@ public partial class MainWindow : Window
             Background = SolidColorBrush.Parse("#3A3A3A"),
             Height = 24
         };
+        WindowDecorationProperties.SetElementRole(titleBar, WindowDecorationsElementRole.TitleBar);
         titleBar.PointerPressed += (_, e) =>
         {
             if (e.Source is Button)
@@ -274,9 +276,15 @@ public partial class MainWindow : Window
 
     private static Button CreateTitleButton(string text, bool isClose, Action action)
     {
+        var normalizedText = isClose ? "X" : text == "-" ? "-" : "[]";
+        var role = isClose
+            ? WindowDecorationsElementRole.CloseButton
+            : normalizedText == "-"
+                ? WindowDecorationsElementRole.MinimizeButton
+                : WindowDecorationsElementRole.MaximizeButton;
         var button = new Button
         {
-            Content = text,
+            Content = normalizedText,
             Width = 46,
             Height = 24,
             MinHeight = 0,
@@ -289,6 +297,7 @@ public partial class MainWindow : Window
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center
         };
+        WindowDecorationProperties.SetElementRole(button, role);
         button.PointerEntered += (_, _) => button.Background = SolidColorBrush.Parse(isClose ? "#E81123" : "#505050");
         button.PointerExited += (_, _) => button.Background = SolidColorBrush.Parse("#3A3A3A");
         button.Click += (_, _) => action();

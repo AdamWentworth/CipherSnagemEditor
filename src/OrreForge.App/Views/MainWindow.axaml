@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:chrome="using:Avalonia.Controls.Chrome"
         xmlns:vm="using:OrreForge.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -16,7 +17,7 @@
         MinHeight="504"
         MaxWidth="1000"
         MaxHeight="1000"
-        WindowDecorations="None"
+        WindowDecorations="BorderOnly"
         FontFamily="Arial"
         Background="#F0F0FC">
 
@@ -78,6 +79,7 @@
     <Grid RowDefinitions="24,*"
           Background="#F0F0FC">
         <Border Background="#3A3A3A"
+                chrome:WindowDecorationProperties.ElementRole="TitleBar"
                 PointerPressed="MainTitleBarPointerPressed">
             <Grid ColumnDefinitions="138,*,138">
                 <TextBlock Grid.Column="1"
@@ -93,12 +95,15 @@
                             VerticalAlignment="Top">
                     <Button Classes="TitleBarButton"
                             Content="-"
+                            chrome:WindowDecorationProperties.ElementRole="MinimizeButton"
                             Click="MainMinimizeClick"/>
                     <Button Classes="TitleBarButton"
-                            Content="□"
+                            Content="[]"
+                            chrome:WindowDecorationProperties.ElementRole="MaximizeButton"
                             Click="MainZoomClick"/>
                     <Button Classes="TitleBarButton TitleBarClose"
                             Content="X"
+                            chrome:WindowDecorationProperties.ElementRole="CloseButton"
                             Click="MainCloseClick"/>
                 </StackPanel>
             </Grid>
