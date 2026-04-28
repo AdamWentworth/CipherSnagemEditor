@@ -38,7 +38,10 @@ public sealed record ColosseumPokemonStats(
     int DefenseYield,
     int SpecialAttackYield,
     int SpecialDefenseYield,
-    int SpeedYield)
+    int SpeedYield,
+    IReadOnlyList<bool> LearnableTms,
+    IReadOnlyList<ColosseumPokemonLevelUpMove> LevelUpMoves,
+    IReadOnlyList<ColosseumPokemonEvolution> Evolutions)
 {
     public int BaseStatTotal => Hp + Attack + Defense + SpecialAttack + SpecialDefense + Speed;
 }

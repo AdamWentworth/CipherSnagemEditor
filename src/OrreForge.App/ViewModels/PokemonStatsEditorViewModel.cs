@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using OrreForge.Colosseum.Data;
@@ -46,6 +47,11 @@ public sealed partial class PokemonStatsEditorViewModel : ObservableObject
         _specialAttackYield = stats.SpecialAttackYield;
         _specialDefenseYield = stats.SpecialDefenseYield;
         _speedYield = stats.SpeedYield;
+        Tms = new ObservableCollection<PokemonStatsTmViewModel>(BuildTmRows(stats, resources, MarkChanged));
+        LevelUpMoves = new ObservableCollection<PokemonStatsLevelUpMoveViewModel>(
+            stats.LevelUpMoves.Select(move => new PokemonStatsLevelUpMoveViewModel(move, resources, MarkChanged)));
+        Evolutions = new ObservableCollection<PokemonStatsEvolutionViewModel>(
+            stats.Evolutions.Select(evolution => new PokemonStatsEvolutionViewModel(evolution, resources, MarkChanged)));
 
         _isInitializing = false;
     }
@@ -68,15 +74,21 @@ public sealed partial class PokemonStatsEditorViewModel : ObservableObject
 
     public string Name => Stats.Name;
 
-    public string IndexText => $"Index: {Stats.Index}";
+    public string IndexText => Stats.Index.ToString();
 
-    public string HexText => $"Hex: 0x{Stats.Index:x}";
+    public string HexText => $"0x{Stats.Index:x}";
 
     public string NationalIndexText => $"National: {Stats.NationalIndex}";
 
-    public string StartOffsetText => $"Start: 0x{Stats.StartOffset:x}";
+    public string StartOffsetText => $"0x{Stats.StartOffset:x}";
 
     public int BaseStatTotal => Hp + Attack + Defense + SpecialAttack + SpecialDefense + Speed;
+
+    public ObservableCollection<PokemonStatsTmViewModel> Tms { get; }
+
+    public ObservableCollection<PokemonStatsLevelUpMoveViewModel> LevelUpMoves { get; }
+
+    public ObservableCollection<PokemonStatsEvolutionViewModel> Evolutions { get; }
 
     [ObservableProperty]
     private int _nameId;
@@ -193,7 +205,10 @@ public sealed partial class PokemonStatsEditorViewModel : ObservableObject
             DefenseYield,
             SpecialAttackYield,
             SpecialDefenseYield,
-            SpeedYield);
+            SpeedYield,
+            Tms.Select(tm => tm.IsLearnable).ToArray(),
+            LevelUpMoves.Select(move => move.ToData()).ToArray(),
+            Evolutions.Select(evolution => evolution.ToData()).ToArray());
 
     public void MarkSaved()
     {
@@ -261,5 +276,26 @@ public sealed partial class PokemonStatsEditorViewModel : ObservableObject
 
         HasChanges = true;
         _changed?.Invoke();
+    }
+
+    private static IEnumerable<PokemonStatsTmViewModel> BuildTmRows(
+        ColosseumPokemonStats stats,
+        PokemonStatsEditorResources resources,
+        Action changed)
+    {
+        var tmMoves = resources.TmMoves.Count == 0
+            ? Enumerable.Range(1, stats.LearnableTms.Count)
+                .Select(index => new ColosseumTmMove(index, 0, $"TM {index:00}", 0, "Normal"))
+                .ToArray()
+            : resources.TmMoves;
+
+        foreach (var tm in tmMoves)
+        {
+            var learnsetIndex = tm.Index - 1;
+            var isLearnable = learnsetIndex >= 0
+                && learnsetIndex < stats.LearnableTms.Count
+                && stats.LearnableTms[learnsetIndex];
+            yield return new PokemonStatsTmViewModel(tm, isLearnable, changed);
+        }
     }
 }

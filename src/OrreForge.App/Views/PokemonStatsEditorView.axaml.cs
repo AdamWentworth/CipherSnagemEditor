@@ -20,4 +20,13 @@ public partial class PokemonStatsEditorView : UserControl
             e.Handled = true;
         }
     }
+
+    private void TmPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control { DataContext: PokemonStatsTmViewModel tm })
+        {
+            tm.IsLearnable = !tm.IsLearnable;
+            e.Handled = true;
+        }
+    }
 }

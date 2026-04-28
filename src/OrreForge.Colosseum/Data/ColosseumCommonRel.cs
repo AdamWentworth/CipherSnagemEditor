@@ -51,6 +51,7 @@ public sealed class ColosseumCommonRel
     private const int PokemonStatsType2Offset = 0x31;
     private const int PokemonStatsAbility1Offset = 0x32;
     private const int PokemonStatsAbility2Offset = 0x33;
+    private const int PokemonStatsFirstTmOffset = 0x34;
     private const int PokemonStatsHeldItem1Offset = 0x70;
     private const int PokemonStatsHeldItem2Offset = 0x72;
     private const int PokemonStatsHpOffset = 0x85;
@@ -60,6 +61,18 @@ public sealed class ColosseumCommonRel
     private const int PokemonStatsSpecialDefenseOffset = 0x8d;
     private const int PokemonStatsSpeedOffset = 0x8f;
     private const int PokemonStatsFirstEvYieldOffset = 0x90;
+    private const int PokemonStatsFirstEvolutionOffset = 0x9c;
+    private const int PokemonStatsFirstLevelUpMoveOffset = 0xba;
+    private const int PokemonStatsTmCount = 0x3a;
+    private const int PokemonStatsEvolutionCount = 0x05;
+    private const int PokemonStatsEvolutionSize = 0x06;
+    private const int PokemonStatsEvolutionMethodOffset = 0x00;
+    private const int PokemonStatsEvolutionConditionOffset = 0x02;
+    private const int PokemonStatsEvolutionSpeciesOffset = 0x04;
+    private const int PokemonStatsLevelUpMoveCount = 0x13;
+    private const int PokemonStatsLevelUpMoveSize = 0x04;
+    private const int PokemonStatsLevelUpMoveLevelOffset = 0x00;
+    private const int PokemonStatsLevelUpMoveMoveOffset = 0x02;
 
     private const int MoveSize = 0x38;
     private const int MovePpOffset = 0x01;
@@ -90,6 +103,8 @@ public sealed class ColosseumCommonRel
     private const int BattlePlayersOffset = 0x18;
     private const int BattlePlayerSize = 0x08;
     private const int BattlePlayerTrainerIdOffset = 0x00;
+    private const int TmEntrySize = 0x08;
+    private const int TmMoveOffset = 0x06;
 
     private static readonly int[] PokemonUnsetFillOffsets =
     [
@@ -106,6 +121,7 @@ public sealed class ColosseumCommonRel
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumTrainerClass>> _trainerClasses;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumPokemonStats>> _pokemonStats;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumMove>> _moves;
+    private readonly Lazy<IReadOnlyList<ColosseumTmMove>> _tmMoves;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _items;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _abilities;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumBattle>> _battles;
@@ -128,6 +144,7 @@ public sealed class ColosseumCommonRel
         _trainerClasses = new Lazy<IReadOnlyDictionary<int, ColosseumTrainerClass>>(LoadTrainerClasses);
         _pokemonStats = new Lazy<IReadOnlyDictionary<int, ColosseumPokemonStats>>(LoadPokemonStats);
         _moves = new Lazy<IReadOnlyDictionary<int, ColosseumMove>>(LoadMoves);
+        _tmMoves = new Lazy<IReadOnlyList<ColosseumTmMove>>(LoadTmMoves);
         _items = new Lazy<IReadOnlyDictionary<int, string>>(LoadItems);
         _abilities = new Lazy<IReadOnlyDictionary<int, string>>(LoadAbilities);
         _battles = new Lazy<IReadOnlyDictionary<int, ColosseumBattle>>(LoadBattles);
@@ -142,6 +159,8 @@ public sealed class ColosseumCommonRel
 
     public IReadOnlyList<ColosseumMove> Moves
         => _moves.Value.Values.OrderBy(move => move.Index).ToArray();
+
+    public IReadOnlyList<ColosseumTmMove> TmMoves => _tmMoves.Value;
 
     public IReadOnlyList<ColosseumNamedResource> Items
         => _items.Value
@@ -407,6 +426,9 @@ public sealed class ColosseumCommonRel
         var nameId = checked((int)_data.ReadUInt32(offset + PokemonStatsNameIdOffset));
         var expRate = _data.ReadByte(offset + PokemonStatsExpRateOffset);
         var genderRatio = _data.ReadByte(offset + PokemonStatsGenderRatioOffset);
+        var learnableTms = ReadPokemonStatsLearnableTms(offset);
+        var levelUpMoves = ReadPokemonStatsLevelUpMoves(offset);
+        var evolutions = ReadPokemonStatsEvolutions(offset);
 
         return new ColosseumPokemonStats(
             index,
@@ -446,7 +468,10 @@ public sealed class ColosseumCommonRel
             _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 4),
             _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 6),
             _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 8),
-            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 10));
+            _data.ReadUInt16(offset + PokemonStatsFirstEvYieldOffset + 10),
+            learnableTms,
+            levelUpMoves,
+            evolutions);
     }
 
     public void WritePokemonStats(ColosseumPokemonStatsUpdate pokemon)
@@ -484,6 +509,32 @@ public sealed class ColosseumCommonRel
         _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 6, ClampUInt16(pokemon.SpecialAttackYield));
         _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 8, ClampUInt16(pokemon.SpecialDefenseYield));
         _data.WriteUInt16(offset + PokemonStatsFirstEvYieldOffset + 10, ClampUInt16(pokemon.SpeedYield));
+        for (var index = 0; index < PokemonStatsTmCount; index++)
+        {
+            var isLearnable = index < pokemon.LearnableTms.Count && pokemon.LearnableTms[index];
+            _data.WriteByte(offset + PokemonStatsFirstTmOffset + index, isLearnable ? (byte)1 : (byte)0);
+        }
+
+        for (var index = 0; index < PokemonStatsLevelUpMoveCount; index++)
+        {
+            var move = index < pokemon.LevelUpMoves.Count
+                ? pokemon.LevelUpMoves[index]
+                : new ColosseumPokemonLevelUpMove(index, 0, 0, "-");
+            var start = offset + PokemonStatsFirstLevelUpMoveOffset + (index * PokemonStatsLevelUpMoveSize);
+            _data.WriteByte(start + PokemonStatsLevelUpMoveLevelOffset, ClampByte(move.Level));
+            _data.WriteUInt16(start + PokemonStatsLevelUpMoveMoveOffset, ClampUInt16(move.MoveId));
+        }
+
+        for (var index = 0; index < PokemonStatsEvolutionCount; index++)
+        {
+            var evolution = index < pokemon.Evolutions.Count
+                ? pokemon.Evolutions[index]
+                : new ColosseumPokemonEvolution(index, 0, "None", 0, "-", 0, "-");
+            var start = offset + PokemonStatsFirstEvolutionOffset + (index * PokemonStatsEvolutionSize);
+            _data.WriteByte(start + PokemonStatsEvolutionMethodOffset, ClampByte(evolution.Method));
+            _data.WriteUInt16(start + PokemonStatsEvolutionConditionOffset, ClampUInt16(evolution.Condition));
+            _data.WriteUInt16(start + PokemonStatsEvolutionSpeciesOffset, ClampUInt16(evolution.EvolvedSpeciesId));
+        }
 
         if (_pokemonStats.IsValueCreated && _pokemonStats.Value is Dictionary<int, ColosseumPokemonStats> stats)
         {
@@ -517,6 +568,7 @@ public sealed class ColosseumCommonRel
             moves[index] = new ColosseumMove(
                 index,
                 Strings.StringWithId(nameId),
+                typeId,
                 TypeName(typeId),
                 _data.ReadByte(offset + MoveBasePowerOffset),
                 _data.ReadByte(offset + MoveAccuracyOffset),
@@ -524,6 +576,32 @@ public sealed class ColosseumCommonRel
         }
 
         return moves;
+    }
+
+    private IReadOnlyList<ColosseumTmMove> LoadTmMoves()
+    {
+        var dol = _dol;
+        var start = FirstTmListOffset(_region);
+        if (dol is null || start <= 0)
+        {
+            return [];
+        }
+
+        var tms = new List<ColosseumTmMove>(PokemonStatsTmCount);
+        for (var index = 1; index <= PokemonStatsTmCount; index++)
+        {
+            var offset = start + TmMoveOffset + ((index - 1) * TmEntrySize);
+            if (offset + 2 > dol.Length)
+            {
+                break;
+            }
+
+            var moveId = dol.ReadUInt16(offset);
+            var move = MoveFor(moveId);
+            tms.Add(new ColosseumTmMove(index, moveId, move.Name, move.TypeId, move.TypeName));
+        }
+
+        return tms;
     }
 
     private IReadOnlyDictionary<int, string> LoadItems()
@@ -630,7 +708,7 @@ public sealed class ColosseumCommonRel
     private ColosseumMove MoveFor(int id)
         => _moves.Value.TryGetValue(id, out var move)
             ? move
-            : new ColosseumMove(id, id == 0 ? "-" : $"Move {id}", "-", 0, 0, 0);
+            : new ColosseumMove(id, id == 0 ? "-" : $"Move {id}", 0, TypeName(0), 0, 0, 0);
 
     private ColosseumPokemonStats UnknownPokemonStats(int id)
         => new(
@@ -671,7 +749,57 @@ public sealed class ColosseumCommonRel
             0,
             0,
             0,
-            0);
+            0,
+            [],
+            [],
+            []);
+
+    private IReadOnlyList<bool> ReadPokemonStatsLearnableTms(int offset)
+    {
+        var tms = new bool[PokemonStatsTmCount];
+        for (var index = 0; index < tms.Length; index++)
+        {
+            tms[index] = _data.ReadByte(offset + PokemonStatsFirstTmOffset + index) == 1;
+        }
+
+        return tms;
+    }
+
+    private IReadOnlyList<ColosseumPokemonLevelUpMove> ReadPokemonStatsLevelUpMoves(int offset)
+    {
+        var moves = new List<ColosseumPokemonLevelUpMove>(PokemonStatsLevelUpMoveCount);
+        for (var index = 0; index < PokemonStatsLevelUpMoveCount; index++)
+        {
+            var start = offset + PokemonStatsFirstLevelUpMoveOffset + (index * PokemonStatsLevelUpMoveSize);
+            var level = _data.ReadByte(start + PokemonStatsLevelUpMoveLevelOffset);
+            var moveId = _data.ReadUInt16(start + PokemonStatsLevelUpMoveMoveOffset);
+            moves.Add(new ColosseumPokemonLevelUpMove(index, level, moveId, MoveFor(moveId).Name));
+        }
+
+        return moves;
+    }
+
+    private IReadOnlyList<ColosseumPokemonEvolution> ReadPokemonStatsEvolutions(int offset)
+    {
+        var evolutions = new List<ColosseumPokemonEvolution>(PokemonStatsEvolutionCount);
+        for (var index = 0; index < PokemonStatsEvolutionCount; index++)
+        {
+            var start = offset + PokemonStatsFirstEvolutionOffset + (index * PokemonStatsEvolutionSize);
+            var method = _data.ReadByte(start + PokemonStatsEvolutionMethodOffset);
+            var condition = _data.ReadUInt16(start + PokemonStatsEvolutionConditionOffset);
+            var speciesId = _data.ReadUInt16(start + PokemonStatsEvolutionSpeciesOffset);
+            evolutions.Add(new ColosseumPokemonEvolution(
+                index,
+                method,
+                EvolutionMethodName(method),
+                condition,
+                EvolutionConditionName(method, condition),
+                speciesId,
+                PokemonStatsNameFor(speciesId)));
+        }
+
+        return evolutions;
+    }
 
     private string NameForItem(int id)
     {
@@ -779,6 +907,46 @@ public sealed class ColosseumCommonRel
             _ => $"Gender Ratio {id}"
         };
 
+    private static string EvolutionMethodName(int id)
+        => id switch
+        {
+            0x00 => "None",
+            0x01 => "Max Happiness",
+            0x02 => "Happiness (Day)",
+            0x03 => "Happiness (Night)",
+            0x04 => "Level Up",
+            0x05 => "Trade",
+            0x06 => "Trade With Item",
+            0x07 => "Evolution Stone",
+            0x08 => "Atk > Def",
+            0x09 => "Atk = Def",
+            0x0a => "Atk < Def",
+            0x0b => "Silcoon evolution method",
+            0x0c => "Cascoon evolution method",
+            0x0d => "Ninjask evolution method",
+            0x0e => "Shedinja evolution method",
+            0x0f => "Max Beauty",
+            0x10 => "Level Up With Key Item",
+            0x11 => "Evolves in Generation 4 (XG)",
+            _ => $"Evolution Method {id}"
+        };
+
+    private string EvolutionConditionName(int method, int condition)
+        => EvolutionConditionKind(method) switch
+        {
+            EvolutionConditionValueKind.Level => $"Lv. {condition}",
+            EvolutionConditionValueKind.Item => NameForItem(condition),
+            _ => condition == 0 ? "-" : condition.ToString()
+        };
+
+    private static EvolutionConditionValueKind EvolutionConditionKind(int method)
+        => method switch
+        {
+            0x04 or 0x08 or 0x09 or 0x0a or 0x0b or 0x0c or 0x0d or 0x0e => EvolutionConditionValueKind.Level,
+            0x06 or 0x07 or 0x10 => EvolutionConditionValueKind.Item,
+            _ => EvolutionConditionValueKind.None
+        };
+
     private static string TypeName(int id)
         => id switch
         {
@@ -844,6 +1012,15 @@ public sealed class ColosseumCommonRel
             GameCubeRegion.UnitedStates => 0x360ce8,
             GameCubeRegion.Japan => 0x34d428,
             GameCubeRegion.Europe => 0x3adda0,
+            _ => 0
+        };
+
+    private static int FirstTmListOffset(GameCubeRegion region)
+        => region switch
+        {
+            GameCubeRegion.UnitedStates => 0x365018,
+            GameCubeRegion.Japan => 0x351758,
+            GameCubeRegion.Europe => 0x3b20d0,
             _ => 0
         };
 
@@ -927,9 +1104,34 @@ public sealed class ColosseumCommonRel
             : $"Model {modelId}";
     }
 
+    private string PokemonStatsNameFor(int id)
+    {
+        if (id == 0)
+        {
+            return "-";
+        }
+
+        var count = GetCount(ColosseumCommonIndex.NumberOfPokemon);
+        if (id < 0 || id >= count)
+        {
+            return $"Pokemon {id}";
+        }
+
+        var offset = PointerFor(ColosseumCommonIndex.PokemonStats) + (id * PokemonStatsSize);
+        var nameId = checked((int)_data.ReadUInt32(offset + PokemonStatsNameIdOffset));
+        return Strings.StringWithId(nameId);
+    }
+
     private int PointerFor(ColosseumCommonIndex index)
         => RelocationTable.GetPointer(ColosseumCommonIndexes.IndexFor(index, _region));
 
     private int GetCount(ColosseumCommonIndex index)
         => RelocationTable.GetValueAtPointer(ColosseumCommonIndexes.IndexFor(index, _region));
+
+    private enum EvolutionConditionValueKind
+    {
+        None,
+        Level,
+        Item
+    }
 }

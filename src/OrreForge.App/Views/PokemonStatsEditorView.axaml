@@ -1,42 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:OrreForge.App.Controls"
              xmlns:vm="using:OrreForge.App.ViewModels"
              x:Class="OrreForge.App.Views.PokemonStatsEditorView"
              x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
              FontFamily="Arial"
              Background="#F0F0FC">
     <UserControl.Styles>
-        <Style Selector="Button.LegacyIsoButton">
-            <Setter Property="Background" Value="#D4D4D4"/>
-            <Setter Property="BorderBrush" Value="#B8B8B8"/>
+        <Style Selector="Border.LegacyStatsPanel">
+            <Setter Property="Background" Value="#F0F0FC"/>
+            <Setter Property="BorderBrush" Value="#A0A0A8"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="Button.LegacyStatsButton">
+            <Setter Property="Background" Value="#6E6E6E"/>
+            <Setter Property="BorderBrush" Value="#7B7B7B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="MinHeight" Value="0"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="#000000"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="TextBox.LegacyStatsField">
-            <Setter Property="MinHeight" Value="0"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="4,2"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#000000"/>
-            <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#C0C0C8"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="ComboBox.LegacyStatsField">
-            <Setter Property="MinHeight" Value="0"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="4,1"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#000000"/>
-            <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="BorderBrush" Value="#C0C0C8"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
@@ -46,23 +33,71 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
+        <Style Selector="TextBlock.LegacyStatsMiniLabel">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style Selector="TextBox.LegacyStatsField">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Padding" Value="3,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#B8B8C0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyStatsReadout">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Padding" Value="3,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="Background" Value="#F0F0FC"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="controls|LegacyPokemonComboBox.LegacyStatsCombo">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="3,0,2,0"/>
+            <Setter Property="FontSize" Value="8"/>
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#B8B8C0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="250,*">
+    <Grid ColumnDefinitions="200,710"
+          Width="910"
+          Height="547"
+          Background="#F0F0FC">
         <Border Grid.Column="0"
-                Background="#000000"
-                BorderBrush="#C0C0C8"
-                BorderThickness="0,0,1,0">
+                Background="#191919">
             <Grid RowDefinitions="Auto,*">
                 <TextBox Text="{Binding PokemonStatsSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         PlaceholderText="Search Pokemon"
+                         PlaceholderText="Search"
+                         PlaceholderForeground="#A8A8A8"
                          Height="28"
-                         Margin="8,6"
+                         Margin="4,4"
                          Padding="8,3"
                          FontSize="12"
-                         Background="#FFFFFF"
-                         Foreground="#000000"
-                         BorderBrush="#808080"
+                         Background="#333333"
+                         Foreground="#FFFFFF"
+                         CaretBrush="#FFFFFF"
+                         SelectionBrush="#80ACFF"
+                         BorderBrush="#5C5C5C"
                          BorderThickness="1"/>
                 <ScrollViewer Grid.Row="1"
                               VerticalScrollBarVisibility="Auto">
@@ -73,7 +108,9 @@
                                         Cursor="Hand"
                                         HorizontalAlignment="Stretch"
                                         Height="50"
-                                        Background="{Binding BackgroundBrush}">
+                                        Background="{Binding BackgroundBrush}"
+                                        BorderBrush="#111111"
+                                        BorderThickness="0,0,0,1">
                                     <Grid ColumnDefinitions="50,*"
                                           ClipToBounds="True">
                                         <Image Grid.ColumnSpan="2"
@@ -104,206 +141,246 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Column="1"
-              RowDefinitions="*,30"
-              Margin="18"
-              Background="#FFFFFF">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Auto">
-                <Grid DataContext="{Binding SelectedPokemonStatsDetail}"
-                      x:CompileBindings="False"
-                      Width="900"
-                      Margin="0"
-                      RowDefinitions="86,Auto,Auto"
-                      ColumnDefinitions="230,230,230,190"
-                      RowSpacing="10"
+        <Canvas Grid.Column="1"
+                Width="710"
+                Height="547"
+                Background="#F0F0FC">
+
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="10"
+                    Canvas.Top="10"
+                    Width="210"
+                    Height="190">
+                <Grid Margin="10,5"
+                      RowDefinitions="30,5,30,10,30,30,30"
+                      ColumnDefinitions="75,105"
                       ColumnSpacing="10">
-                    <Border Grid.ColumnSpan="4"
-                            Background="#FFFFFF"
-                            BorderBrush="#C0C0C8"
-                            BorderThickness="1"
-                            Padding="10">
-                        <Grid ColumnDefinitions="64,180,120,120,160,*"
-                              ColumnSpacing="10">
-                            <Border Width="64"
-                                    Height="64"
-                                    Background="#F0F0FC"
-                                    BorderBrush="#000000"
-                                    BorderThickness="1">
-                                <Image Source="{Binding FaceImage}"
-                                       Stretch="Uniform"/>
-                            </Border>
-                            <StackPanel Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        Spacing="4">
-                                <TextBlock Text="{Binding Name}"
-                                           FontSize="18"
-                                           FontWeight="Bold"
-                                           Foreground="#000000"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding NationalIndexText}"
-                                           Classes="LegacyStatsLabel"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2"
-                                        VerticalAlignment="Center"
-                                        Spacing="4">
-                                <TextBlock Text="{Binding IndexText}"
-                                           Classes="LegacyStatsLabel"/>
-                                <TextBlock Text="{Binding HexText}"
-                                           Classes="LegacyStatsLabel"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="3"
-                                        VerticalAlignment="Center"
-                                        Spacing="4">
-                                <TextBlock Text="Name ID"
-                                           Classes="LegacyStatsLabel"
-                                           HorizontalAlignment="Center"/>
-                                <TextBox Classes="LegacyStatsField"
-                                         Text="{Binding NameId, Mode=TwoWay}"/>
-                            </StackPanel>
-                            <TextBlock Grid.Column="4"
-                                       Text="{Binding StartOffsetText}"
-                                       Classes="LegacyStatsLabel"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="5"
-                                       Text="{Binding BaseStatTotal, StringFormat='Total: {0}'}"
-                                       FontSize="16"
-                                       FontWeight="Bold"
-                                       Foreground="#000000"
-                                       HorizontalAlignment="Right"
-                                       VerticalAlignment="Center"/>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="1"
-                            Background="#FFFFFF"
-                            BorderBrush="#C0C0C8"
-                            BorderThickness="1"
-                            Padding="10">
-                        <Grid RowDefinitions="Auto,24,24,24,24,24,24"
-                              ColumnDefinitions="80,*"
-                              RowSpacing="5"
-                              ColumnSpacing="8">
-                            <TextBlock Grid.ColumnSpan="2"
-                                       Text="Base Stats"
-                                       FontWeight="Bold"
-                                       Foreground="#000000"/>
-                            <TextBlock Grid.Row="1" Text="HP" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding Hp, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="2" Text="Attack" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding Attack, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="3" Text="Defense" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding Defense, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="4" Text="Sp. Atk" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SpecialAttack, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="5" Text="Sp. Def" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="5" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SpecialDefense, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="6" Text="Speed" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="6" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding Speed, Mode=TwoWay}"/>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="1"
-                            Grid.Column="1"
-                            Background="#FFFFFF"
-                            BorderBrush="#C0C0C8"
-                            BorderThickness="1"
-                            Padding="10">
-                        <Grid RowDefinitions="Auto,24,24,24,24,24,24"
-                              ColumnDefinitions="80,*"
-                              RowSpacing="5"
-                              ColumnSpacing="8">
-                            <TextBlock Grid.ColumnSpan="2"
-                                       Text="EV Yield"
-                                       FontWeight="Bold"
-                                       Foreground="#000000"/>
-                            <TextBlock Grid.Row="1" Text="HP" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding HpYield, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="2" Text="Attack" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding AttackYield, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="3" Text="Defense" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding DefenseYield, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="4" Text="Sp. Atk" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SpecialAttackYield, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="5" Text="Sp. Def" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="5" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SpecialDefenseYield, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="6" Text="Speed" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="6" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SpeedYield, Mode=TwoWay}"/>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="1"
-                            Grid.Column="2"
-                            Grid.ColumnSpan="2"
-                            Background="#FFFFFF"
-                            BorderBrush="#C0C0C8"
-                            BorderThickness="1"
-                            Padding="10">
-                        <Grid RowDefinitions="Auto,24,24,24,24,24,24"
-                              ColumnDefinitions="92,*,92,*"
-                              RowSpacing="5"
-                              ColumnSpacing="8">
-                            <TextBlock Grid.ColumnSpan="4"
-                                       Text="Typing and Abilities"
-                                       FontWeight="Bold"
-                                       Foreground="#000000"/>
-                            <TextBlock Grid.Row="1" Text="Type 1" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="1" Grid.Column="1" Classes="LegacyStatsField" ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding SelectedType1, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="Type 2" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="1" Grid.Column="3" Classes="LegacyStatsField" ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding SelectedType2, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="2" Text="Ability 1" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="2" Grid.Column="1" Classes="LegacyStatsField" ItemsSource="{Binding AbilityOptions}" SelectedItem="{Binding SelectedAbility1, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                            <TextBlock Grid.Row="2" Grid.Column="2" Text="Ability 2" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="2" Grid.Column="3" Classes="LegacyStatsField" ItemsSource="{Binding AbilityOptions}" SelectedItem="{Binding SelectedAbility2, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                            <TextBlock Grid.Row="3" Text="Catch Rate" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding CatchRate, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="2" Text="Happiness" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="3" Grid.Column="3" Classes="LegacyStatsField" Text="{Binding BaseHappiness, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="4" Text="Base Exp" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding BaseExp, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="4" Grid.Column="2" Text="Growth" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="4" Grid.Column="3" Classes="LegacyStatsField" ItemsSource="{Binding ExpRateOptions}" SelectedItem="{Binding SelectedExpRate, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="5" Text="Gender" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="5" Grid.Column="1" Classes="LegacyStatsField" ItemsSource="{Binding GenderRatioOptions}" SelectedItem="{Binding SelectedGenderRatio, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="5" Grid.Column="2" Text="Height (ft)" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="5" Grid.Column="3" Classes="LegacyStatsField" Text="{Binding Height, Mode=TwoWay}"/>
-                            <TextBlock Grid.Row="6" Grid.Column="2" Text="Weight (lbs)" Classes="LegacyStatsLabel"/>
-                            <TextBox Grid.Row="6" Grid.Column="3" Classes="LegacyStatsField" Text="{Binding Weight, Mode=TwoWay}"/>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="2"
-                            Grid.ColumnSpan="4"
-                            Background="#FFFFFF"
-                            BorderBrush="#C0C0C8"
-                            BorderThickness="1"
-                            Padding="10">
-                        <Grid RowDefinitions="Auto,24"
-                              ColumnDefinitions="90,250,90,250,*"
-                              RowSpacing="5"
-                              ColumnSpacing="8">
-                            <TextBlock Grid.ColumnSpan="5"
-                                       Text="Wild Held Items"
-                                       FontWeight="Bold"
-                                       Foreground="#000000"/>
-                            <TextBlock Grid.Row="1" Text="Item 1" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="1" Grid.Column="1" Classes="LegacyStatsField" ItemsSource="{Binding ItemOptions}" SelectedItem="{Binding SelectedHeldItem1, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="Item 2" Classes="LegacyStatsLabel"/>
-                            <ComboBox Grid.Row="1" Grid.Column="3" Classes="LegacyStatsField" ItemsSource="{Binding ItemOptions}" SelectedItem="{Binding SelectedHeldItem2, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                        </Grid>
-                    </Border>
+                    <TextBlock Text="Name:" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Column="1" Classes="LegacyStatsField" IsReadOnly="True" Text="{Binding SelectedPokemonStatsDetail.Name, Mode=OneWay}"/>
+                    <TextBlock Grid.Row="2" Text="Name ID:" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.NameId, Mode=TwoWay}"/>
+                    <Separator Grid.Row="3" Grid.ColumnSpan="2" Margin="0,2"/>
+                    <TextBlock Grid.Row="4" Text="Index:" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Classes="LegacyStatsReadout" IsReadOnly="True" Text="{Binding SelectedPokemonStatsDetail.Stats.Index, Mode=OneWay}"/>
+                    <TextBlock Grid.Row="5" Text="Hex:" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="5" Grid.Column="1" Classes="LegacyStatsReadout" IsReadOnly="True" Text="{Binding SelectedPokemonStatsDetail.HexText, Mode=OneWay}"/>
+                    <TextBlock Grid.Row="6" Text="Start Offset:" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" Classes="LegacyStatsReadout" IsReadOnly="True" Text="{Binding SelectedPokemonStatsDetail.StartOffsetText, Mode=OneWay}"/>
                 </Grid>
-            </ScrollViewer>
+            </Border>
 
-            <Button Grid.Row="1"
-                    Classes="LegacyIsoButton"
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="225"
+                    Canvas.Top="10"
+                    Width="105"
+                    Height="190">
+                <Grid Margin="5"
+                      RowDefinitions="25,5,25,5,25,5,25,5,25,5,25"
+                      ColumnDefinitions="50,45">
+                    <TextBlock Text="HP" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.Hp, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="2" Text="Atk" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.Attack, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="4" Text="Def" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.Defense, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="6" Text="Sp.Atk" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.SpecialAttack, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="8" Text="Sp. Def" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="8" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.SpecialDefense, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="10" Text="Speed" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Row="10" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.Speed, Mode=TwoWay}"/>
+                </Grid>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="335"
+                    Canvas.Top="10"
+                    Width="160"
+                    Height="190">
+                <ScrollViewer Margin="3"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding SelectedPokemonStatsDetail.Tms}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PokemonStatsTmViewModel">
+                                <Border PointerPressed="TmPointerPressed"
+                                        Height="30"
+                                        Margin="0,0,0,2"
+                                        BorderBrush="{Binding LearnableBorderBrush}"
+                                        BorderThickness="{Binding LearnableBorderThickness}"
+                                        Cursor="Hand"
+                                        ClipToBounds="True">
+                                    <Grid>
+                                        <Image Source="{Binding TypeImage}" Stretch="Fill"/>
+                                        <TextBlock Text="{Binding MoveName}"
+                                                   FontSize="12"
+                                                   Foreground="#000000"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Margin="4,0"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="500"
+                    Canvas.Top="10"
+                    Width="205"
+                    Height="190">
+                <ScrollViewer Margin="3"
+                              VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding SelectedPokemonStatsDetail.LevelUpMoves}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PokemonStatsLevelUpMoveViewModel">
+                                <Grid Height="30"
+                                      ColumnDefinitions="2*,*"
+                                      ColumnSpacing="10"
+                                      Margin="0,0,0,2">
+                                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo"
+                                                                    ItemsSource="{Binding MoveOptions}"
+                                                                    SelectedItem="{Binding SelectedMove, Mode=TwoWay}"
+                                                                    MaxDropDownHeight="260"/>
+                                    <controls:LegacyPokemonComboBox Grid.Column="1"
+                                                                    Classes="LegacyStatsCombo"
+                                                                    ItemsSource="{Binding LevelOptions}"
+                                                                    SelectedItem="{Binding Level, Mode=TwoWay}"
+                                                                    MaxDropDownHeight="260">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding StringFormat='Lv. {0}'}"
+                                                           HorizontalAlignment="Center"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </controls:LegacyPokemonComboBox>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel" Canvas.Left="10" Canvas.Top="205" Width="210" Height="70">
+                <Canvas>
+                    <TextBlock Text="Types" Classes="LegacyStatsLabel" Canvas.Left="53" Canvas.Top="10" Width="104" TextAlignment="Center"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo" Canvas.Left="6" Canvas.Top="39" Width="100" ItemsSource="{Binding SelectedPokemonStatsDetail.TypeOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedType1, Mode=TwoWay}"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo" Canvas.Left="106" Canvas.Top="39" Width="100" ItemsSource="{Binding SelectedPokemonStatsDetail.TypeOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedType2, Mode=TwoWay}"/>
+                </Canvas>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel" Canvas.Left="10" Canvas.Top="280" Width="210" Height="70">
+                <Canvas>
+                    <TextBlock Text="Abilities" Classes="LegacyStatsLabel" Canvas.Left="53" Canvas.Top="10" Width="104" TextAlignment="Center"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo" Canvas.Left="6" Canvas.Top="39" Width="100" ItemsSource="{Binding SelectedPokemonStatsDetail.AbilityOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedAbility1, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo" Canvas.Left="106" Canvas.Top="39" Width="100" ItemsSource="{Binding SelectedPokemonStatsDetail.AbilityOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedAbility2, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                </Canvas>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel" Canvas.Left="10" Canvas.Top="355" Width="210" Height="70">
+                <Canvas>
+                    <TextBlock Text="Items" Classes="LegacyStatsLabel" Canvas.Left="53" Canvas.Top="10" Width="104" TextAlignment="Center"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo" Canvas.Left="6" Canvas.Top="39" Width="100" ItemsSource="{Binding SelectedPokemonStatsDetail.ItemOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedHeldItem1, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo" Canvas.Left="106" Canvas.Top="39" Width="100" ItemsSource="{Binding SelectedPokemonStatsDetail.ItemOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedHeldItem2, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                </Canvas>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="225"
+                    Canvas.Top="205"
+                    Width="105"
+                    Height="220">
+                <Grid Margin="5,20,5,0"
+                      RowDefinitions="20,20,20,20,20,20,20,20,20,20,20"
+                      ColumnDefinitions="50,45"
+                      RowSpacing="0">
+                    <TextBlock Text="HP EV" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.HpYield, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="2" Text="Atk EV" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.AttackYield, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="4" Text="Def EV" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.DefenseYield, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="6" Text="Sp.Atk EV" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.SpecialAttackYield, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="8" Text="Sp. Def EV" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Row="8" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.SpecialDefenseYield, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="10" Text="Speed EV" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Row="10" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.SpeedYield, Mode=TwoWay}"/>
+                </Grid>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="335"
+                    Canvas.Top="205"
+                    Width="160"
+                    Height="220">
+                <Grid Margin="8,20,5,0"
+                      RowDefinitions="20,20,20,20,20,20,20,20,20"
+                      ColumnDefinitions="50,90"
+                      ColumnSpacing="5">
+                    <TextBlock Text="Catch Rate" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.CatchRate, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="2" Text="Happiness" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.BaseHappiness, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="4" Text="Exp Yield" Classes="LegacyStatsMiniLabel"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.BaseExp, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="6" Text="Exp Rate" Classes="LegacyStatsMiniLabel"/>
+                    <controls:LegacyPokemonComboBox Grid.Row="6" Grid.Column="1" Classes="LegacyStatsCombo" ItemsSource="{Binding SelectedPokemonStatsDetail.ExpRateOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedExpRate, Mode=TwoWay}"/>
+                    <TextBlock Grid.Row="8" Text="Gender" Classes="LegacyStatsMiniLabel"/>
+                    <controls:LegacyPokemonComboBox Grid.Row="8" Grid.Column="1" Classes="LegacyStatsCombo" ItemsSource="{Binding SelectedPokemonStatsDetail.GenderRatioOptions}" SelectedItem="{Binding SelectedPokemonStatsDetail.SelectedGenderRatio, Mode=TwoWay}"/>
+                </Grid>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="500"
+                    Canvas.Top="205"
+                    Width="205"
+                    Height="220">
+                <Grid Margin="5,10"
+                      RowDefinitions="20,30,5,30,5,30,5,30,5,30">
+                    <TextBlock Text="Evolutions" Classes="LegacyStatsLabel" HorizontalAlignment="Center"/>
+                    <ItemsControl Grid.Row="1" Grid.RowSpan="9" ItemsSource="{Binding SelectedPokemonStatsDetail.Evolutions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PokemonStatsEvolutionViewModel">
+                                <Grid Height="30"
+                                      ColumnDefinitions="82,55,55"
+                                      ColumnSpacing="2"
+                                      Margin="0,0,0,5">
+                                    <controls:LegacyPokemonComboBox Classes="LegacyStatsCombo" ItemsSource="{Binding SpeciesOptions}" SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                    <controls:LegacyPokemonComboBox Grid.Column="1" Classes="LegacyStatsCombo" ItemsSource="{Binding MethodOptions}" SelectedItem="{Binding SelectedMethod, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                    <controls:LegacyPokemonComboBox Grid.Column="2" Classes="LegacyStatsCombo" ItemsSource="{Binding ConditionOptions}" SelectedItem="{Binding SelectedCondition, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <Border Classes="LegacyStatsPanel"
+                    Canvas.Left="10"
+                    Canvas.Top="435"
+                    Width="485"
+                    Height="60">
+                <Grid Margin="8,18"
+                      ColumnDefinitions="115,112,115,111"
+                      ColumnSpacing="3">
+                    <TextBlock Text="Height (ft)" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Column="1" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.Height, Mode=TwoWay}"/>
+                    <TextBlock Grid.Column="2" Text="Weight (lbs)" Classes="LegacyStatsLabel"/>
+                    <TextBox Grid.Column="3" Classes="LegacyStatsField" Text="{Binding SelectedPokemonStatsDetail.Weight, Mode=TwoWay}"/>
+                </Grid>
+            </Border>
+
+            <Button Classes="LegacyStatsButton"
+                    Canvas.Left="305"
+                    Canvas.Top="505"
                     Width="100"
-                    Height="20"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Bottom"
+                    Height="23"
                     Content="Save"
-                    Command="{Binding SavePokemonStatsCommand}"
-                    Foreground="#000000"/>
-        </Grid>
+                    Command="{Binding SavePokemonStatsCommand}"/>
+        </Canvas>
     </Grid>
 </UserControl>

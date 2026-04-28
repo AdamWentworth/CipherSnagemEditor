@@ -27,4 +27,7 @@ public sealed record ColosseumPokemonStatsUpdate(
     int DefenseYield,
     int SpecialAttackYield,
     int SpecialDefenseYield,
-    int SpeedYield);
+    int SpeedYield,
+    IReadOnlyList<bool> LearnableTms,
+    IReadOnlyList<ColosseumPokemonLevelUpMove> LevelUpMoves,
+    IReadOnlyList<ColosseumPokemonEvolution> Evolutions);

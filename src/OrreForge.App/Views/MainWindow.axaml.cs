@@ -309,7 +309,7 @@ public partial class MainWindow : Window
         => title switch
         {
             "Trainer Editor" => new Size(1420, 760),
-            "Pokemon Stats Editor" => new Size(1188, 650),
+            "Pokemon Stats Editor" => new Size(910, 571),
             "ISO Explorer" => new Size(900, 650),
             _ => new Size(620, 320)
         };
