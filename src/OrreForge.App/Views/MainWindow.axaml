@@ -15,9 +15,10 @@
         Height="504"
         MinWidth="640"
         MinHeight="504"
-        MaxWidth="1000"
-        MaxHeight="1000"
+        CanResize="True"
         WindowDecorations="None"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="24"
         FontFamily="Arial"
         Background="#F0F0FC">
 
@@ -79,8 +80,7 @@
     <Grid RowDefinitions="24,*"
           Background="#F0F0FC">
         <Border Background="#3A3A3A"
-                chrome:WindowDecorationProperties.ElementRole="TitleBar"
-                PointerPressed="MainTitleBarPointerPressed">
+                chrome:WindowDecorationProperties.ElementRole="TitleBar">
             <Grid ColumnDefinitions="138,*,138">
                 <TextBlock Grid.Column="1"
                            Text="Colosseum Tool"
@@ -206,5 +206,63 @@
                 </Border>
             </Grid>
         </Grid>
+
+        <Border Grid.RowSpan="2"
+                Height="6"
+                Margin="6,0,144,0"
+                Background="Transparent"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Top"
+                chrome:WindowDecorationProperties.ElementRole="ResizeN"/>
+        <Border Grid.RowSpan="2"
+                Height="6"
+                Margin="6,0"
+                Background="Transparent"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Bottom"
+                chrome:WindowDecorationProperties.ElementRole="ResizeS"/>
+        <Border Grid.RowSpan="2"
+                Width="6"
+                Margin="0,24,0,6"
+                Background="Transparent"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Stretch"
+                chrome:WindowDecorationProperties.ElementRole="ResizeW"/>
+        <Border Grid.RowSpan="2"
+                Width="6"
+                Margin="0,24,0,6"
+                Background="Transparent"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Stretch"
+                chrome:WindowDecorationProperties.ElementRole="ResizeE"/>
+        <Border Grid.RowSpan="2"
+                Width="6"
+                Height="6"
+                Background="Transparent"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                chrome:WindowDecorationProperties.ElementRole="ResizeNW"/>
+        <Border Grid.RowSpan="2"
+                Width="6"
+                Height="6"
+                Margin="0,0,138,0"
+                Background="Transparent"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                chrome:WindowDecorationProperties.ElementRole="ResizeNE"/>
+        <Border Grid.RowSpan="2"
+                Width="12"
+                Height="12"
+                Background="Transparent"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                chrome:WindowDecorationProperties.ElementRole="ResizeSW"/>
+        <Border Grid.RowSpan="2"
+                Width="12"
+                Height="12"
+                Background="Transparent"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                chrome:WindowDecorationProperties.ElementRole="ResizeSE"/>
     </Grid>
 </Window>

@@ -176,9 +176,12 @@ public partial class MainWindow : Window
             Height = size.Height,
             MinWidth = Math.Min(size.Width, 900),
             MinHeight = Math.Min(size.Height, 560),
+            CanResize = true,
             FontFamily = FontFamily,
             Background = SolidColorBrush.Parse("#F0F0FC"),
             WindowDecorations = Avalonia.Controls.WindowDecorations.None,
+            ExtendClientAreaToDecorationsHint = true,
+            ExtendClientAreaTitleBarHeightHint = 24,
             DataContext = viewModel
         };
         window.Content = CreateToolWindowShell(window, tool.Title, content);
@@ -225,18 +228,6 @@ public partial class MainWindow : Window
             Height = 24
         };
         WindowDecorationProperties.SetElementRole(titleBar, WindowDecorationsElementRole.TitleBar);
-        titleBar.PointerPressed += (_, e) =>
-        {
-            if (e.Source is Button)
-            {
-                return;
-            }
-
-            if (e.GetCurrentPoint(titleBar).Properties.IsLeftButtonPressed)
-            {
-                window.BeginMoveDrag(e);
-            }
-        };
 
         var titleLayout = new Grid
         {
@@ -277,7 +268,44 @@ public partial class MainWindow : Window
 
         Grid.SetRow(content, 1);
         root.Children.Add(content);
+        AddResizeHitTargets(root);
         return root;
+    }
+
+    private static void AddResizeHitTargets(Grid root)
+    {
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeN, HorizontalAlignment.Stretch, VerticalAlignment.Top, new Thickness(6, 0, 144, 0), double.NaN, 6);
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeS, HorizontalAlignment.Stretch, VerticalAlignment.Bottom, new Thickness(6, 0), double.NaN, 6);
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeW, HorizontalAlignment.Left, VerticalAlignment.Stretch, new Thickness(0, 24, 0, 6), 6, double.NaN);
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeE, HorizontalAlignment.Right, VerticalAlignment.Stretch, new Thickness(0, 24, 0, 6), 6, double.NaN);
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeNW, HorizontalAlignment.Left, VerticalAlignment.Top, new Thickness(0), 6, 6);
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeNE, HorizontalAlignment.Right, VerticalAlignment.Top, new Thickness(0, 0, 138, 0), 6, 6);
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeSW, HorizontalAlignment.Left, VerticalAlignment.Bottom, new Thickness(0), 12, 12);
+        AddResizeHitTarget(root, WindowDecorationsElementRole.ResizeSE, HorizontalAlignment.Right, VerticalAlignment.Bottom, new Thickness(0), 12, 12);
+    }
+
+    private static void AddResizeHitTarget(
+        Grid root,
+        WindowDecorationsElementRole role,
+        HorizontalAlignment horizontalAlignment,
+        VerticalAlignment verticalAlignment,
+        Thickness margin,
+        double width,
+        double height)
+    {
+        var hitTarget = new Border
+        {
+            Background = Brushes.Transparent,
+            HorizontalAlignment = horizontalAlignment,
+            VerticalAlignment = verticalAlignment,
+            Margin = margin,
+            Width = width,
+            Height = height,
+            IsHitTestVisible = true
+        };
+        WindowDecorationProperties.SetElementRole(hitTarget, role);
+        Grid.SetRowSpan(hitTarget, 2);
+        root.Children.Add(hitTarget);
     }
 
     private static Button CreateTitleButton(TitleButtonKind kind, Action action)
