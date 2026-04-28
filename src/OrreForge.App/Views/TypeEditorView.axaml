@@ -73,6 +73,15 @@
             <Setter Property="FontSize" Value="8"/>
             <Setter Property="Padding" Value="2,0,2,0"/>
         </Style>
+        <Style Selector="TextBlock.LegacyTypeMatchupLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#EDEDED"/>
+            <Setter Property="Background" Value="#00000000"/>
+            <Setter Property="TextAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
         <Style Selector="RadioButton.LegacyTypeRadio">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Bold"/>
@@ -198,21 +207,21 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:TypeEffectivenessViewModel">
-                                <Grid Width="130" Height="60">
+                                <StackPanel Width="130"
+                                            Height="60"
+                                            Orientation="Vertical">
                                     <TextBlock Text="{Binding TypeName}"
-                                               Classes="LegacyTypeHeader"
-                                               Canvas.Left="0"
+                                               Classes="LegacyTypeMatchupLabel"
                                                Width="120"
                                                Height="20"
-                                               HorizontalAlignment="Left"
-                                               TextAlignment="Left"/>
+                                               Margin="0,0,10,0"/>
                                     <controls:LegacyPokemonComboBox Classes="LegacyTypeCombo LegacyTypeMatchupCombo"
-                                                                    Margin="0,22,10,0"
+                                                                    Margin="0,2,10,0"
                                                                     Width="120"
                                                                     ItemsSource="{Binding Options}"
                                                                     SelectedItem="{Binding SelectedEffectiveness, Mode=TwoWay}"
                                                                     MaxDropDownHeight="220"/>
-                                </Grid>
+                                </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
