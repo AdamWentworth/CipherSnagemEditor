@@ -1548,7 +1548,7 @@ public sealed class ColosseumCommonRel
         };
 
     private static string RoomName(int id)
-        => id == 0 ? "-" : $"Room 0x{id:X4}";
+        => ColosseumRoomCatalog.NameFor(id);
 
     private static string ShinyValueName(int id)
         => id switch

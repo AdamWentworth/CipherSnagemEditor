@@ -45,7 +45,7 @@ public sealed class TreasureEditorResources
         var itemOptions = commonRel.Items.Count == 0
             ? [new PickerOptionViewModel(0, "-")]
             : commonRel.Items
-                .Select(item => new PickerOptionViewModel(item.Index, item.Index == 0 ? "-" : item.Name))
+                .Select(item => new PickerOptionViewModel(item.Index, item.Index == 0 ? "-" : $"{item.Name} ({item.Index})"))
                 .ToArray();
 
         return new TreasureEditorResources(BuildModelOptions(), roomOptions, itemOptions);
@@ -71,8 +71,8 @@ public sealed class TreasureEditorResources
     private static IReadOnlyList<PickerOptionViewModel> BuildModelOptions()
         =>
         [
-            new(0, "None"),
-            new(0x24, "Treasure Box"),
+            new(0, "-"),
+            new(0x24, "Chest"),
             new(0x44, "Sparkle")
         ];
 }
