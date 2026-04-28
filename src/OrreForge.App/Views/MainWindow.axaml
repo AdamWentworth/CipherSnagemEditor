@@ -93,13 +93,13 @@
                             VerticalAlignment="Top">
                     <Button Classes="TitleBarButton"
                             Content="-"
-                            PointerPressed="MainMinimizePointerPressed"/>
+                            Click="MainMinimizeClick"/>
                     <Button Classes="TitleBarButton"
                             Content="□"
-                            PointerPressed="MainZoomPointerPressed"/>
+                            Click="MainZoomClick"/>
                     <Button Classes="TitleBarButton TitleBarClose"
                             Content="X"
-                            PointerPressed="MainClosePointerPressed"/>
+                            Click="MainCloseClick"/>
                 </StackPanel>
             </Grid>
         </Border>

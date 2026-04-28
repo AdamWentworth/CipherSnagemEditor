@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia;
@@ -55,39 +56,32 @@ public partial class MainWindow : Window
 
     private void MainTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (e.Source is Button)
+        {
+            return;
+        }
+
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             BeginMoveDrag(e);
         }
     }
 
-    private void MainClosePointerPressed(object? sender, PointerPressedEventArgs e)
+    private void MainCloseClick(object? sender, RoutedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            Close();
-            e.Handled = true;
-        }
+        Close();
     }
 
-    private void MainMinimizePointerPressed(object? sender, PointerPressedEventArgs e)
+    private void MainMinimizeClick(object? sender, RoutedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            WindowState = WindowState.Minimized;
-            e.Handled = true;
-        }
+        WindowState = WindowState.Minimized;
     }
 
-    private void MainZoomPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void MainZoomClick(object? sender, RoutedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            WindowState = WindowState == WindowState.Maximized
-                ? WindowState.Normal
-                : WindowState.Maximized;
-            e.Handled = true;
-        }
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)
@@ -225,6 +219,11 @@ public partial class MainWindow : Window
         };
         titleBar.PointerPressed += (_, e) =>
         {
+            if (e.Source is Button)
+            {
+                return;
+            }
+
             if (e.GetCurrentPoint(titleBar).Properties.IsLeftButtonPressed)
             {
                 window.BeginMoveDrag(e);
@@ -292,14 +291,7 @@ public partial class MainWindow : Window
         };
         button.PointerEntered += (_, _) => button.Background = SolidColorBrush.Parse(isClose ? "#E81123" : "#505050");
         button.PointerExited += (_, _) => button.Background = SolidColorBrush.Parse("#3A3A3A");
-        button.PointerPressed += (_, e) =>
-        {
-            if (e.GetCurrentPoint(button).Properties.IsLeftButtonPressed)
-            {
-                action();
-                e.Handled = true;
-            }
-        };
+        button.Click += (_, _) => action();
 
         return button;
     }
