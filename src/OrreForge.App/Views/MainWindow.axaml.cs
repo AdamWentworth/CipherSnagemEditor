@@ -333,8 +333,8 @@ public partial class MainWindow : Window
     {
         var icon = new Grid
         {
-            Width = 12,
-            Height = 12
+            Width = 10,
+            Height = 10
         };
 
         icon.Children.Add(CreateCloseStroke(foreground, 45));
@@ -345,7 +345,7 @@ public partial class MainWindow : Window
     private static Border CreateCloseStroke(IBrush foreground, double angle)
         => new()
         {
-            Width = 12,
+            Width = 8,
             Height = 1,
             Background = foreground,
             VerticalAlignment = VerticalAlignment.Center,

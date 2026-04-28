@@ -113,9 +113,9 @@
                     <Button Classes="TitleBarButton TitleBarClose"
                             chrome:WindowDecorationProperties.ElementRole="CloseButton"
                             Click="MainCloseClick">
-                        <Grid Width="12"
-                              Height="12">
-                            <Border Width="12"
+                        <Grid Width="10"
+                              Height="10">
+                            <Border Width="8"
                                     Height="1"
                                     Background="#DCDCDC"
                                     VerticalAlignment="Center"
@@ -124,7 +124,7 @@
                                     <RotateTransform Angle="45"/>
                                 </Border.RenderTransform>
                             </Border>
-                            <Border Width="12"
+                            <Border Width="8"
                                     Height="1"
                                     Background="#DCDCDC"
                                     VerticalAlignment="Center"
