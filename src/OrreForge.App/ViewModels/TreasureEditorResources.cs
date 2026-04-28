@@ -23,7 +23,7 @@ public sealed class TreasureEditorResources
 
     public static TreasureEditorResources Empty { get; } = new(
         BuildModelOptions(),
-        [new PickerOptionViewModel(0, "Room 0")],
+        [new PickerOptionViewModel(0, "-")],
         [new PickerOptionViewModel(0, "-")]);
 
     public IReadOnlyList<PickerOptionViewModel> ModelOptions { get; }
@@ -35,24 +35,36 @@ public sealed class TreasureEditorResources
     public static TreasureEditorResources FromCommonRel(ColosseumCommonRel commonRel)
     {
         var treasures = commonRel.Treasures;
-        var roomOptions = treasures
-            .Select(treasure => new PickerOptionViewModel(treasure.RoomId, treasure.RoomName))
+        var roomOptions = ColosseumRoomCatalog.AllRooms
+            .Select(room => new PickerOptionViewModel(room.Index, room.Name))
+            .Concat(treasures.Select(treasure => new PickerOptionViewModel(treasure.RoomId, treasure.RoomName)))
             .GroupBy(option => option.Value)
             .Select(group => group.First())
-            .OrderBy(option => option.Value)
-            .DefaultIfEmpty(new PickerOptionViewModel(0, "Room 0"))
+            .OrderBy(option => option.Name, StringComparer.OrdinalIgnoreCase)
+            .Prepend(new PickerOptionViewModel(0, "-"))
+            .GroupBy(option => option.Value)
+            .Select(group => group.First())
             .ToArray();
         var itemOptions = commonRel.Items.Count == 0
             ? [new PickerOptionViewModel(0, "-")]
             : commonRel.Items
-                .Select(item => new PickerOptionViewModel(item.Index, item.Index == 0 ? "-" : $"{item.Name} ({item.Index})"))
+                .Where(item => item.Index == 0 || !string.IsNullOrWhiteSpace(item.Name))
+                .SelectMany(item => BuildItemOptions(item.Index, item.Name))
+                .Concat(treasures.Select(treasure => new PickerOptionViewModel(
+                    treasure.ItemId,
+                    treasure.ItemId == 0 ? "-" : $"{treasure.ItemName} ({treasure.ItemId})")))
+                .GroupBy(option => option.Value)
+                .Select(group => group.First())
+                .OrderBy(option => option.Value == 0 ? string.Empty : option.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
         return new TreasureEditorResources(BuildModelOptions(), roomOptions, itemOptions);
     }
 
     public PickerOptionViewModel ModelOption(int value)
-        => OptionFor(_modelOptionsByValue, value, $"Model {value}");
+        => _modelOptionsByValue.TryGetValue(value, out var option)
+            ? option
+            : ModelOptions[0];
 
     public PickerOptionViewModel RoomOption(int value)
         => OptionFor(_roomOptionsByValue, value, $"Room {value}");
@@ -75,4 +87,20 @@ public sealed class TreasureEditorResources
             new(0x24, "Chest"),
             new(0x44, "Sparkle")
         ];
+
+    private static IEnumerable<PickerOptionViewModel> BuildItemOptions(int itemIndex, string itemName)
+    {
+        var label = itemIndex == 0 ? "-" : $"{itemName} ({itemIndex})";
+        yield return new PickerOptionViewModel(ScriptIndexForItem(itemIndex), label);
+
+        if (itemIndex >= FirstScriptKeyItemIndex)
+        {
+            yield return new PickerOptionViewModel(itemIndex, label);
+        }
+    }
+
+    private const int FirstScriptKeyItemIndex = 0x15e;
+
+    private static int ScriptIndexForItem(int itemIndex)
+        => itemIndex >= FirstScriptKeyItemIndex ? itemIndex + 151 : itemIndex;
 }

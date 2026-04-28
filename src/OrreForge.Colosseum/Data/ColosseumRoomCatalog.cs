@@ -202,6 +202,12 @@ public static class ColosseumRoomCatalog
         [0x3e7] = "waza_viewer"
     };
 
+    public static IReadOnlyList<ColosseumNamedResource> AllRooms
+        => NamesById
+            .OrderBy(room => room.Value, StringComparer.OrdinalIgnoreCase)
+            .Select(room => new ColosseumNamedResource(room.Key, room.Value))
+            .ToArray();
+
     public static string NameFor(int id)
         => id == 0
             ? "-"
