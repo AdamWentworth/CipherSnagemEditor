@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,6 +17,9 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     private static readonly IBrush ShadowFieldBorderBrush = SolidColorBrush.Parse("#C7AEFF");
     private static readonly IBrush EmptyFieldBrush = SolidColorBrush.Parse("#9A9A9A");
     private static readonly IBrush EmptyFieldBorderBrush = SolidColorBrush.Parse("#A6A6A6");
+    private static readonly IBrush NormalDropdownFieldBrush = CreateDropdownBrush("#666666");
+    private static readonly IBrush ShadowDropdownFieldBrush = CreateDropdownBrush("#B895FF");
+    private static readonly IBrush EmptyDropdownFieldBrush = CreateDropdownBrush("#9A9A9A");
     private static readonly IBrush NormalImageBrush = SolidColorBrush.Parse("#2A2A2A");
     private static readonly IBrush ShadowImageBrush = SolidColorBrush.Parse("#B895FF");
     private static readonly IBrush EmptyImageBrush = SolidColorBrush.Parse("#777777");
@@ -186,6 +190,8 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
 
     public IBrush FieldBackgroundBrush => IsShadow ? ShadowFieldBrush : IsSet ? NormalFieldBrush : EmptyFieldBrush;
 
+    public IBrush DropdownBackgroundBrush => IsShadow ? ShadowDropdownFieldBrush : IsSet ? NormalDropdownFieldBrush : EmptyDropdownFieldBrush;
+
     public IBrush FieldBorderBrush => IsShadow ? ShadowFieldBorderBrush : IsSet ? NormalFieldBorderBrush : EmptyFieldBorderBrush;
 
     public IBrush ImageBackgroundBrush => IsShadow ? ShadowImageBrush : IsSet ? NormalImageBrush : EmptyImageBrush;
@@ -334,6 +340,7 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
         OnPropertyChanged(nameof(Opacity));
         OnPropertyChanged(nameof(BackgroundBrush));
         OnPropertyChanged(nameof(FieldBackgroundBrush));
+        OnPropertyChanged(nameof(DropdownBackgroundBrush));
         OnPropertyChanged(nameof(FieldBorderBrush));
         OnPropertyChanged(nameof(ImageBackgroundBrush));
         OnPropertyChanged(nameof(TextBrush));
@@ -430,5 +437,22 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
                 current = current.Parent;
             }
         }
+    }
+
+    private static IBrush CreateDropdownBrush(string baseColorText)
+    {
+        var baseColor = Color.Parse(baseColorText);
+        var accent = Color.Parse("#0A73D9");
+        var brush = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative)
+        };
+
+        brush.GradientStops.Add(new GradientStop(baseColor, 0));
+        brush.GradientStops.Add(new GradientStop(baseColor, 0.86));
+        brush.GradientStops.Add(new GradientStop(accent, 0.86));
+        brush.GradientStops.Add(new GradientStop(accent, 1));
+        return brush;
     }
 }
