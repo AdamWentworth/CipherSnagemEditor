@@ -1803,11 +1803,11 @@ public sealed class ColosseumCommonRel
     private static GiftLayoutInfo GiftLayout(int rowId, GameCubeRegion region)
         => rowId switch
         {
-            1 => new(rowId, 0, DemoStarterOffset(0, region), "Starter Espeon", true),
-            2 => new(rowId, 1, DemoStarterOffset(1, region), "Starter Umbreon", true),
+            1 => new(rowId, 0, DemoStarterOffset(0, region), "Starter Pokemon", true),
+            2 => new(rowId, 1, DemoStarterOffset(1, region), "Starter Pokemon", true),
             3 => new(rowId, 0, DistroGiftOffset(0, region), "Duking's Plusle", false),
             4 => new(rowId, 1, DistroGiftOffset(1, region), "Mt.Battle Ho-oh", false),
-            5 => new(rowId, 3, DistroGiftOffset(3, region), "Colosseum Pikachu", false),
+            5 => new(rowId, 3, DistroGiftOffset(3, region), "Agate Pikachu", false),
             6 => new(rowId, 2, DistroGiftOffset(2, region), "Agate Celebi", false),
             _ => new(rowId, 0, 0, $"Gift {rowId}", false)
         };
