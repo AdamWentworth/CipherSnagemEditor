@@ -127,9 +127,9 @@
             <Border Classes="LegacyMessagePanel" Canvas.Left="10" Canvas.Top="78" Width="460" Height="168">
                 <Canvas>
                     <TextBlock Text="String ID" Classes="LegacyMessageHeader" Canvas.Left="16" Canvas.Top="12" Width="90" Height="20"/>
-                    <TextBox Text="{Binding SelectedMessageString.IdText, Mode=OneWay}" Classes="LegacyMessageField" IsReadOnly="True" Canvas.Left="16" Canvas.Top="38" Width="90" Height="24" HorizontalContentAlignment="Right"/>
+                    <TextBox Text="{Binding SelectedMessageIdText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Classes="LegacyMessageField" Canvas.Left="16" Canvas.Top="38" Width="90" Height="24" HorizontalContentAlignment="Right"/>
                     <TextBlock Text="Description" Classes="LegacyMessageHeader" Canvas.Left="118" Canvas.Top="12" Width="326" Height="20"/>
-                    <TextBox Text="{Binding SelectedMessageText, Mode=TwoWay}" Classes="LegacyMessageField" AcceptsReturn="True" TextWrapping="Wrap" Canvas.Left="118" Canvas.Top="38" Width="326" Height="112"/>
+                    <TextBox Text="{Binding SelectedMessageText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Classes="LegacyMessageField" AcceptsReturn="True" TextWrapping="Wrap" Canvas.Left="118" Canvas.Top="38" Width="326" Height="112"/>
                 </Canvas>
             </Border>
 
@@ -139,7 +139,7 @@
                     Width="120"
                     Height="30"
                     Content="Save"
-                    IsEnabled="False"/>
+                    Command="{Binding SaveMessageCommand}"/>
         </Canvas>
     </Grid>
 </UserControl>

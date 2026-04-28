@@ -471,7 +471,13 @@ public sealed class ColosseumProjectContext
             {
                 try
                 {
-                    var table = GameStringTable.Parse(archive.Extract(messageEntry));
+                    var savedMessagePath = WorkspaceDirectory is null
+                        ? null
+                        : Path.Combine(GetIsoExportDirectory(isoEntry.Name), SafeFileName(messageEntry.Name));
+                    var tableBytes = savedMessagePath is not null && File.Exists(savedMessagePath)
+                        ? File.ReadAllBytes(savedMessagePath)
+                        : archive.Extract(messageEntry);
+                    var table = GameStringTable.Parse(tableBytes);
                     var strings = table.Strings
                         .Select(message => new ColosseumMessageString(message.Id, $"0x{message.Id:X}", message.Text))
                         .ToArray();
@@ -494,6 +500,68 @@ public sealed class ColosseumProjectContext
         }
 
         return tables.OrderBy(table => table.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    public ColosseumMessageTable SaveMessageString(ColosseumMessageTable table, int id, string text)
+    {
+        var sourceBytes = LoadMessageTableBytes(table, out var targetPath);
+        var updatedTable = GameStringTable.Parse(sourceBytes).WithString(id, text);
+        var bytes = updatedTable.ToArray();
+        var parent = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(parent))
+        {
+            Directory.CreateDirectory(parent);
+        }
+
+        File.WriteAllBytes(targetPath, bytes);
+        LoadedStringTables[targetPath] = updatedTable;
+
+        return new ColosseumMessageTable(
+            table.DisplayName,
+            table.IsoFileName,
+            table.EntryName,
+            updatedTable.Strings.Select(message => new ColosseumMessageString(
+                message.Id,
+                $"0x{message.Id:X}",
+                message.Text)).ToArray());
+    }
+
+    private byte[] LoadMessageTableBytes(ColosseumMessageTable table, out string targetPath)
+    {
+        if (MessageTable is not null
+            && string.Equals(table.IsoFileName, SourcePath, StringComparison.OrdinalIgnoreCase))
+        {
+            targetPath = SourcePath;
+            return File.ReadAllBytes(SourcePath);
+        }
+
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No message table is selected.");
+        }
+
+        targetPath = Path.Combine(GetIsoExportDirectory(table.IsoFileName), SafeFileName(table.EntryName));
+        if (File.Exists(targetPath))
+        {
+            return File.ReadAllBytes(targetPath);
+        }
+
+        var isoEntry = Iso.Files.FirstOrDefault(entry =>
+            string.Equals(entry.Name, table.IsoFileName, StringComparison.OrdinalIgnoreCase));
+        if (isoEntry is null)
+        {
+            throw new FileNotFoundException($"Could not find {table.IsoFileName} in the ISO.");
+        }
+
+        var archive = FsysArchive.Parse(isoEntry.Name, GameCubeIsoReader.ReadFile(Iso, isoEntry));
+        var messageEntry = archive.Entries.FirstOrDefault(entry =>
+            string.Equals(entry.Name, table.EntryName, StringComparison.OrdinalIgnoreCase));
+        if (messageEntry is null)
+        {
+            throw new FileNotFoundException($"Could not find {table.EntryName} in {table.IsoFileName}.");
+        }
+
+        return archive.Extract(messageEntry);
     }
 
     private string SaveStartDol(ColosseumCommonRel commonRel)

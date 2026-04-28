@@ -98,6 +98,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private MessageStringEntryViewModel? _selectedMessageString;
 
     [ObservableProperty]
+    private string _selectedMessageIdText = string.Empty;
+
+    [ObservableProperty]
     private string _selectedMessageText = string.Empty;
 
     [ObservableProperty]
@@ -299,6 +302,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTreasureDetail = null;
             SelectedMessageTable = null;
             SelectedMessageString = null;
+            SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
             PopulateIsoFiles(context);
@@ -359,6 +363,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTreasureDetail = null;
             SelectedMessageTable = null;
             SelectedMessageString = null;
+            SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
             RefreshSelectedToolView(SelectedTool);
@@ -608,6 +613,40 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSaveMessage))]
+    private async Task SaveMessageAsync()
+    {
+        if (CurrentProject is null
+            || SelectedMessageTable is null
+            || !TryParseMessageId(SelectedMessageIdText, out var messageId))
+        {
+            return;
+        }
+
+        IsBusy = true;
+        Logs.Add($"Saving message {messageId:X} in {SelectedMessageTable.Table.DisplayName}");
+
+        try
+        {
+            var updated = await Task.Run(() => CurrentProject.SaveMessageString(
+                SelectedMessageTable.Table,
+                messageId,
+                SelectedMessageText));
+            SelectedMessageTable.ReplaceTable(updated);
+            LoadMessageStrings(SelectedMessageTable);
+            SelectedMessageString = MessageStrings.FirstOrDefault(entry => entry.Message.Id == messageId);
+            Logs.Add($"Message saved: {updated.DisplayName} id 0x{messageId:X}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"Message save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     [RelayCommand]
     private void ReturnHome()
     {
@@ -681,6 +720,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private bool CanSaveTreasure()
         => CurrentProject?.Iso is not null && SelectedTreasureDetail is not null && !IsBusy;
+
+    private bool CanSaveMessage()
+        => CurrentProject is not null
+            && SelectedMessageTable is not null
+            && TryParseMessageId(SelectedMessageIdText, out _)
+            && !IsBusy;
 
     public bool PrepareToolWindow(ToolEntryViewModel tool)
     {
@@ -833,6 +878,7 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedMessageTableChanged(MessageTableViewModel? value)
     {
         LoadMessageStrings(value);
+        SaveMessageCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedMessageStringChanged(MessageStringEntryViewModel? value)
@@ -842,7 +888,19 @@ public partial class MainWindowViewModel : ViewModelBase
             message.IsSelected = ReferenceEquals(message, value);
         }
 
+        SelectedMessageIdText = value?.Message.IdHex ?? string.Empty;
         SelectedMessageText = value?.Message.Text ?? string.Empty;
+        SaveMessageCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedMessageIdTextChanged(string value)
+    {
+        SaveMessageCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedMessageTextChanged(string value)
+    {
+        SaveMessageCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnTrainerSearchTextChanged(string value)
@@ -895,6 +953,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveGiftPokemonCommand.NotifyCanExecuteChanged();
         SaveTypeCommand.NotifyCanExecuteChanged();
         SaveTreasureCommand.NotifyCanExecuteChanged();
+        SaveMessageCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSelectedToolView(ToolEntryViewModel? value)
@@ -1240,6 +1299,7 @@ public partial class MainWindowViewModel : ViewModelBase
             MessageStrings.Clear();
             SelectedMessageTable = null;
             SelectedMessageString = null;
+            SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             return;
         }
@@ -1264,6 +1324,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             SelectedMessageTable = null;
             SelectedMessageString = null;
+            SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedToolDetail = $"Message Editor\n{ex.Message}";
             Logs.Add($"Message load failed: {ex.Message}");
@@ -1619,6 +1680,24 @@ public partial class MainWindowViewModel : ViewModelBase
         return builder.ToString();
     }
 
+    private static bool TryParseMessageId(string? value, out int id)
+    {
+        id = 0;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var text = value.Trim();
+        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            return int.TryParse(text[2..], System.Globalization.NumberStyles.HexNumber, null, out id)
+                && id is > 0 and <= 0x000fffff;
+        }
+
+        return int.TryParse(text, out id) && id is > 0 and <= 0x000fffff;
+    }
+
     private void RefreshSelectedTrainerDetails(TrainerEntryViewModel? value)
     {
         SelectedTrainerPokemon.Clear();
@@ -1819,6 +1898,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _allMessageStrings.Clear();
         MessageStrings.Clear();
         SelectedMessageString = null;
+        SelectedMessageIdText = string.Empty;
         SelectedMessageText = string.Empty;
 
         if (table is null)

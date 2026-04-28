@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 
@@ -38,12 +39,27 @@ public sealed class LegacySimpleToolView : UserControl
         var list = new StackPanel();
         var rows = new[]
         {
-            "Physical/Special split",
-            "Reusable TMs",
-            "Remove trade evolutions",
-            "Update shadow Pokemon data",
-            "Colosseum quality of life",
-            "Patch from folder"
+            "Apply the gen IV physical/special split and set moves to their default category",
+            "Disables some save file checks to prevent the save from being corrupted",
+            "Adds the ability to soft reset using B + X + Start button combo",
+            "Press R in the overworld to open the PC menu from anywhere (Make sure you don't softlock yourself)",
+            "Remove shiny locks from gift pokemon (espeon, umbreon, plusle, pikachu, celebi, hooh)",
+            "Allow starter pokemon to be female",
+            "TMs can be reused infinitely",
+            "Gen 6+ critical hit multiplier (1.5x)",
+            "Gen 7+ critical hit probablities",
+            "Trade evolutions become level 40",
+            "Evolution stone evolutions become level 40",
+            "Starter pokemon can be shiny",
+            "Starter pokemon can never be shiny",
+            "Starter pokemon are always shiny",
+            "Enable Debug Logs (Only useful for script development)",
+            "When a shadow pokemon has locked moves the move doesn't show the ??? type icon",
+            "Any pokemon can learn any TM",
+            "All pokemon have the maximum catch rate of 255",
+            "Set all battles to single battles",
+            "Set all battles to double battles",
+            "Modify the ASM so it allows any region's colbtl.bin to be imported. Trades will be locked to whichever region's colbtl.bin was imported"
         };
         for (var index = 0; index < rows.Length; index++)
         {
@@ -57,7 +73,7 @@ public sealed class LegacySimpleToolView : UserControl
                 {
                     Text = rows[index],
                     Foreground = Brushes.Black,
-                    FontSize = 12,
+                    FontSize = 10,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 }
@@ -75,7 +91,11 @@ public sealed class LegacySimpleToolView : UserControl
                 {
                     Margin = new Thickness(8),
                     Background = SolidColorBrush.Parse("#222222"),
-                    Child = list
+                    Child = new ScrollViewer
+                    {
+                        VerticalScrollBarVisibility = ScrollBarVisibility.Visible,
+                        Content = list
+                    }
                 }
             }
         };
@@ -90,7 +110,7 @@ public sealed class LegacySimpleToolView : UserControl
             Children =
             {
                 LegacyCheck("Randomise Starter Pokemon"),
-                LegacyCheck("Randomise Shadow Pokemon"),
+                LegacyCheck("Shadow Pokemon"),
                 LegacyCheck("Randomise Unobtainable Pokemon"),
                 LegacyCheck("Randomise Pokemon Moves"),
                 LegacyCheck("Randomise Pokemon Types"),
@@ -131,8 +151,8 @@ public sealed class LegacySimpleToolView : UserControl
             Height = size.Height,
             Background = DarkBackground
         };
-        AddPanel(canvas, 10, 10, 190, size.Height - 20, "Rooms", ["Select room", "Load collision", "Export mesh"]);
-        AddPanel(canvas, 210, 10, size.Width - 220, size.Height - 20, "Collision Viewer", ["Viewport reserved for the model/collision renderer.", "Swift parity shell is ready; renderer port follows the binary model parser."]);
+        AddPanel(canvas, 10, 10, 190, size.Height - 20, "Rooms", ["Room", "Collision", "Export"]);
+        AddPanel(canvas, 210, 10, size.Width - 220, size.Height - 20, "Collision Viewer", ["X", "Y", "Z", "Faces", "Materials"]);
         return canvas;
     }
 
@@ -146,7 +166,7 @@ public sealed class LegacySimpleToolView : UserControl
         };
         AddPanel(canvas, 10, 10, 190, size.Height - 20, "Files", ["common.rel", "script FSYS", "room data"]);
         AddPanel(canvas, 210, 10, size.Width - 220, 150, "Interaction", ["Character", "Script", "Flags"]);
-        AddPanel(canvas, 210, 170, size.Width - 220, size.Height - 180, "Script Preview", ["Interaction rows will attach here once the script parser is ported."]);
+        AddPanel(canvas, 210, 170, size.Width - 220, size.Height - 180, "Script Preview", ["Function", "Parameter", "Message"]);
         return canvas;
     }
 
@@ -160,7 +180,7 @@ public sealed class LegacySimpleToolView : UserControl
         };
         AddPanel(canvas, 10, 10, 180, size.Height - 20, "Filters", ["Current filter", "Rooms", "Models", "Materials"]);
         AddPanel(canvas, 200, 10, size.Width - 210, 170, "Search", ["Name", "Index", "Vertex Group"]);
-        AddPanel(canvas, 200, 190, size.Width - 210, size.Height - 200, "Results", ["Filter result table reserved for the geometry parser."]);
+        AddPanel(canvas, 200, 190, size.Width - 210, size.Height - 200, "Results", ["Index", "Vertices", "Texture"]);
         return canvas;
     }
 
@@ -172,9 +192,9 @@ public sealed class LegacySimpleToolView : UserControl
             Height = size.Height,
             Background = DarkBackground
         };
-        AddPanel(canvas, 10, 10, 180, size.Height - 20, "Tables", ["common.rel", "Start.dol", "Decks", "Messages"]);
-        AddPanel(canvas, 200, 10, size.Width - 210, 60, "Table", ["Select a binary table"]);
-        AddPanel(canvas, 200, 80, size.Width - 210, size.Height - 90, "Fields", ["Offset", "Type", "Value"]);
+        AddPanel(canvas, 10, 10, 180, size.Height - 20, "Tables", ["Save Data", "E-Reader", "Common", "Deck Pokemon", "Deck Trainer", "Deck AI", "Other"]);
+        AddPanel(canvas, 200, 10, size.Width - 210, 72, "Table", ["Decode", "Encode", "Document"]);
+        AddPanel(canvas, 200, 92, size.Width - 210, size.Height - 102, "Fields", ["Offset", "Type", "Value"]);
         return canvas;
     }
 

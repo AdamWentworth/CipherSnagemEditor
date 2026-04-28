@@ -7,6 +7,37 @@ public sealed class GameStringTable
 {
     private const int NumberOfStringsOffset = 0x04;
     private const int EndOfHeader = 0x10;
+    private static readonly IReadOnlyDictionary<string, byte> SpecialTokens = new Dictionary<string, byte>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["New Line"] = 0x00,
+        ["Dialogue End"] = 0x02,
+        ["Clear Window"] = 0x03,
+        ["Kanji"] = 0x04,
+        ["Furigana"] = 0x05,
+        ["Furigana End"] = 0x06,
+        ["Font"] = 0x07,
+        ["Spec Colour"] = 0x08,
+        ["Pause"] = 0x09,
+        ["Player Battle 19"] = 0x13,
+        ["Switch Pokemon 20"] = 0x14,
+        ["Switch Pokemon 21"] = 0x15,
+        ["Foe Tr Class 34"] = 0x22,
+        ["Foe Tr Name 35"] = 0x23,
+        ["Move 40"] = 0x28,
+        ["Item 41"] = 0x29,
+        ["Player Field 43"] = 0x2b,
+        ["Rui 44"] = 0x2c,
+        ["Item 45"] = 0x2d,
+        ["Item 46"] = 0x2e,
+        ["Quantity 47"] = 0x2f,
+        ["String 50"] = 0x32,
+        ["Predef Colour"] = 0x38,
+        ["MsgID 77"] = 0x4d,
+        ["Pokemon Cry 80"] = 0x50,
+        ["Speaker"] = 0x59,
+        ["Set Speaker 106"] = 0x6a,
+        ["Wait Input 109"] = 0x6d
+    };
 
     private GameStringTable(IReadOnlyList<GameString> strings)
     {
@@ -19,6 +50,52 @@ public sealed class GameStringTable
 
     public string StringWithId(int id)
         => id == 0 ? "-" : Strings.FirstOrDefault(text => text.Id == id)?.Text ?? $"#{id}";
+
+    public GameStringTable WithString(int id, string text)
+    {
+        if (id <= 0 || id > 0x000fffff)
+        {
+            throw new ArgumentOutOfRangeException(nameof(id), "Message string IDs must be between 1 and 0xFFFFF.");
+        }
+
+        var replacementText = string.IsNullOrEmpty(text) ? "-" : text;
+        var strings = Strings
+            .Where(message => message.Id != id)
+            .Append(new GameString(id, replacementText, 0))
+            .OrderBy(message => message.Id)
+            .ToArray();
+        return new GameStringTable(strings);
+    }
+
+    public byte[] ToArray()
+    {
+        if (Strings.Count > ushort.MaxValue)
+        {
+            throw new InvalidDataException("String table has too many entries.");
+        }
+
+        var encodedStrings = Strings
+            .OrderBy(message => message.Id)
+            .Select(message => (message.Id, Bytes: EncodeGameString(message.Text)))
+            .ToArray();
+        var textOffset = EndOfHeader + (encodedStrings.Length * 8);
+        var length = textOffset + encodedStrings.Sum(message => message.Bytes.Length);
+        var bytes = new byte[length];
+        BigEndian.WriteUInt16(bytes, NumberOfStringsOffset, checked((ushort)encodedStrings.Length));
+
+        var currentEntry = EndOfHeader;
+        var currentText = textOffset;
+        foreach (var message in encodedStrings)
+        {
+            BigEndian.WriteUInt32(bytes, currentEntry, checked((uint)message.Id & 0x000fffff));
+            BigEndian.WriteUInt32(bytes, currentEntry + 4, checked((uint)currentText));
+            message.Bytes.CopyTo(bytes, currentText);
+            currentEntry += 8;
+            currentText += message.Bytes.Length;
+        }
+
+        return bytes;
+    }
 
     public static GameStringTable Parse(byte[] bytes)
     {
@@ -83,6 +160,89 @@ public sealed class GameStringTable
         }
 
         return builder.ToString();
+    }
+
+    private static byte[] EncodeGameString(string text)
+    {
+        using var stream = new MemoryStream();
+        for (var index = 0; index < text.Length;)
+        {
+            if (text[index] == '\r')
+            {
+                index++;
+                continue;
+            }
+
+            if (text[index] == '\n')
+            {
+                WriteSpecial(stream, 0x00, []);
+                index++;
+                continue;
+            }
+
+            if (text[index] == '[')
+            {
+                var end = text.IndexOf(']', index + 1);
+                if (end > index)
+                {
+                    var token = text[(index + 1)..end];
+                    if (TryParseSpecialToken(token, out var special, out var extra))
+                    {
+                        WriteSpecial(stream, special, extra);
+                        index = end + 1;
+                        continue;
+                    }
+                }
+            }
+
+            WriteUInt16(stream, text[index]);
+            index++;
+        }
+
+        WriteUInt16(stream, 0);
+        return stream.ToArray();
+    }
+
+    private static bool TryParseSpecialToken(string token, out byte special, out byte[] extra)
+    {
+        extra = [];
+        if (SpecialTokens.TryGetValue(token.Trim(), out special))
+        {
+            extra = new byte[SpecialCharacterExtraBytes(special)];
+            return true;
+        }
+
+        if (byte.TryParse(token.Trim(), out special))
+        {
+            extra = new byte[SpecialCharacterExtraBytes(special)];
+            return true;
+        }
+
+        if (token.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            && byte.TryParse(token[2..], System.Globalization.NumberStyles.HexNumber, null, out special))
+        {
+            extra = new byte[SpecialCharacterExtraBytes(special)];
+            return true;
+        }
+
+        special = 0;
+        return false;
+    }
+
+    private static void WriteSpecial(Stream stream, byte special, ReadOnlySpan<byte> extra)
+    {
+        WriteUInt16(stream, 0xffff);
+        stream.WriteByte(special);
+        for (var index = 0; index < SpecialCharacterExtraBytes(special); index++)
+        {
+            stream.WriteByte(index < extra.Length ? extra[index] : (byte)0);
+        }
+    }
+
+    private static void WriteUInt16(Stream stream, int value)
+    {
+        stream.WriteByte((byte)(value >> 8));
+        stream.WriteByte((byte)value);
     }
 
     private static string SpecialCharacterText(byte special)
