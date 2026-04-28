@@ -74,6 +74,12 @@ public sealed class ColosseumCommonRel
     private const int PokemonStatsLevelUpMoveLevelOffset = 0x00;
     private const int PokemonStatsLevelUpMoveMoveOffset = 0x02;
 
+    private const int TypeCount = 0x12;
+    private const int TypeSize = 0x2c;
+    private const int TypeCategoryOffset = 0x00;
+    private const int TypeNameIdOffset = 0x04;
+    private const int TypeFirstEffectivenessOffset = 0x09;
+
     private const int MoveSize = 0x38;
     private const int MovePriorityOffset = 0x00;
     private const int MovePpOffset = 0x01;
@@ -135,6 +141,32 @@ public sealed class ColosseumCommonRel
     private const int TmEntrySize = 0x08;
     private const int TmMoveOffset = 0x06;
 
+    private const int TreasureSize = 0x1c;
+    private const int TreasureModelIdOffset = 0x00;
+    private const int TreasureQuantityOffset = 0x01;
+    private const int TreasureAngleOffset = 0x02;
+    private const int TreasureRoomIdOffset = 0x04;
+    private const int TreasureFlagOffset = 0x06;
+    private const int TreasureItemIdOffset = 0x0e;
+    private const int TreasureXOffset = 0x10;
+    private const int TreasureYOffset = 0x14;
+    private const int TreasureZOffset = 0x18;
+
+    private const int GiftDemoSpeciesOffset = 0x02;
+    private const int GiftDemoLevelOffset = 0x07;
+    private const int GiftDemoMove1Offset = 0x16;
+    private const int GiftDemoMove2Offset = 0x26;
+    private const int GiftDemoMove3Offset = 0x36;
+    private const int GiftDemoMove4Offset = 0x46;
+    private const int GiftDemoGenderOffset = 0x56;
+    private const int GiftDemoNatureOffset = 0x5a;
+    private const int GiftDemoShinyOffset = 0x5e;
+    private const int GiftDemoExpOffset = 0x92;
+    private const int GiftDistroSpeciesOffset = 0x02;
+    private const int GiftDistroLevelOffset = 0x07;
+    private const int GiftDistroShinyOffset = 0x5a;
+    private const int GiftPlusleShinyOffset = 0x66;
+
     private static readonly int[] PokemonUnsetFillOffsets =
     [
         0x00, 0x01, 0x02, 0x08, 0x09, 0x10, 0x11, 0x10, 0x13, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
@@ -150,10 +182,13 @@ public sealed class ColosseumCommonRel
     private readonly GameCubeRegion _region;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumTrainerClass>> _trainerClasses;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumPokemonStats>> _pokemonStats;
+    private readonly Lazy<IReadOnlyDictionary<int, ColosseumTypeData>> _typeData;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumMove>> _moves;
     private readonly Lazy<IReadOnlyList<ColosseumTmMove>> _tmMoves;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _items;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumItem>> _itemData;
+    private readonly Lazy<IReadOnlyDictionary<int, ColosseumGiftPokemon>> _giftPokemon;
+    private readonly Lazy<IReadOnlyDictionary<int, ColosseumTreasure>> _treasures;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _abilities;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumBattle>> _battles;
     private readonly GameStringTable? _pocketMenuStrings;
@@ -178,10 +213,13 @@ public sealed class ColosseumCommonRel
         _trainerModelNames = trainerModelNames ?? new Dictionary<int, string>();
         _trainerClasses = new Lazy<IReadOnlyDictionary<int, ColosseumTrainerClass>>(LoadTrainerClasses);
         _pokemonStats = new Lazy<IReadOnlyDictionary<int, ColosseumPokemonStats>>(LoadPokemonStats);
+        _typeData = new Lazy<IReadOnlyDictionary<int, ColosseumTypeData>>(LoadTypeData);
         _moves = new Lazy<IReadOnlyDictionary<int, ColosseumMove>>(LoadMoves);
         _tmMoves = new Lazy<IReadOnlyList<ColosseumTmMove>>(LoadTmMoves);
         _items = new Lazy<IReadOnlyDictionary<int, string>>(LoadItems);
         _itemData = new Lazy<IReadOnlyDictionary<int, ColosseumItem>>(LoadItemData);
+        _giftPokemon = new Lazy<IReadOnlyDictionary<int, ColosseumGiftPokemon>>(LoadGiftPokemon);
+        _treasures = new Lazy<IReadOnlyDictionary<int, ColosseumTreasure>>(LoadTreasures);
         _abilities = new Lazy<IReadOnlyDictionary<int, string>>(LoadAbilities);
         _battles = new Lazy<IReadOnlyDictionary<int, ColosseumBattle>>(LoadBattles);
     }
@@ -193,6 +231,9 @@ public sealed class ColosseumCommonRel
     public IReadOnlyList<ColosseumPokemonStats> PokemonStats
         => _pokemonStats.Value.Values.OrderBy(pokemon => pokemon.Index).ToArray();
 
+    public IReadOnlyList<ColosseumTypeData> TypeData
+        => _typeData.Value.Values.OrderBy(type => type.Index).ToArray();
+
     public IReadOnlyList<ColosseumMove> Moves
         => _moves.Value.Values.OrderBy(move => move.Index).ToArray();
 
@@ -200,6 +241,12 @@ public sealed class ColosseumCommonRel
 
     public IReadOnlyList<ColosseumItem> ItemData
         => _itemData.Value.Values.OrderBy(item => item.Index).ToArray();
+
+    public IReadOnlyList<ColosseumGiftPokemon> GiftPokemon
+        => _giftPokemon.Value.Values.OrderBy(gift => gift.RowId).ToArray();
+
+    public IReadOnlyList<ColosseumTreasure> Treasures
+        => _treasures.Value.Values.OrderBy(treasure => treasure.Index).ToArray();
 
     public IReadOnlyList<ColosseumNamedResource> Items
         => _items.Value
@@ -677,6 +724,96 @@ public sealed class ColosseumCommonRel
         }
     }
 
+    public void WriteType(ColosseumTypeUpdate type)
+    {
+        var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
+        var start = FirstTypeOffset(_region);
+        if (type.Index < 0 || type.Index >= TypeCount || start <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(type), $"Type index {type.Index} is outside the editable table.");
+        }
+
+        var offset = start + (type.Index * TypeSize);
+        dol.WriteByte(offset + TypeCategoryOffset, ClampByte(type.CategoryId));
+        dol.WriteUInt32(offset + TypeNameIdOffset, checked((uint)Math.Clamp(type.NameId, 0, int.MaxValue)));
+
+        for (var index = 0; index < TypeCount; index++)
+        {
+            var value = index < type.Effectiveness.Count ? type.Effectiveness[index] : 0x3f;
+            dol.WriteByte(offset + TypeFirstEffectivenessOffset + (index * 2), ClampByte(value));
+        }
+
+        if (_typeData.IsValueCreated && _typeData.Value is Dictionary<int, ColosseumTypeData> types)
+        {
+            types[type.Index] = ReadType(type.Index);
+        }
+    }
+
+    public void WriteTreasure(ColosseumTreasureUpdate treasure)
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberTreasureBoxes);
+        if (treasure.Index < 0 || treasure.Index >= count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(treasure), $"Treasure index {treasure.Index} is outside the table.");
+        }
+
+        var offset = PointerFor(ColosseumCommonIndex.TreasureBoxData) + (treasure.Index * TreasureSize);
+        _data.WriteByte(offset + TreasureModelIdOffset, ClampByte(treasure.ModelId));
+        _data.WriteByte(offset + TreasureQuantityOffset, ClampByte(treasure.Quantity));
+        _data.WriteUInt16(offset + TreasureAngleOffset, ClampUInt16(treasure.Angle));
+        _data.WriteUInt16(offset + TreasureRoomIdOffset, ClampUInt16(treasure.RoomId));
+        _data.WriteUInt16(offset + TreasureItemIdOffset, ClampUInt16(treasure.ItemId));
+        _data.WriteUInt32(offset + TreasureXOffset, FloatBits(treasure.X));
+        _data.WriteUInt32(offset + TreasureYOffset, FloatBits(treasure.Y));
+        _data.WriteUInt32(offset + TreasureZOffset, FloatBits(treasure.Z));
+
+        if (_treasures.IsValueCreated && _treasures.Value is Dictionary<int, ColosseumTreasure> treasures)
+        {
+            treasures[treasure.Index] = ReadTreasure(treasure.Index);
+        }
+    }
+
+    public void WriteGiftPokemon(ColosseumGiftPokemonUpdate gift)
+    {
+        var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
+        var current = GiftPokemonByRow(gift.RowId)
+            ?? throw new ArgumentOutOfRangeException(nameof(gift), $"Gift Pokemon row {gift.RowId} is outside the table.");
+        if (current.StartOffset <= 0 || current.StartOffset >= dol.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(gift), $"Gift Pokemon row {gift.RowId} has no editable Start.dol offset.");
+        }
+
+        if (current.RowId <= 2)
+        {
+            dol.WriteByte(current.StartOffset + GiftDemoLevelOffset, ClampByte(gift.Level));
+            dol.WriteUInt16(current.StartOffset + GiftDemoSpeciesOffset, ClampUInt16(gift.SpeciesId));
+            dol.WriteUInt16(current.StartOffset + GiftDemoShinyOffset, ClampUInt16(gift.ShinyValue));
+            dol.WriteUInt16(current.StartOffset + GiftDemoGenderOffset, ClampUInt16(gift.Gender));
+            dol.WriteUInt16(current.StartOffset + GiftDemoNatureOffset, ClampUInt16(gift.Nature));
+            dol.WriteUInt16(current.StartOffset + GiftDemoExpOffset, ClampUInt16(0));
+
+            var moveOffsets = new[] { GiftDemoMove1Offset, GiftDemoMove2Offset, GiftDemoMove3Offset, GiftDemoMove4Offset };
+            for (var index = 0; index < moveOffsets.Length; index++)
+            {
+                var moveId = index < gift.MoveIds.Count ? gift.MoveIds[index] : 0;
+                dol.WriteUInt16(current.StartOffset + moveOffsets[index], ClampUInt16(moveId));
+            }
+        }
+        else
+        {
+            dol.WriteByte(current.StartOffset + GiftDistroLevelOffset, ClampByte(gift.Level));
+            dol.WriteUInt16(current.StartOffset + GiftDistroSpeciesOffset, ClampUInt16(gift.SpeciesId));
+            dol.WriteUInt16(
+                current.StartOffset + (current.DataIndex == 0 ? GiftPlusleShinyOffset : GiftDistroShinyOffset),
+                ClampUInt16(gift.ShinyValue));
+        }
+
+        if (_giftPokemon.IsValueCreated && _giftPokemon.Value is Dictionary<int, ColosseumGiftPokemon> gifts)
+        {
+            gifts[gift.RowId] = ReadGiftPokemon(current.RowId);
+        }
+    }
+
     public ColosseumPokemonStats? PokemonStatsFor(int id)
         => _pokemonStats.Value.TryGetValue(id, out var pokemon) ? pokemon : null;
 
@@ -686,11 +823,60 @@ public sealed class ColosseumCommonRel
     public ColosseumItem? ItemById(int id)
         => _itemData.Value.TryGetValue(NormalizeItemIndex(id), out var item) ? item : null;
 
+    public ColosseumTypeData? TypeById(int id)
+        => _typeData.Value.TryGetValue(id, out var type) ? type : null;
+
+    public ColosseumTreasure? TreasureById(int id)
+        => _treasures.Value.TryGetValue(id, out var treasure) ? treasure : null;
+
+    public ColosseumGiftPokemon? GiftPokemonByRow(int rowId)
+        => _giftPokemon.Value.TryGetValue(rowId, out var gift) ? gift : null;
+
     public string ItemNameById(int id)
         => NameForItem(id);
 
     public ColosseumShadowPokemonData? ShadowDataById(int id)
         => ReadShadowData(id);
+
+    private IReadOnlyDictionary<int, ColosseumTypeData> LoadTypeData()
+    {
+        var dol = _dol;
+        var start = FirstTypeOffset(_region);
+        if (dol is null || start <= 0 || start + TypeSize > dol.Length)
+        {
+            return new Dictionary<int, ColosseumTypeData>();
+        }
+
+        var types = new Dictionary<int, ColosseumTypeData>();
+        for (var index = 0; index < TypeCount; index++)
+        {
+            types[index] = ReadType(index);
+        }
+
+        return types;
+    }
+
+    private ColosseumTypeData ReadType(int index)
+    {
+        var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
+        var offset = FirstTypeOffset(_region) + (index * TypeSize);
+        var nameId = checked((int)dol.ReadUInt32(offset + TypeNameIdOffset));
+        var category = dol.ReadByte(offset + TypeCategoryOffset);
+        var effectiveness = new int[TypeCount];
+        for (var defenseType = 0; defenseType < TypeCount; defenseType++)
+        {
+            effectiveness[defenseType] = dol.ReadByte(offset + TypeFirstEffectivenessOffset + (defenseType * 2));
+        }
+
+        return new ColosseumTypeData(
+            index,
+            offset,
+            Strings.StringWithId(nameId),
+            nameId,
+            category,
+            MoveCategoryName(category),
+            effectiveness);
+    }
 
     private IReadOnlyDictionary<int, ColosseumMove> LoadMoves()
     {
@@ -868,6 +1054,124 @@ public sealed class ColosseumCommonRel
             tmIndex,
             tmMove?.MoveId ?? 0,
             tmMove?.MoveName ?? "-");
+    }
+
+    private IReadOnlyDictionary<int, ColosseumGiftPokemon> LoadGiftPokemon()
+    {
+        var dol = _dol;
+        if (dol is null)
+        {
+            return new Dictionary<int, ColosseumGiftPokemon>();
+        }
+
+        var gifts = new Dictionary<int, ColosseumGiftPokemon>();
+        for (var row = 1; row <= 6; row++)
+        {
+            var gift = ReadGiftPokemon(row);
+            if (gift.StartOffset > 0)
+            {
+                gifts[row] = gift;
+            }
+        }
+
+        return gifts;
+    }
+
+    private ColosseumGiftPokemon ReadGiftPokemon(int rowId)
+    {
+        var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
+        var layout = GiftLayout(rowId, _region);
+        if (layout.Offset <= 0 || layout.Offset >= dol.Length)
+        {
+            return EmptyGift(rowId);
+        }
+
+        int speciesId;
+        int level;
+        int shiny;
+        int gender = 0xff;
+        int nature = 0xff;
+        IReadOnlyList<int> moveIds;
+        if (layout.IsDemo)
+        {
+            speciesId = dol.ReadUInt16(layout.Offset + GiftDemoSpeciesOffset);
+            level = dol.ReadByte(layout.Offset + GiftDemoLevelOffset);
+            shiny = dol.ReadUInt16(layout.Offset + GiftDemoShinyOffset);
+            gender = dol.ReadUInt16(layout.Offset + GiftDemoGenderOffset);
+            nature = dol.ReadUInt16(layout.Offset + GiftDemoNatureOffset);
+            moveIds =
+            [
+                dol.ReadUInt16(layout.Offset + GiftDemoMove1Offset),
+                dol.ReadUInt16(layout.Offset + GiftDemoMove2Offset),
+                dol.ReadUInt16(layout.Offset + GiftDemoMove3Offset),
+                dol.ReadUInt16(layout.Offset + GiftDemoMove4Offset)
+            ];
+        }
+        else
+        {
+            speciesId = dol.ReadUInt16(layout.Offset + GiftDistroSpeciesOffset);
+            level = dol.ReadByte(layout.Offset + GiftDistroLevelOffset);
+            shiny = dol.ReadUInt16(layout.Offset + (layout.DataIndex == 0 ? GiftPlusleShinyOffset : GiftDistroShinyOffset));
+            moveIds = LevelUpMovesFor(speciesId, level);
+        }
+
+        var moveNames = moveIds.Select(id => MoveFor(id).Name).ToArray();
+        return new ColosseumGiftPokemon(
+            rowId,
+            layout.DataIndex,
+            layout.Offset,
+            layout.GiftType,
+            speciesId,
+            PokemonStatsNameFor(speciesId),
+            level,
+            moveIds,
+            moveNames,
+            shiny,
+            ShinyValueName(shiny),
+            gender,
+            GenderName(gender),
+            nature,
+            NatureName(nature),
+            !layout.IsDemo,
+            layout.IsDemo);
+    }
+
+    private ColosseumGiftPokemon EmptyGift(int rowId)
+        => new(rowId, 0, 0, $"Gift {rowId}", 0, "-", 0, [0, 0, 0, 0], ["-", "-", "-", "-"], 0xffff, "Random", 0xff, "Random", 0xff, "Random", true, false);
+
+    private IReadOnlyDictionary<int, ColosseumTreasure> LoadTreasures()
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberTreasureBoxes);
+        var treasures = new Dictionary<int, ColosseumTreasure>();
+        for (var index = 0; index < count; index++)
+        {
+            treasures[index] = ReadTreasure(index);
+        }
+
+        return treasures;
+    }
+
+    private ColosseumTreasure ReadTreasure(int index)
+    {
+        var offset = PointerFor(ColosseumCommonIndex.TreasureBoxData) + (index * TreasureSize);
+        var modelId = _data.ReadByte(offset + TreasureModelIdOffset);
+        var roomId = _data.ReadUInt16(offset + TreasureRoomIdOffset);
+        var itemId = _data.ReadUInt16(offset + TreasureItemIdOffset);
+        return new ColosseumTreasure(
+            index,
+            offset,
+            modelId,
+            TreasureModelName(modelId),
+            _data.ReadByte(offset + TreasureQuantityOffset),
+            _data.ReadUInt16(offset + TreasureAngleOffset),
+            roomId,
+            RoomName(roomId),
+            _data.ReadUInt16(offset + TreasureFlagOffset),
+            itemId,
+            NameForItem(itemId),
+            ReadSingle(offset + TreasureXOffset),
+            ReadSingle(offset + TreasureYOffset),
+            ReadSingle(offset + TreasureZOffset));
     }
 
     private IReadOnlyDictionary<int, string> LoadAbilities()
@@ -1155,6 +1459,15 @@ public sealed class ColosseumCommonRel
     private static byte BoolByte(bool value)
         => value ? (byte)1 : (byte)0;
 
+    private static float ReadSingle(BinaryData data, int offset)
+        => BitConverter.Int32BitsToSingle(unchecked((int)data.ReadUInt32(offset)));
+
+    private float ReadSingle(int offset)
+        => ReadSingle(_data, offset);
+
+    private static uint FloatBits(float value)
+        => unchecked((uint)BitConverter.SingleToInt32Bits(value));
+
     private static int SignedByte(byte value)
         => value > 127 ? value - 256 : value;
 
@@ -1186,6 +1499,31 @@ public sealed class ColosseumCommonRel
         return tmIndex is >= 1 and <= ItemEditorTmCount ? tmIndex : -1;
     }
 
+    private IReadOnlyList<int> LevelUpMovesFor(int speciesId, int level)
+    {
+        var stats = PokemonStatsFor(speciesId);
+        if (stats is null)
+        {
+            return [0, 0, 0, 0];
+        }
+
+        var moves = stats.LevelUpMoves
+            .Where(move => move.MoveId > 0 && move.Level <= level)
+            .OrderBy(move => move.Level)
+            .ThenBy(move => move.Index)
+            .Select(move => move.MoveId)
+            .Distinct()
+            .TakeLast(4)
+            .ToList();
+
+        while (moves.Count < 4)
+        {
+            moves.Add(0);
+        }
+
+        return moves;
+    }
+
     private static string BagSlotName(int id)
         => id switch
         {
@@ -1198,6 +1536,27 @@ public sealed class ColosseumCommonRel
             6 => "Colognes",
             7 => "Battle CDs",
             _ => $"Pocket {id}"
+        };
+
+    private static string TreasureModelName(int id)
+        => id switch
+        {
+            0 => "-",
+            0x24 => "Chest",
+            0x44 => "Sparkle",
+            _ => $"Model {id:X2}"
+        };
+
+    private static string RoomName(int id)
+        => id == 0 ? "-" : $"Room 0x{id:X4}";
+
+    private static string ShinyValueName(int id)
+        => id switch
+        {
+            0x0000 => "Never",
+            0x0001 => "Always",
+            0xffff => "Random",
+            _ => $"Shiny {id}"
         };
 
     private static string NatureName(int id)
@@ -1423,12 +1782,63 @@ public sealed class ColosseumCommonRel
             _ => 0
         };
 
+    private static int FirstTypeOffset(GameCubeRegion region)
+        => region switch
+        {
+            GameCubeRegion.UnitedStates => 0x358500,
+            GameCubeRegion.Japan => 0x344c40,
+            GameCubeRegion.Europe => 0x3a55c0,
+            _ => 0
+        };
+
     private static int FirstTmListOffset(GameCubeRegion region)
         => region switch
         {
             GameCubeRegion.UnitedStates => 0x365018,
             GameCubeRegion.Japan => 0x351758,
             GameCubeRegion.Europe => 0x3b20d0,
+            _ => 0
+        };
+
+    private static GiftLayoutInfo GiftLayout(int rowId, GameCubeRegion region)
+        => rowId switch
+        {
+            1 => new(rowId, 0, DemoStarterOffset(0, region), "Starter Espeon", true),
+            2 => new(rowId, 1, DemoStarterOffset(1, region), "Starter Umbreon", true),
+            3 => new(rowId, 0, DistroGiftOffset(0, region), "Duking's Plusle", false),
+            4 => new(rowId, 1, DistroGiftOffset(1, region), "Mt.Battle Ho-oh", false),
+            5 => new(rowId, 3, DistroGiftOffset(3, region), "Colosseum Pikachu", false),
+            6 => new(rowId, 2, DistroGiftOffset(2, region), "Agate Celebi", false),
+            _ => new(rowId, 0, 0, $"Gift {rowId}", false)
+        };
+
+    private static int DemoStarterOffset(int index, GameCubeRegion region)
+        => (index, region) switch
+        {
+            (0, GameCubeRegion.UnitedStates) => 0x12dbf0,
+            (0, GameCubeRegion.Japan) => 0x12b2c0,
+            (0, GameCubeRegion.Europe) => 0x131e1c,
+            (1, GameCubeRegion.UnitedStates) => 0x12dac8,
+            (1, GameCubeRegion.Japan) => 0x12b198,
+            (1, GameCubeRegion.Europe) => 0x131cf4,
+            _ => 0
+        };
+
+    private static int DistroGiftOffset(int index, GameCubeRegion region)
+        => (index, region) switch
+        {
+            (0, GameCubeRegion.UnitedStates) => 0x12d9c8,
+            (0, GameCubeRegion.Japan) => 0x12b098,
+            (0, GameCubeRegion.Europe) => 0x131bf4,
+            (1, GameCubeRegion.UnitedStates) => 0x12d8e4,
+            (1, GameCubeRegion.Japan) => 0x12afb8,
+            (1, GameCubeRegion.Europe) => 0x131b10,
+            (2, GameCubeRegion.UnitedStates) => 0x12d6b4,
+            (2, GameCubeRegion.Japan) => 0x12add0,
+            (2, GameCubeRegion.Europe) => 0x1318e0,
+            (3, GameCubeRegion.UnitedStates) => 0x12d7c4,
+            (3, GameCubeRegion.Japan) => 0x12aebc,
+            (3, GameCubeRegion.Europe) => 0x1319f0,
             _ => 0
         };
 
@@ -1585,4 +1995,11 @@ public sealed class ColosseumCommonRel
         Level,
         Item
     }
+
+    private sealed record GiftLayoutInfo(
+        int RowId,
+        int DataIndex,
+        int Offset,
+        string GiftType,
+        bool IsDemo);
 }

@@ -12,6 +12,8 @@ public enum ColosseumCommonIndex
     NumberOfTrainerPokemonData = 49,
     Battles = 50,
     NumberOfBattles = 51,
+    TreasureBoxData = 60,
+    NumberTreasureBoxes = 61,
     Moves = 62,
     NumberOfMoves = 63,
     PokemonStats = 68,

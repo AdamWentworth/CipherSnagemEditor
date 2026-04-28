@@ -203,8 +203,12 @@ public partial class MainWindow : Window
             "Pokemon Stats Editor" => new PokemonStatsEditorView(),
             "Move Editor" => new MoveEditorView(),
             "Item Editor" => new ItemEditorView(),
+            "Gift Pokemon Editor" => new GiftPokemonEditorView(),
+            "Type Editor" => new TypeEditorView(),
+            "Treasure Editor" => new TreasureEditorView(),
+            "Message Editor" => new MessageEditorView(),
             "ISO Explorer" => new IsoExplorerView(),
-            _ => CreatePlaceholderContent(tool)
+            _ => new LegacySimpleToolView(tool.Title, ToolContentSize(tool.Title))
         };
 
     private static Control CreateToolWindowShell(Window window, string title, Control content)
@@ -357,9 +361,25 @@ public partial class MainWindow : Window
             "Pokemon Stats Editor" => new Size(910, 571),
             "Move Editor" => new Size(874, 504),
             "Item Editor" => new Size(860, 504),
+            "Gift Pokemon Editor" => new Size(560, 354),
+            "Type Editor" => new Size(640, 540),
+            "Treasure Editor" => new Size(450, 381),
+            "Patches" => new Size(400, 504),
+            "Randomizer" => new Size(390, 529),
+            "Message Editor" => new Size(680, 324),
+            "Collision Viewer" => new Size(840, 504),
+            "Interaction Editor" => new Size(530, 449),
+            "Vertex Filters" => new Size(580, 690),
+            "Table Editor" => new Size(560, 590),
             "ISO Explorer" => new Size(900, 650),
             _ => new Size(620, 320)
         };
+
+    private static Size ToolContentSize(string title)
+    {
+        var size = ToolWindowSize(title);
+        return new Size(size.Width, Math.Max(0, size.Height - 24));
+    }
 
     private static Control CreatePlaceholderContent(ToolEntryViewModel tool)
         => new Border

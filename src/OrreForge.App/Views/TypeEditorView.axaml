@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:OrreForge.App.Controls"
+             xmlns:vm="using:OrreForge.App.ViewModels"
+             x:Class="OrreForge.App.Views.TypeEditorView"
+             x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
+             FontFamily="Arial"
+             Background="#303030">
+    <UserControl.Styles>
+        <Style Selector="Border.LegacyTypePanel">
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="BorderBrush" Value="#545454"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyTypeLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyTypeHeader">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeField">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="ComboBox.LegacyTypeCombo">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0,2,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.LegacyTypeButton">
+            <Setter Property="Background" Value="#6E6E6E"/>
+            <Setter Property="BorderBrush" Value="#7B7B7B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeSearch">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="4,4"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#5C5C5C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="PlaceholderForeground" Value="#A8A8A8"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="200,440"
+          Width="640"
+          Height="516"
+          Background="#303030">
+        <Border Grid.Column="0" Background="#222222">
+            <Grid RowDefinitions="Auto,*">
+                <TextBox Classes="LegacyTypeSearch"
+                         Text="{Binding TypeSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Search"
+                         IsTabStop="False"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible">
+                    <ItemsControl ItemsSource="{Binding TypeEntries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TypeEntryViewModel">
+                                <Border PointerPressed="TypePointerPressed"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Stretch"
+                                        Height="40"
+                                        Background="{Binding BackgroundBrush}"
+                                        BorderBrush="{Binding SelectionBorderBrush}"
+                                        BorderThickness="{Binding SelectionBorderThickness}">
+                                    <Grid ClipToBounds="True">
+                                        <Image Source="{Binding TypeImage}" Stretch="Fill"/>
+                                        <TextBlock Text="{Binding RowText}"
+                                                   HorizontalAlignment="Stretch"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="12"
+                                                   Foreground="#000000"
+                                                   TextAlignment="Center"
+                                                   Margin="8,0"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Canvas Grid.Column="1"
+                Width="440"
+                Height="516"
+                Background="#303030">
+            <Border Classes="LegacyTypePanel" Canvas.Left="10" Canvas.Top="10" Width="210" Height="145">
+                <Canvas>
+                    <TextBlock Text="Name:" Classes="LegacyTypeLabel" Canvas.Left="8" Canvas.Top="5" Width="79" Height="30"/>
+                    <TextBox Text="{Binding SelectedTypeDetail.Name, Mode=OneWay}" Classes="LegacyTypeField" IsReadOnly="True" Canvas.Left="95" Canvas.Top="5" Width="105"/>
+                    <TextBlock Text="Name ID:" Classes="LegacyTypeLabel" Canvas.Left="8" Canvas.Top="40" Width="79" Height="30"/>
+                    <TextBox Text="{Binding SelectedTypeDetail.NameId, Mode=TwoWay}" Classes="LegacyTypeField" Canvas.Left="95" Canvas.Top="40" Width="105"/>
+                    <Separator Canvas.Left="10" Canvas.Top="75" Width="190" Height="5"/>
+                    <TextBlock Text="Index:" Classes="LegacyTypeLabel" Canvas.Left="8" Canvas.Top="85" Width="79" Height="18"/>
+                    <TextBox Text="{Binding SelectedTypeDetail.IndexText, Mode=OneWay}" Classes="LegacyTypeField" IsReadOnly="True" Canvas.Left="95" Canvas.Top="82" Width="105" Height="20"/>
+                    <TextBlock Text="Hex:" Classes="LegacyTypeLabel" Canvas.Left="8" Canvas.Top="108" Width="79" Height="18"/>
+                    <TextBox Text="{Binding SelectedTypeDetail.HexText, Mode=OneWay}" Classes="LegacyTypeField" IsReadOnly="True" Canvas.Left="95" Canvas.Top="105" Width="105" Height="20"/>
+                </Canvas>
+            </Border>
+
+            <Border Classes="LegacyTypePanel" Canvas.Left="230" Canvas.Top="10" Width="200" Height="145">
+                <Canvas>
+                    <TextBlock Text="Category" Classes="LegacyTypeHeader" Canvas.Left="8" Canvas.Top="30" Width="184" Height="20"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyTypeCombo" Canvas.Left="18" Canvas.Top="58" Width="164"
+                                                    ItemsSource="{Binding SelectedTypeDetail.CategoryOptions}"
+                                                    SelectedItem="{Binding SelectedTypeDetail.SelectedCategory, Mode=TwoWay}"/>
+                    <TextBlock Text="Start Offset:" Classes="LegacyTypeLabel" Canvas.Left="18" Canvas.Top="98" Width="80" Height="20"/>
+                    <TextBox Text="{Binding SelectedTypeDetail.StartOffsetText, Mode=OneWay}" Classes="LegacyTypeField" IsReadOnly="True" Canvas.Left="100" Canvas.Top="96" Width="82" Height="20"/>
+                </Canvas>
+            </Border>
+
+            <Border Classes="LegacyTypePanel" Canvas.Left="10" Canvas.Top="165" Width="420" Height="300">
+                <Canvas>
+                    <TextBlock Text="Type Matchups" Classes="LegacyTypeHeader" Canvas.Left="10" Canvas.Top="8" Width="400" Height="20"/>
+                    <ItemsControl ItemsSource="{Binding SelectedTypeDetail.Effectiveness}"
+                                  Canvas.Left="14"
+                                  Canvas.Top="34"
+                                  Width="392"
+                                  Height="250">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TypeEffectivenessViewModel">
+                                <Grid Width="130" Height="41" Margin="0,0,0,1">
+                                    <TextBlock Text="{Binding TypeName}" Classes="LegacyTypeLabel" Width="50" Height="24" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    <controls:LegacyPokemonComboBox Classes="LegacyTypeCombo"
+                                                                    Margin="56,8,4,0"
+                                                                    Width="70"
+                                                                    ItemsSource="{Binding Options}"
+                                                                    SelectedItem="{Binding SelectedEffectiveness, Mode=TwoWay}"
+                                                                    MaxDropDownHeight="220"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Canvas>
+            </Border>
+
+            <Button Classes="LegacyTypeButton"
+                    Canvas.Left="160"
+                    Canvas.Top="475"
+                    Width="120"
+                    Height="30"
+                    Content="Save"
+                    Command="{Binding SaveTypeCommand}"/>
+        </Canvas>
+    </Grid>
+</UserControl>

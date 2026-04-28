@@ -17,10 +17,16 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<PokemonStatsEntryViewModel> _allPokemonStats = [];
     private readonly List<MoveEntryViewModel> _allMoves = [];
     private readonly List<ItemEntryViewModel> _allItems = [];
+    private readonly List<GiftPokemonEntryViewModel> _allGiftPokemon = [];
+    private readonly List<TypeEntryViewModel> _allTypes = [];
+    private readonly List<TreasureEntryViewModel> _allTreasures = [];
+    private readonly List<MessageStringEntryViewModel> _allMessageStrings = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
     private PokemonStatsEditorResources _pokemonStatsResources = PokemonStatsEditorResources.Empty;
     private MoveEditorResources _moveEditorResources = MoveEditorResources.Empty;
     private ItemEditorResources _itemEditorResources = ItemEditorResources.Empty;
+    private GiftPokemonEditorResources _giftPokemonResources = GiftPokemonEditorResources.Empty;
+    private TreasureEditorResources _treasureEditorResources = TreasureEditorResources.Empty;
 
     [ObservableProperty]
     private ToolEntryViewModel? _selectedTool;
@@ -68,6 +74,33 @@ public partial class MainWindowViewModel : ViewModelBase
     private ItemEditorViewModel? _selectedItemDetail;
 
     [ObservableProperty]
+    private GiftPokemonEntryViewModel? _selectedGiftPokemon;
+
+    [ObservableProperty]
+    private GiftPokemonEditorViewModel? _selectedGiftPokemonDetail;
+
+    [ObservableProperty]
+    private TypeEntryViewModel? _selectedType;
+
+    [ObservableProperty]
+    private TypeEditorViewModel? _selectedTypeDetail;
+
+    [ObservableProperty]
+    private TreasureEntryViewModel? _selectedTreasure;
+
+    [ObservableProperty]
+    private TreasureEditorViewModel? _selectedTreasureDetail;
+
+    [ObservableProperty]
+    private MessageTableViewModel? _selectedMessageTable;
+
+    [ObservableProperty]
+    private MessageStringEntryViewModel? _selectedMessageString;
+
+    [ObservableProperty]
+    private string _selectedMessageText = string.Empty;
+
+    [ObservableProperty]
     private string _trainerSearchText = string.Empty;
 
     [ObservableProperty]
@@ -78,6 +111,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _itemSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _giftPokemonSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _typeSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _treasureSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _messageSearchText = string.Empty;
 
     [ObservableProperty]
     private bool _showIsoExplorer;
@@ -177,6 +222,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<ItemEntryViewModel> ItemEntries { get; } = [];
 
+    public ObservableCollection<GiftPokemonEntryViewModel> GiftPokemonEntries { get; } = [];
+
+    public ObservableCollection<TypeEntryViewModel> TypeEntries { get; } = [];
+
+    public ObservableCollection<TreasureEntryViewModel> TreasureEntries { get; } = [];
+
+    public ObservableCollection<MessageTableViewModel> MessageTables { get; } = [];
+
+    public ObservableCollection<MessageStringEntryViewModel> MessageStrings { get; } = [];
+
     public ObservableCollection<TrainerPokemonSlotViewModel> SelectedTrainerPokemon { get; } = [];
 
     public ColosseumProjectContext? CurrentProject { get; private set; }
@@ -206,14 +261,29 @@ public partial class MainWindowViewModel : ViewModelBase
             _moveEditorResources = MoveEditorResources.Empty;
             _allItems.Clear();
             _itemEditorResources = ItemEditorResources.Empty;
+            _allGiftPokemon.Clear();
+            _giftPokemonResources = GiftPokemonEditorResources.Empty;
+            _allTypes.Clear();
+            _allTreasures.Clear();
+            _treasureEditorResources = TreasureEditorResources.Empty;
+            _allMessageStrings.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
             ItemEntries.Clear();
+            GiftPokemonEntries.Clear();
+            TypeEntries.Clear();
+            TreasureEntries.Clear();
+            MessageTables.Clear();
+            MessageStrings.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
             ItemSearchText = string.Empty;
+            GiftPokemonSearchText = string.Empty;
+            TypeSearchText = string.Empty;
+            TreasureSearchText = string.Empty;
+            MessageSearchText = string.Empty;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
             SelectedPokemonStatsDetail = null;
@@ -221,6 +291,15 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedMoveDetail = null;
             SelectedItem = null;
             SelectedItemDetail = null;
+            SelectedGiftPokemon = null;
+            SelectedGiftPokemonDetail = null;
+            SelectedType = null;
+            SelectedTypeDetail = null;
+            SelectedTreasure = null;
+            SelectedTreasureDetail = null;
+            SelectedMessageTable = null;
+            SelectedMessageString = null;
+            SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
             PopulateIsoFiles(context);
             RefreshSelectedToolView(SelectedTool);
@@ -241,14 +320,29 @@ public partial class MainWindowViewModel : ViewModelBase
             _moveEditorResources = MoveEditorResources.Empty;
             _allItems.Clear();
             _itemEditorResources = ItemEditorResources.Empty;
+            _allGiftPokemon.Clear();
+            _giftPokemonResources = GiftPokemonEditorResources.Empty;
+            _allTypes.Clear();
+            _allTreasures.Clear();
+            _treasureEditorResources = TreasureEditorResources.Empty;
+            _allMessageStrings.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
             ItemEntries.Clear();
+            GiftPokemonEntries.Clear();
+            TypeEntries.Clear();
+            TreasureEntries.Clear();
+            MessageTables.Clear();
+            MessageStrings.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
             ItemSearchText = string.Empty;
+            GiftPokemonSearchText = string.Empty;
+            TypeSearchText = string.Empty;
+            TreasureSearchText = string.Empty;
+            MessageSearchText = string.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
@@ -257,6 +351,15 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedMoveDetail = null;
             SelectedItem = null;
             SelectedItemDetail = null;
+            SelectedGiftPokemon = null;
+            SelectedGiftPokemonDetail = null;
+            SelectedType = null;
+            SelectedTypeDetail = null;
+            SelectedTreasure = null;
+            SelectedTreasureDetail = null;
+            SelectedMessageTable = null;
+            SelectedMessageString = null;
+            SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
             RefreshSelectedToolView(SelectedTool);
             Logs.Add($"Error: {ex.Message}");
@@ -418,6 +521,93 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSaveGiftPokemon))]
+    private async Task SaveGiftPokemonAsync()
+    {
+        if (CurrentProject is null || SelectedGiftPokemonDetail is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var rowId = SelectedGiftPokemonDetail.Gift.RowId;
+        Logs.Add($"Saving gift Pokemon {rowId}: {SelectedGiftPokemonDetail.Name}");
+
+        try
+        {
+            var update = SelectedGiftPokemonDetail.ToUpdate();
+            var path = await Task.Run(() => CurrentProject.SaveGiftPokemon(update));
+            RefreshSavedGiftPokemonEntry(rowId);
+            Logs.Add($"Gift Pokemon saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"Gift Pokemon save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveType))]
+    private async Task SaveTypeAsync()
+    {
+        if (CurrentProject is null || SelectedTypeDetail is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var index = SelectedTypeDetail.Type.Index;
+        Logs.Add($"Saving type {index}: {SelectedTypeDetail.Name}");
+
+        try
+        {
+            var update = SelectedTypeDetail.ToUpdate();
+            var path = await Task.Run(() => CurrentProject.SaveType(update));
+            RefreshSavedTypeEntry(index);
+            Logs.Add($"Type saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"Type save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveTreasure))]
+    private async Task SaveTreasureAsync()
+    {
+        if (CurrentProject is null || SelectedTreasureDetail is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var index = SelectedTreasureDetail.Treasure.Index;
+        Logs.Add($"Saving treasure {index}: {SelectedTreasureDetail.Name}");
+
+        try
+        {
+            var update = SelectedTreasureDetail.ToUpdate();
+            var path = await Task.Run(() => CurrentProject.SaveTreasure(update));
+            RefreshSavedTreasureEntry(index);
+            Logs.Add($"Treasure saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"Treasure save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     [RelayCommand]
     private void ReturnHome()
     {
@@ -483,10 +673,19 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanSaveItem()
         => CurrentProject?.Iso is not null && SelectedItemDetail is not null && !IsBusy;
 
+    private bool CanSaveGiftPokemon()
+        => CurrentProject?.Iso is not null && SelectedGiftPokemonDetail is not null && !IsBusy;
+
+    private bool CanSaveType()
+        => CurrentProject?.Iso is not null && SelectedTypeDetail is not null && !IsBusy;
+
+    private bool CanSaveTreasure()
+        => CurrentProject?.Iso is not null && SelectedTreasureDetail is not null && !IsBusy;
+
     public bool PrepareToolWindow(ToolEntryViewModel tool)
     {
         SelectedTool = tool;
-        if (CurrentProject?.Iso is null)
+        if (CurrentProject?.Iso is null && !(tool.Title == "Message Editor" && CurrentProject?.MessageTable is not null))
         {
             Logs.Add($"Open a Colosseum ISO before launching {tool.Title}.");
             return false;
@@ -505,6 +704,18 @@ public partial class MainWindowViewModel : ViewModelBase
                 return true;
             case "Item Editor":
                 LoadItemRows();
+                return true;
+            case "Gift Pokemon Editor":
+                LoadGiftPokemonRows();
+                return true;
+            case "Type Editor":
+                LoadTypeRows();
+                return true;
+            case "Treasure Editor":
+                LoadTreasureRows();
+                return true;
+            case "Message Editor":
+                LoadMessageRows();
                 return true;
             default:
                 return true;
@@ -580,6 +791,60 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveItemCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedGiftPokemonChanged(GiftPokemonEntryViewModel? value)
+    {
+        foreach (var gift in _allGiftPokemon)
+        {
+            gift.IsSelected = ReferenceEquals(gift, value);
+        }
+
+        SelectedGiftPokemonDetail = value is null
+            ? null
+            : new GiftPokemonEditorViewModel(value.Gift, _giftPokemonResources, value.FaceImage, OnGiftPokemonChanged);
+        SaveGiftPokemonCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedTypeChanged(TypeEntryViewModel? value)
+    {
+        foreach (var type in _allTypes)
+        {
+            type.IsSelected = ReferenceEquals(type, value);
+        }
+
+        SelectedTypeDetail = value is null
+            ? null
+            : new TypeEditorViewModel(value.Type, _allTypes.Select(entry => entry.Type).ToArray(), OnTypeChanged);
+        SaveTypeCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedTreasureChanged(TreasureEntryViewModel? value)
+    {
+        foreach (var treasure in _allTreasures)
+        {
+            treasure.IsSelected = ReferenceEquals(treasure, value);
+        }
+
+        SelectedTreasureDetail = value is null
+            ? null
+            : new TreasureEditorViewModel(value.Treasure, _treasureEditorResources, OnTreasureChanged);
+        SaveTreasureCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedMessageTableChanged(MessageTableViewModel? value)
+    {
+        LoadMessageStrings(value);
+    }
+
+    partial void OnSelectedMessageStringChanged(MessageStringEntryViewModel? value)
+    {
+        foreach (var message in _allMessageStrings)
+        {
+            message.IsSelected = ReferenceEquals(message, value);
+        }
+
+        SelectedMessageText = value?.Message.Text ?? string.Empty;
+    }
+
     partial void OnTrainerSearchTextChanged(string value)
     {
         ApplyTrainerFilter(value);
@@ -600,6 +865,26 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyItemFilter(value);
     }
 
+    partial void OnGiftPokemonSearchTextChanged(string value)
+    {
+        ApplyGiftPokemonFilter(value);
+    }
+
+    partial void OnTypeSearchTextChanged(string value)
+    {
+        ApplyTypeFilter(value);
+    }
+
+    partial void OnTreasureSearchTextChanged(string value)
+    {
+        ApplyTreasureFilter(value);
+    }
+
+    partial void OnMessageSearchTextChanged(string value)
+    {
+        ApplyMessageFilter(value);
+    }
+
     partial void OnIsBusyChanged(bool value)
     {
         NotifyIsoExplorerCommands();
@@ -607,6 +892,9 @@ public partial class MainWindowViewModel : ViewModelBase
         SavePokemonStatsCommand.NotifyCanExecuteChanged();
         SaveMoveCommand.NotifyCanExecuteChanged();
         SaveItemCommand.NotifyCanExecuteChanged();
+        SaveGiftPokemonCommand.NotifyCanExecuteChanged();
+        SaveTypeCommand.NotifyCanExecuteChanged();
+        SaveTreasureCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSelectedToolView(ToolEntryViewModel? value)
@@ -824,6 +1112,164 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void LoadGiftPokemonRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allGiftPokemon.Clear();
+            _giftPokemonResources = GiftPokemonEditorResources.Empty;
+            GiftPokemonEntries.Clear();
+            SelectedGiftPokemon = null;
+            SelectedGiftPokemonDetail = null;
+            return;
+        }
+
+        if (_allGiftPokemon.Count > 0)
+        {
+            ApplyGiftPokemonFilter(GiftPokemonSearchText);
+            return;
+        }
+
+        try
+        {
+            var commonRel = CurrentProject.LoadCommonRel();
+            _giftPokemonResources = GiftPokemonEditorResources.FromCommonRel(commonRel);
+            var rowIndex = 0;
+            foreach (var gift in commonRel.GiftPokemon)
+            {
+                _allGiftPokemon.Add(new GiftPokemonEntryViewModel(gift, rowIndex++));
+            }
+
+            ApplyGiftPokemonFilter(GiftPokemonSearchText);
+            SelectedGiftPokemon = GiftPokemonEntries.FirstOrDefault();
+            Logs.Add($"Gift Pokemon Editor loaded: {_allGiftPokemon.Count} gifts.");
+        }
+        catch (Exception ex)
+        {
+            SelectedGiftPokemon = null;
+            SelectedGiftPokemonDetail = null;
+            SelectedToolDetail = $"Gift Pokemon Editor\n{ex.Message}";
+            Logs.Add($"Gift Pokemon load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadTypeRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allTypes.Clear();
+            TypeEntries.Clear();
+            SelectedType = null;
+            SelectedTypeDetail = null;
+            return;
+        }
+
+        if (_allTypes.Count > 0)
+        {
+            ApplyTypeFilter(TypeSearchText);
+            return;
+        }
+
+        try
+        {
+            var types = CurrentProject.LoadTypes();
+            foreach (var type in types)
+            {
+                _allTypes.Add(new TypeEntryViewModel(type));
+            }
+
+            ApplyTypeFilter(TypeSearchText);
+            SelectedType = TypeEntries.FirstOrDefault();
+            Logs.Add($"Type Editor loaded: {_allTypes.Count} types.");
+        }
+        catch (Exception ex)
+        {
+            SelectedType = null;
+            SelectedTypeDetail = null;
+            SelectedToolDetail = $"Type Editor\n{ex.Message}";
+            Logs.Add($"Type load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadTreasureRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allTreasures.Clear();
+            _treasureEditorResources = TreasureEditorResources.Empty;
+            TreasureEntries.Clear();
+            SelectedTreasure = null;
+            SelectedTreasureDetail = null;
+            return;
+        }
+
+        if (_allTreasures.Count > 0)
+        {
+            ApplyTreasureFilter(TreasureSearchText);
+            return;
+        }
+
+        try
+        {
+            var commonRel = CurrentProject.LoadCommonRel();
+            _treasureEditorResources = TreasureEditorResources.FromCommonRel(commonRel);
+            foreach (var treasure in commonRel.Treasures)
+            {
+                _allTreasures.Add(new TreasureEntryViewModel(treasure));
+            }
+
+            ApplyTreasureFilter(TreasureSearchText);
+            SelectedTreasure = TreasureEntries.FirstOrDefault();
+            Logs.Add($"Treasure Editor loaded: {_allTreasures.Count} treasure boxes.");
+        }
+        catch (Exception ex)
+        {
+            SelectedTreasure = null;
+            SelectedTreasureDetail = null;
+            SelectedToolDetail = $"Treasure Editor\n{ex.Message}";
+            Logs.Add($"Treasure load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadMessageRows()
+    {
+        if (CurrentProject?.Iso is null && CurrentProject?.MessageTable is null)
+        {
+            MessageTables.Clear();
+            _allMessageStrings.Clear();
+            MessageStrings.Clear();
+            SelectedMessageTable = null;
+            SelectedMessageString = null;
+            SelectedMessageText = string.Empty;
+            return;
+        }
+
+        if (MessageTables.Count > 0)
+        {
+            ApplyMessageFilter(MessageSearchText);
+            return;
+        }
+
+        try
+        {
+            foreach (var table in CurrentProject.LoadMessageTables())
+            {
+                MessageTables.Add(new MessageTableViewModel(table));
+            }
+
+            SelectedMessageTable = MessageTables.FirstOrDefault();
+            Logs.Add($"Message Editor loaded: {MessageTables.Count} message tables.");
+        }
+        catch (Exception ex)
+        {
+            SelectedMessageTable = null;
+            SelectedMessageString = null;
+            SelectedMessageText = string.Empty;
+            SelectedToolDetail = $"Message Editor\n{ex.Message}";
+            Logs.Add($"Message load failed: {ex.Message}");
+        }
+    }
+
     private void ApplyTrainerFilter(string? filterText)
     {
         if (_allTrainers.Count == 0)
@@ -952,6 +1398,134 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void ApplyGiftPokemonFilter(string? filterText)
+    {
+        if (_allGiftPokemon.Count == 0)
+        {
+            GiftPokemonEntries.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allGiftPokemon
+            : _allGiftPokemon.Where(gift => Contains(gift.SearchText, filter)).ToList();
+
+        GiftPokemonEntries.Clear();
+        foreach (var gift in filtered)
+        {
+            GiftPokemonEntries.Add(gift);
+        }
+
+        if (SelectedGiftPokemon is null || !GiftPokemonEntries.Contains(SelectedGiftPokemon))
+        {
+            SelectedGiftPokemon = GiftPokemonEntries.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var gift in _allGiftPokemon)
+            {
+                gift.IsSelected = ReferenceEquals(gift, SelectedGiftPokemon);
+            }
+        }
+    }
+
+    private void ApplyTypeFilter(string? filterText)
+    {
+        if (_allTypes.Count == 0)
+        {
+            TypeEntries.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allTypes
+            : _allTypes.Where(type => Contains(type.SearchText, filter)).ToList();
+
+        TypeEntries.Clear();
+        foreach (var type in filtered)
+        {
+            TypeEntries.Add(type);
+        }
+
+        if (SelectedType is null || !TypeEntries.Contains(SelectedType))
+        {
+            SelectedType = TypeEntries.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var type in _allTypes)
+            {
+                type.IsSelected = ReferenceEquals(type, SelectedType);
+            }
+        }
+    }
+
+    private void ApplyTreasureFilter(string? filterText)
+    {
+        if (_allTreasures.Count == 0)
+        {
+            TreasureEntries.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allTreasures
+            : _allTreasures.Where(treasure => TreasureMatchesFilter(treasure, filter)).ToList();
+
+        TreasureEntries.Clear();
+        foreach (var treasure in filtered)
+        {
+            TreasureEntries.Add(treasure);
+        }
+
+        if (SelectedTreasure is null || !TreasureEntries.Contains(SelectedTreasure))
+        {
+            SelectedTreasure = TreasureEntries.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var treasure in _allTreasures)
+            {
+                treasure.IsSelected = ReferenceEquals(treasure, SelectedTreasure);
+            }
+        }
+    }
+
+    private void ApplyMessageFilter(string? filterText)
+    {
+        if (_allMessageStrings.Count == 0)
+        {
+            MessageStrings.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allMessageStrings
+            : _allMessageStrings.Where(message => Contains(message.SearchText, filter)).ToList();
+
+        MessageStrings.Clear();
+        foreach (var message in filtered)
+        {
+            MessageStrings.Add(message);
+        }
+
+        if (SelectedMessageString is null || !MessageStrings.Contains(SelectedMessageString))
+        {
+            SelectedMessageString = MessageStrings.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var message in _allMessageStrings)
+            {
+                message.IsSelected = ReferenceEquals(message, SelectedMessageString);
+            }
+        }
+    }
+
     private static bool TrainerMatchesFilter(TrainerEntryViewModel entry, string filter)
     {
         var trainer = entry.Trainer;
@@ -1001,6 +1575,21 @@ public partial class MainWindowViewModel : ViewModelBase
                 || item.TmIndex == numericFilter
                 || item.InBattleUseId == numericFilter
                 || item.HoldItemId == numericFilter))
+        {
+            return true;
+        }
+
+        return Contains(entry.SearchText, filter);
+    }
+
+    private static bool TreasureMatchesFilter(TreasureEntryViewModel entry, string filter)
+    {
+        var treasure = entry.Treasure;
+        if (int.TryParse(filter, out var numericFilter)
+            && (treasure.Index == numericFilter
+                || treasure.RoomId == numericFilter
+                || treasure.ItemId == numericFilter
+                || treasure.Flag == numericFilter))
         {
             return true;
         }
@@ -1089,6 +1678,21 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveItemCommand.NotifyCanExecuteChanged();
     }
 
+    private void OnGiftPokemonChanged()
+    {
+        SaveGiftPokemonCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnTypeChanged()
+    {
+        SaveTypeCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnTreasureChanged()
+    {
+        SaveTreasureCommand.NotifyCanExecuteChanged();
+    }
+
     private void RefreshSavedPokemonStatsEntry(int index)
     {
         var updated = CurrentProject?.LoadCommonRel().PokemonStatsFor(index);
@@ -1147,6 +1751,88 @@ public partial class MainWindowViewModel : ViewModelBase
 
         ApplyItemFilter(ItemSearchText);
         SelectedItem = ItemEntries.FirstOrDefault(entry => entry.Item.Index == index) ?? replacement;
+    }
+
+    private void RefreshSavedGiftPokemonEntry(int rowId)
+    {
+        var updated = CurrentProject?.LoadCommonRel().GiftPokemonByRow(rowId);
+        if (updated is null)
+        {
+            SelectedGiftPokemonDetail?.MarkSaved();
+            return;
+        }
+
+        var rowIndex = Math.Max(0, _allGiftPokemon.FindIndex(entry => entry.Gift.RowId == rowId));
+        var replacement = new GiftPokemonEntryViewModel(updated, rowIndex);
+        var listIndex = _allGiftPokemon.FindIndex(entry => entry.Gift.RowId == rowId);
+        if (listIndex >= 0)
+        {
+            _allGiftPokemon[listIndex] = replacement;
+        }
+
+        ApplyGiftPokemonFilter(GiftPokemonSearchText);
+        SelectedGiftPokemon = GiftPokemonEntries.FirstOrDefault(entry => entry.Gift.RowId == rowId) ?? replacement;
+    }
+
+    private void RefreshSavedTypeEntry(int index)
+    {
+        var updated = CurrentProject?.LoadCommonRel().TypeById(index);
+        if (updated is null)
+        {
+            SelectedTypeDetail?.MarkSaved();
+            return;
+        }
+
+        var replacement = new TypeEntryViewModel(updated);
+        var listIndex = _allTypes.FindIndex(entry => entry.Type.Index == index);
+        if (listIndex >= 0)
+        {
+            _allTypes[listIndex] = replacement;
+        }
+
+        ApplyTypeFilter(TypeSearchText);
+        SelectedType = TypeEntries.FirstOrDefault(entry => entry.Type.Index == index) ?? replacement;
+    }
+
+    private void RefreshSavedTreasureEntry(int index)
+    {
+        var updated = CurrentProject?.LoadCommonRel().TreasureById(index);
+        if (updated is null)
+        {
+            SelectedTreasureDetail?.MarkSaved();
+            return;
+        }
+
+        var replacement = new TreasureEntryViewModel(updated);
+        var listIndex = _allTreasures.FindIndex(entry => entry.Treasure.Index == index);
+        if (listIndex >= 0)
+        {
+            _allTreasures[listIndex] = replacement;
+        }
+
+        ApplyTreasureFilter(TreasureSearchText);
+        SelectedTreasure = TreasureEntries.FirstOrDefault(entry => entry.Treasure.Index == index) ?? replacement;
+    }
+
+    private void LoadMessageStrings(MessageTableViewModel? table)
+    {
+        _allMessageStrings.Clear();
+        MessageStrings.Clear();
+        SelectedMessageString = null;
+        SelectedMessageText = string.Empty;
+
+        if (table is null)
+        {
+            return;
+        }
+
+        foreach (var message in table.Table.Strings)
+        {
+            _allMessageStrings.Add(new MessageStringEntryViewModel(message));
+        }
+
+        ApplyMessageFilter(MessageSearchText);
+        SelectedMessageString = MessageStrings.FirstOrDefault();
     }
 
     private void RefreshSelectedIsoFileDetails(IsoFileEntryViewModel? value)

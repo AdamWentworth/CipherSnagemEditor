@@ -218,11 +218,20 @@ public sealed class ColosseumProjectContext
     public IReadOnlyList<ColosseumPokemonStats> LoadPokemonStats()
         => LoadCommonRel().PokemonStats;
 
+    public IReadOnlyList<ColosseumTypeData> LoadTypes()
+        => LoadCommonRel().TypeData;
+
     public IReadOnlyList<ColosseumMove> LoadMoves()
         => LoadCommonRel().Moves;
 
     public IReadOnlyList<ColosseumItem> LoadItems()
         => LoadCommonRel().ItemData;
+
+    public IReadOnlyList<ColosseumGiftPokemon> LoadGiftPokemon()
+        => LoadCommonRel().GiftPokemon;
+
+    public IReadOnlyList<ColosseumTreasure> LoadTreasures()
+        => LoadCommonRel().Treasures;
 
     private IReadOnlyDictionary<int, string> BuildTrainerModelNames()
     {
@@ -365,6 +374,130 @@ public sealed class ColosseumProjectContext
         var commonRel = LoadCommonRel();
         commonRel.WriteItem(update);
 
+        var targetPath = ResolveIsoExtractPath("Start.dol", null);
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? WorkspaceDirectory!);
+        var bytes = commonRel.StartDolToArray();
+        File.WriteAllBytes(targetPath, bytes);
+        LoadedFiles["Start.dol"] = bytes;
+        return targetPath;
+    }
+
+    public string SaveType(ColosseumTypeUpdate update)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var commonRel = LoadCommonRel();
+        commonRel.WriteType(update);
+        return SaveStartDol(commonRel);
+    }
+
+    public string SaveGiftPokemon(ColosseumGiftPokemonUpdate update)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var commonRel = LoadCommonRel();
+        commonRel.WriteGiftPokemon(update);
+        return SaveStartDol(commonRel);
+    }
+
+    public string SaveTreasure(ColosseumTreasureUpdate update)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var commonRel = LoadCommonRel();
+        commonRel.WriteTreasure(update);
+
+        var targetPath = Path.Combine(GetIsoExportDirectory("common.fsys"), "common.rel");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? WorkspaceDirectory!);
+        var bytes = commonRel.ToArray();
+        File.WriteAllBytes(targetPath, bytes);
+        LoadedFiles["common.rel"] = bytes;
+        return targetPath;
+    }
+
+    public IReadOnlyList<ColosseumMessageTable> LoadMessageTables()
+    {
+        if (MessageTable is not null)
+        {
+            return
+            [
+                new ColosseumMessageTable(
+                    Path.GetFileName(SourcePath),
+                    SourcePath,
+                    Path.GetFileName(SourcePath),
+                    MessageTable.Strings.Select(message => new ColosseumMessageString(
+                        message.Id,
+                        $"0x{message.Id:X}",
+                        message.Text)).ToArray())
+            ];
+        }
+
+        if (Iso is null)
+        {
+            return [];
+        }
+
+        var tables = new List<ColosseumMessageTable>();
+        foreach (var isoEntry in Iso.Files.Where(entry => string.Equals(Path.GetExtension(entry.Name), ".fsys", StringComparison.OrdinalIgnoreCase)))
+        {
+            FsysArchive archive;
+            try
+            {
+                archive = FsysArchive.Parse(isoEntry.Name, GameCubeIsoReader.ReadFile(Iso, isoEntry));
+            }
+            catch (InvalidDataException)
+            {
+                continue;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                continue;
+            }
+            catch (EndOfStreamException)
+            {
+                continue;
+            }
+
+            foreach (var messageEntry in archive.Entries.Where(entry => entry.FileType == GameFileType.Message))
+            {
+                try
+                {
+                    var table = GameStringTable.Parse(archive.Extract(messageEntry));
+                    var strings = table.Strings
+                        .Select(message => new ColosseumMessageString(message.Id, $"0x{message.Id:X}", message.Text))
+                        .ToArray();
+                    tables.Add(new ColosseumMessageTable(
+                        $"{Path.GetFileNameWithoutExtension(isoEntry.Name)}/{messageEntry.Name}",
+                        isoEntry.Name,
+                        messageEntry.Name,
+                        strings));
+                }
+                catch (InvalidDataException)
+                {
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                }
+                catch (EndOfStreamException)
+                {
+                }
+            }
+        }
+
+        return tables.OrderBy(table => table.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private string SaveStartDol(ColosseumCommonRel commonRel)
+    {
         var targetPath = ResolveIsoExtractPath("Start.dol", null);
         Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? WorkspaceDirectory!);
         var bytes = commonRel.StartDolToArray();
