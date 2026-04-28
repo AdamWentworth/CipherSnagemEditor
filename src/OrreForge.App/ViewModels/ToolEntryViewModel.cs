@@ -22,8 +22,8 @@ public sealed partial class ToolEntryViewModel : ObservableObject
         Title = definition.Title;
         LegacySegue = definition.LegacySegue;
         LegacySource = definition.LegacySource;
-        BackgroundImage = index % 2 == 1 ? ItemCellImage : ToolCellImage;
-        FallbackBrush = index % 2 == 1 ? ItemCellFallback : ToolCellFallback;
+        BackgroundImage = index % 2 == 0 ? ItemCellImage : ToolCellImage;
+        FallbackBrush = index % 2 == 0 ? ItemCellFallback : ToolCellFallback;
     }
 
     [ObservableProperty]
