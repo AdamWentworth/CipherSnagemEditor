@@ -69,6 +69,10 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <Style Selector="ComboBox.LegacyTypeMatchupCombo">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Padding" Value="2,0,2,0"/>
+        </Style>
         <Style Selector="Button.LegacyTypeButton">
             <Setter Property="Background" Value="#6E6E6E"/>
             <Setter Property="BorderBrush" Value="#7B7B7B"/>
@@ -110,8 +114,8 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="200,440"
-          Width="640"
+    <Grid ColumnDefinitions="200,600"
+          Width="800"
           Height="516"
           Background="#303030">
         <Border Grid.Column="0" Background="#222222">
@@ -151,7 +155,7 @@
         </Border>
 
         <Canvas Grid.Column="1"
-                Width="440"
+                Width="600"
                 Height="516"
                 Background="#303030">
             <Border Classes="LegacyTypePanel" Canvas.Left="10" Canvas.Top="10" Width="210" Height="145">
@@ -179,13 +183,13 @@
                 </Canvas>
             </Border>
 
-            <Border Classes="LegacyTypePanel" Canvas.Left="10" Canvas.Top="165" Width="420" Height="300">
+            <Border Classes="LegacyTypePanel" Canvas.Left="10" Canvas.Top="165" Width="580" Height="300">
                 <Canvas>
-                    <TextBlock Text="Type Matchups" Classes="LegacyTypeHeader" Canvas.Left="10" Canvas.Top="8" Width="400" Height="20"/>
+                    <TextBlock Text="Type Matchups" Classes="LegacyTypeHeader" Canvas.Left="10" Canvas.Top="8" Width="560" Height="20"/>
                     <ItemsControl ItemsSource="{Binding SelectedTypeDetail.Effectiveness}"
                                   Canvas.Left="14"
                                   Canvas.Top="34"
-                                  Width="392"
+                                  Width="552"
                                   Height="250">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -194,11 +198,16 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:TypeEffectivenessViewModel">
-                                <Grid Width="130" Height="41" Margin="0,0,0,1">
-                                    <TextBlock Text="{Binding TypeName}" Classes="LegacyTypeLabel" Width="50" Height="24" VerticalAlignment="Center" TextAlignment="Right"/>
-                                    <controls:LegacyPokemonComboBox Classes="LegacyTypeCombo"
-                                                                    Margin="56,8,4,0"
-                                                                    Width="70"
+                                <Grid Width="184" Height="41" Margin="0,0,0,1">
+                                    <TextBlock Text="{Binding TypeName}"
+                                               Classes="LegacyTypeLabel"
+                                               Width="58"
+                                               Height="24"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Right"/>
+                                    <controls:LegacyPokemonComboBox Classes="LegacyTypeCombo LegacyTypeMatchupCombo"
+                                                                    Margin="64,8,4,0"
+                                                                    Width="116"
                                                                     ItemsSource="{Binding Options}"
                                                                     SelectedItem="{Binding SelectedEffectiveness, Mode=TwoWay}"
                                                                     MaxDropDownHeight="220"/>
@@ -210,7 +219,7 @@
             </Border>
 
             <Button Classes="LegacyTypeButton"
-                    Canvas.Left="160"
+                    Canvas.Left="240"
                     Canvas.Top="475"
                     Width="120"
                     Height="30"
