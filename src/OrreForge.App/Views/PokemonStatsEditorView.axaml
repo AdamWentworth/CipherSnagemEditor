@@ -100,7 +100,7 @@
                          BorderBrush="#5C5C5C"
                          BorderThickness="1"/>
                 <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Auto">
+                              VerticalScrollBarVisibility="Visible">
                     <ItemsControl ItemsSource="{Binding PokemonStatsEntries}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:PokemonStatsEntryViewModel">
@@ -198,7 +198,7 @@
                     Width="160"
                     Height="190">
                 <ScrollViewer Margin="3"
-                              VerticalScrollBarVisibility="Auto">
+                              VerticalScrollBarVisibility="Visible">
                     <ItemsControl ItemsSource="{Binding SelectedPokemonStatsDetail.Tms}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:PokemonStatsTmViewModel">
@@ -233,7 +233,7 @@
                     Width="205"
                     Height="190">
                 <ScrollViewer Margin="3"
-                              VerticalScrollBarVisibility="Auto">
+                              VerticalScrollBarVisibility="Visible">
                     <ItemsControl ItemsSource="{Binding SelectedPokemonStatsDetail.LevelUpMoves}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:PokemonStatsLevelUpMoveViewModel">
