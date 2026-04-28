@@ -178,7 +178,7 @@ public partial class MainWindow : Window
             MinHeight = Math.Min(size.Height, 560),
             FontFamily = FontFamily,
             Background = SolidColorBrush.Parse("#F0F0FC"),
-            WindowDecorations = Avalonia.Controls.WindowDecorations.BorderOnly,
+            WindowDecorations = Avalonia.Controls.WindowDecorations.None,
             DataContext = viewModel
         };
         window.Content = CreateToolWindowShell(window, tool.Title, content);
@@ -255,14 +255,14 @@ public partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top
         };
-        windowControls.Children.Add(CreateTitleButton("-", false, () => window.WindowState = WindowState.Minimized));
-        windowControls.Children.Add(CreateTitleButton("□", false, () =>
+        windowControls.Children.Add(CreateTitleButton(TitleButtonKind.Minimize, () => window.WindowState = WindowState.Minimized));
+        windowControls.Children.Add(CreateTitleButton(TitleButtonKind.Maximize, () =>
         {
             window.WindowState = window.WindowState == WindowState.Maximized
                 ? WindowState.Normal
                 : WindowState.Maximized;
         }));
-        windowControls.Children.Add(CreateTitleButton("X", true, window.Close));
+        windowControls.Children.Add(CreateTitleButton(TitleButtonKind.Close, window.Close));
         Grid.SetColumn(windowControls, 2);
         titleLayout.Children.Add(windowControls);
 
@@ -274,17 +274,17 @@ public partial class MainWindow : Window
         return root;
     }
 
-    private static Button CreateTitleButton(string text, bool isClose, Action action)
+    private static Button CreateTitleButton(TitleButtonKind kind, Action action)
     {
-        var normalizedText = isClose ? "X" : text == "-" ? "-" : "[]";
-        var role = isClose
-            ? WindowDecorationsElementRole.CloseButton
-            : normalizedText == "-"
-                ? WindowDecorationsElementRole.MinimizeButton
-                : WindowDecorationsElementRole.MaximizeButton;
+        var role = kind switch
+        {
+            TitleButtonKind.Minimize => WindowDecorationsElementRole.MinimizeButton,
+            TitleButtonKind.Maximize => WindowDecorationsElementRole.MaximizeButton,
+            _ => WindowDecorationsElementRole.CloseButton
+        };
         var button = new Button
         {
-            Content = normalizedText,
+            Content = CreateTitleButtonIcon(kind),
             Width = 46,
             Height = 24,
             MinHeight = 0,
@@ -298,11 +298,66 @@ public partial class MainWindow : Window
             VerticalContentAlignment = VerticalAlignment.Center
         };
         WindowDecorationProperties.SetElementRole(button, role);
-        button.PointerEntered += (_, _) => button.Background = SolidColorBrush.Parse(isClose ? "#E81123" : "#505050");
+        button.PointerEntered += (_, _) => button.Background = SolidColorBrush.Parse(kind == TitleButtonKind.Close ? "#E81123" : "#505050");
         button.PointerExited += (_, _) => button.Background = SolidColorBrush.Parse("#3A3A3A");
         button.Click += (_, _) => action();
 
         return button;
+    }
+
+    private static Control CreateTitleButtonIcon(TitleButtonKind kind)
+    {
+        var foreground = SolidColorBrush.Parse("#DCDCDC");
+        return kind switch
+        {
+            TitleButtonKind.Minimize => new Border
+            {
+                Width = 10,
+                Height = 1,
+                Background = foreground,
+                VerticalAlignment = VerticalAlignment.Center
+            },
+            TitleButtonKind.Maximize => new Border
+            {
+                Width = 10,
+                Height = 10,
+                BorderBrush = foreground,
+                BorderThickness = new Thickness(1),
+                Background = Brushes.Transparent
+            },
+            _ => CreateCloseIcon(foreground)
+        };
+    }
+
+    private static Control CreateCloseIcon(IBrush foreground)
+    {
+        var icon = new Grid
+        {
+            Width = 12,
+            Height = 12
+        };
+
+        icon.Children.Add(CreateCloseStroke(foreground, 45));
+        icon.Children.Add(CreateCloseStroke(foreground, -45));
+        return icon;
+    }
+
+    private static Border CreateCloseStroke(IBrush foreground, double angle)
+        => new()
+        {
+            Width = 12,
+            Height = 1,
+            Background = foreground,
+            VerticalAlignment = VerticalAlignment.Center,
+            RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative),
+            RenderTransform = new RotateTransform(angle)
+        };
+
+    private enum TitleButtonKind
+    {
+        Minimize,
+        Maximize,
+        Close
     }
 
     private static Size ToolWindowSize(string title)

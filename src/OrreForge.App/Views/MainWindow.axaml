@@ -17,7 +17,7 @@
         MinHeight="504"
         MaxWidth="1000"
         MaxHeight="1000"
-        WindowDecorations="BorderOnly"
+        WindowDecorations="None"
         FontFamily="Arial"
         Background="#F0F0FC">
 
@@ -94,17 +94,47 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top">
                     <Button Classes="TitleBarButton"
-                            Content="-"
                             chrome:WindowDecorationProperties.ElementRole="MinimizeButton"
-                            Click="MainMinimizeClick"/>
+                            Click="MainMinimizeClick">
+                        <Border Width="10"
+                                Height="1"
+                                Background="#DCDCDC"
+                                VerticalAlignment="Center"/>
+                    </Button>
                     <Button Classes="TitleBarButton"
-                            Content="[]"
                             chrome:WindowDecorationProperties.ElementRole="MaximizeButton"
-                            Click="MainZoomClick"/>
+                            Click="MainZoomClick">
+                        <Border Width="10"
+                                Height="10"
+                                BorderBrush="#DCDCDC"
+                                BorderThickness="1"
+                                Background="Transparent"/>
+                    </Button>
                     <Button Classes="TitleBarButton TitleBarClose"
-                            Content="X"
                             chrome:WindowDecorationProperties.ElementRole="CloseButton"
-                            Click="MainCloseClick"/>
+                            Click="MainCloseClick">
+                        <Grid Width="12"
+                              Height="12">
+                            <Border Width="12"
+                                    Height="1"
+                                    Background="#DCDCDC"
+                                    VerticalAlignment="Center"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <RotateTransform Angle="45"/>
+                                </Border.RenderTransform>
+                            </Border>
+                            <Border Width="12"
+                                    Height="1"
+                                    Background="#DCDCDC"
+                                    VerticalAlignment="Center"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <RotateTransform Angle="-45"/>
+                                </Border.RenderTransform>
+                            </Border>
+                        </Grid>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
