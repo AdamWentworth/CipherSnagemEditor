@@ -12,6 +12,8 @@ public sealed class LegacyPokemonComboBox : ComboBox
     private static readonly Pen IndicatorBorderPen = new(SolidColorBrush.Parse("#66B4FF"), 0.8);
     private static readonly IBrush GlyphBrush = Brushes.White;
 
+    protected override Type StyleKeyOverride => typeof(ComboBox);
+
     public LegacyPokemonComboBox()
     {
         MinHeight = 0;
