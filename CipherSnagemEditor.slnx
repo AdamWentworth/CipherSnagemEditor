@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CipherSnagemEditor.App/CipherSnagemEditor.App.csproj" />
+    <Project Path="src/CipherSnagemEditor.Cli/CipherSnagemEditor.Cli.csproj" />
+    <Project Path="src/CipherSnagemEditor.Colosseum/CipherSnagemEditor.Colosseum.csproj" />
+    <Project Path="src/CipherSnagemEditor.Core/CipherSnagemEditor.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CipherSnagemEditor.Tests/CipherSnagemEditor.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -4,7 +4,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-    <Authors>OrreForge contributors</Authors>
+    <Authors>Cipher Snagem Editor contributors</Authors>
+    <Product>Cipher Snagem Editor</Product>
     <PackageLicenseExpression>GPL-2.0-only</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>

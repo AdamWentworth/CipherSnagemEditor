@@ -1,0 +1,240 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:CipherSnagemEditor.App.Controls"
+             xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             x:Class="CipherSnagemEditor.App.Views.TypeEditorView"
+             x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
+             FontFamily="Arial"
+             Background="#303030">
+    <UserControl.Styles>
+        <Style Selector="Border.LegacyTypePanel">
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="BorderBrush" Value="#545454"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyTypeLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyTypeHeader">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeField">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#7D7D7D"/>
+        </Style>
+        <Style Selector="ComboBox.LegacyTypeCombo">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,0,2,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="ComboBox.LegacyTypeMatchupCombo">
+            <Setter Property="FontSize" Value="8"/>
+            <Setter Property="Padding" Value="2,0,2,0"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyTypeMatchupLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#EDEDED"/>
+            <Setter Property="Background" Value="#00000000"/>
+            <Setter Property="TextAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style Selector="RadioButton.LegacyTypeRadio">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.LegacyTypeButton">
+            <Setter Property="Background" Value="#6E6E6E"/>
+            <Setter Property="BorderBrush" Value="#7B7B7B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeSearch">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="4,4"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#5C5C5C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="PlaceholderForeground" Value="#A8A8A8"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeSearch:pointerover">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTypeSearch:focus">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="200,440"
+          Width="640"
+          Height="566"
+          Background="#303030">
+        <Border Grid.Column="0" Background="#222222">
+            <Grid RowDefinitions="Auto,*">
+                <TextBox Classes="LegacyTypeSearch"
+                         Text="{Binding TypeSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Search"
+                         IsTabStop="False"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible">
+                    <ItemsControl ItemsSource="{Binding TypeEntries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TypeEntryViewModel">
+                                <Border PointerPressed="TypePointerPressed"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Stretch"
+                                        Height="40"
+                                        Background="{Binding BackgroundBrush}"
+                                        BorderBrush="{Binding SelectionBorderBrush}"
+                                        BorderThickness="{Binding SelectionBorderThickness}">
+                                    <Grid ClipToBounds="True">
+                                        <Image Source="{Binding TypeImage}" Stretch="Fill"/>
+                                        <TextBlock Text="{Binding RowText}"
+                                                   HorizontalAlignment="Stretch"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="12"
+                                                   Foreground="#000000"
+                                                   TextAlignment="Center"
+                                                   Margin="8,0"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Canvas Grid.Column="1"
+                Width="440"
+                Height="566"
+                Background="#303030">
+            <Border Classes="LegacyTypePanel" Canvas.Left="8" Canvas.Top="12" Width="424" Height="542">
+                <Canvas>
+                    <TextBlock Text="Name ID:" Classes="LegacyTypeLabel" Canvas.Left="18" Canvas.Top="18" Width="70" Height="24"/>
+                    <TextBox Text="{Binding SelectedTypeDetail.NameId, Mode=TwoWay}" Classes="LegacyTypeField" Canvas.Left="90" Canvas.Top="18" Width="112" Height="28"/>
+                    <TextBlock Text="Name:" Classes="LegacyTypeLabel" Canvas.Left="234" Canvas.Top="18" Width="48" Height="24"/>
+                    <TextBox Text="{Binding SelectedTypeDetail.Name, Mode=OneWay}" Classes="LegacyTypeField" IsReadOnly="True" Canvas.Left="285" Canvas.Top="18" Width="112" Height="28"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="14" Canvas.Left="82" Canvas.Top="68">
+                        <RadioButton Classes="LegacyTypeRadio"
+                                     Content="Physical"
+                                     GroupName="TypeCategory"
+                                     IsChecked="{Binding SelectedTypeDetail.IsPhysicalCategory, Mode=TwoWay}"/>
+                        <RadioButton Classes="LegacyTypeRadio"
+                                     Content="Special"
+                                     GroupName="TypeCategory"
+                                     IsChecked="{Binding SelectedTypeDetail.IsSpecialCategory, Mode=TwoWay}"/>
+                        <RadioButton Classes="LegacyTypeRadio"
+                                     Content="Neither"
+                                     GroupName="TypeCategory"
+                                     IsChecked="{Binding SelectedTypeDetail.IsNeitherCategory, Mode=TwoWay}"/>
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding SelectedTypeDetail.Effectiveness}"
+                                  Canvas.Left="18"
+                                  Canvas.Top="100"
+                                  Width="390"
+                                  Height="360">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TypeEffectivenessViewModel">
+                                <StackPanel Width="130"
+                                            Height="60"
+                                            Orientation="Vertical">
+                                    <TextBlock Text="{Binding TypeName}"
+                                               Classes="LegacyTypeMatchupLabel"
+                                               Width="120"
+                                               Height="20"
+                                               Margin="0,0,10,0"/>
+                                    <controls:LegacyPokemonComboBox Classes="LegacyTypeCombo LegacyTypeMatchupCombo"
+                                                                    Margin="0,2,10,0"
+                                                                    Width="120"
+                                                                    ItemsSource="{Binding Options}"
+                                                                    SelectedItem="{Binding SelectedEffectiveness, Mode=TwoWay}"
+                                                                    MaxDropDownHeight="220"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Classes="LegacyTypeButton"
+                            Canvas.Left="150"
+                            Canvas.Top="492"
+                            Width="120"
+                            Height="30"
+                            Content="Save"
+                            Command="{Binding SaveTypeCommand}"/>
+                </Canvas>
+            </Border>
+        </Canvas>
+    </Grid>
+</UserControl>
