@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
 
 namespace OrreForge.App.Controls;
@@ -11,6 +12,16 @@ public sealed class LegacyPokemonComboBox : ComboBox
     private static readonly Pen IndicatorBorderPen = new(SolidColorBrush.Parse("#66B4FF"), 0.8);
     private static readonly IBrush GlyphBrush = Brushes.White;
 
+    public LegacyPokemonComboBox()
+    {
+        MinHeight = 0;
+        Height = 20;
+        Padding = new Thickness(3, 0, 20, 0);
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalContentAlignment = HorizontalAlignment.Center;
+        VerticalContentAlignment = VerticalAlignment.Center;
+    }
+
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -21,7 +32,7 @@ public sealed class LegacyPokemonComboBox : ComboBox
         }
 
         var indicatorHeight = Math.Min(16, Bounds.Height - 4);
-        var indicatorWidth = Math.Min(16, Bounds.Height - 4);
+        var indicatorWidth = Math.Min(15, Bounds.Height - 5);
         var x = Bounds.Width - indicatorWidth - 3;
         var y = (Bounds.Height - indicatorHeight) / 2;
         var indicator = new Rect(x, y, indicatorWidth, indicatorHeight);
@@ -34,8 +45,8 @@ public sealed class LegacyPokemonComboBox : ComboBox
             4);
 
         var centerX = x + (indicatorWidth / 2);
-        DrawTriangle(context, new Point(centerX, y + 5.4), isUp: true);
-        DrawTriangle(context, new Point(centerX, y + indicatorHeight - 5.4), isUp: false);
+        DrawTriangle(context, new Point(centerX, y + 4.4), isUp: true);
+        DrawTriangle(context, new Point(centerX, y + indicatorHeight - 4.4), isUp: false);
     }
 
     private static void DrawTriangle(DrawingContext context, Point center, bool isUp)
@@ -45,15 +56,15 @@ public sealed class LegacyPokemonComboBox : ComboBox
         {
             if (isUp)
             {
-                geometryContext.BeginFigure(new Point(center.X, center.Y - 2.1), isFilled: true);
-                geometryContext.LineTo(new Point(center.X - 3.1, center.Y + 1.6));
-                geometryContext.LineTo(new Point(center.X + 3.1, center.Y + 1.6));
+                geometryContext.BeginFigure(new Point(center.X, center.Y - 1.7), isFilled: true);
+                geometryContext.LineTo(new Point(center.X - 2.6, center.Y + 1.3));
+                geometryContext.LineTo(new Point(center.X + 2.6, center.Y + 1.3));
             }
             else
             {
-                geometryContext.BeginFigure(new Point(center.X - 3.1, center.Y - 1.6), isFilled: true);
-                geometryContext.LineTo(new Point(center.X + 3.1, center.Y - 1.6));
-                geometryContext.LineTo(new Point(center.X, center.Y + 2.1));
+                geometryContext.BeginFigure(new Point(center.X - 2.6, center.Y - 1.3), isFilled: true);
+                geometryContext.LineTo(new Point(center.X + 2.6, center.Y - 1.3));
+                geometryContext.LineTo(new Point(center.X, center.Y + 1.7));
             }
 
             geometryContext.EndFigure(isClosed: true);
