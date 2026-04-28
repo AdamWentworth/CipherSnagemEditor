@@ -45,6 +45,9 @@ public static class ApngImageLoader
 
             switch (type)
             {
+                case "CgBI":
+                    png.IsCgbi = true;
+                    break;
                 case "IHDR":
                     png.Width = checked((int)ReadUInt32(data, 0));
                     png.Height = checked((int)ReadUInt32(data, 4));
@@ -181,9 +184,11 @@ public static class ApngImageLoader
     {
         var compressed = Concatenate(frame.CompressedChunks);
         using var source = new MemoryStream(compressed);
-        using var zlib = new ZLibStream(source, CompressionMode.Decompress);
+        using Stream inflater = png.IsCgbi
+            ? new DeflateStream(source, CompressionMode.Decompress)
+            : new ZLibStream(source, CompressionMode.Decompress);
         using var decoded = new MemoryStream();
-        zlib.CopyTo(decoded);
+        inflater.CopyTo(decoded);
 
         var scanlines = Unfilter(decoded.ToArray(), frame.Width, frame.Height, png.ColorType, png.BitDepth);
         return ToRgba(scanlines, frame.Width, frame.Height, png);
@@ -267,7 +272,7 @@ public static class ApngImageLoader
                 ConvertGrayscaleAlpha(pixels, rgba);
                 break;
             case 6:
-                ConvertRgba(pixels, rgba);
+                ConvertRgba(pixels, rgba, png.IsCgbi);
                 break;
             default:
                 throw new NotSupportedException($"Unsupported PNG color type {png.ColorType}.");
@@ -356,14 +361,26 @@ public static class ApngImageLoader
         }
     }
 
-    private static void ConvertRgba(byte[] pixels, byte[] rgba)
+    private static void ConvertRgba(byte[] pixels, byte[] rgba, bool isCgbi)
     {
         if (pixels.Length != rgba.Length)
         {
             throw new InvalidDataException("RGBA PNG frame data does not match expected dimensions.");
         }
 
-        Buffer.BlockCopy(pixels, 0, rgba, 0, pixels.Length);
+        if (!isCgbi)
+        {
+            Buffer.BlockCopy(pixels, 0, rgba, 0, pixels.Length);
+            return;
+        }
+
+        for (var source = 0; source < pixels.Length; source += 4)
+        {
+            rgba[source] = pixels[source + 2];
+            rgba[source + 1] = pixels[source + 1];
+            rgba[source + 2] = pixels[source];
+            rgba[source + 3] = pixels[source + 3];
+        }
     }
 
     private static void BlendFrame(byte[] canvas, int canvasWidth, int canvasHeight, FrameData frame, byte[] framePixels)
@@ -543,6 +560,8 @@ public static class ApngImageLoader
         public int ColorType { get; set; }
 
         public int InterlaceMethod { get; set; }
+
+        public bool IsCgbi { get; set; }
 
         public byte[]? Palette { get; set; }
 
