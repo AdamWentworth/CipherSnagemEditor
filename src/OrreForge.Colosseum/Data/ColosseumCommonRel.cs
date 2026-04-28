@@ -152,6 +152,38 @@ public sealed class ColosseumCommonRel
     private const int TreasureYOffset = 0x14;
     private const int TreasureZOffset = 0x18;
 
+    private const int InteractionPointSize = 0x1c;
+    private const int InteractionMethodOffset = 0x00;
+    private const int InteractionRoomIdOffset = 0x02;
+    private const int InteractionRegionIdOffset = 0x07;
+    private const int InteractionScriptValueOffset = 0x08;
+    private const int InteractionScriptIndexOffset = 0x0a;
+    private const int InteractionParameter1Offset = 0x0c;
+    private const int InteractionParameter2Offset = 0x10;
+    private const int InteractionParameter3Offset = 0x14;
+    private const int InteractionParameter4Offset = 0x18;
+    private const int InteractionWarpTargetRoomIdOffset = 0x0e;
+    private const int InteractionWarpTargetEntryIdOffset = 0x13;
+    private const int InteractionWarpSoundOffset = 0x17;
+    private const int InteractionStringIdOffset = 0x0e;
+    private const int InteractionDoorIdOffset = 0x0e;
+    private const int InteractionElevatorIdOffset = 0x0e;
+    private const int InteractionElevatorTargetRoomIdOffset = 0x12;
+    private const int InteractionTargetElevatorIdOffset = 0x16;
+    private const int InteractionElevatorDirectionOffset = 0x1b;
+    private const int InteractionCutsceneIdOffset = 0x16;
+    private const int InteractionCameraIdOffset = 0x18;
+    private const int InteractionPcRoomIdOffset = 0x0e;
+    private const int InteractionPcUnknownOffset = 0x13;
+    private const int InteractionCurrentScriptIdentifier = 0x100;
+    private const int InteractionCommonScriptIdentifier = 0x596;
+    private const int InteractionWarpScriptIndex = 0x04;
+    private const int InteractionDoorScriptIndex = 0x05;
+    private const int InteractionElevatorScriptIndex = 0x06;
+    private const int InteractionTextScriptIndex = 0x0b;
+    private const int InteractionCutsceneScriptIndex = 0x0c;
+    private const int InteractionPcScriptIndex = 0x0d;
+
     private const int GiftDemoSpeciesOffset = 0x02;
     private const int GiftDemoLevelOffset = 0x07;
     private const int GiftDemoMove1Offset = 0x16;
@@ -189,6 +221,7 @@ public sealed class ColosseumCommonRel
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumItem>> _itemData;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumGiftPokemon>> _giftPokemon;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumTreasure>> _treasures;
+    private readonly Lazy<IReadOnlyDictionary<int, ColosseumInteractionPoint>> _interactionPoints;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _abilities;
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumBattle>> _battles;
     private readonly GameStringTable? _pocketMenuStrings;
@@ -220,6 +253,7 @@ public sealed class ColosseumCommonRel
         _itemData = new Lazy<IReadOnlyDictionary<int, ColosseumItem>>(LoadItemData);
         _giftPokemon = new Lazy<IReadOnlyDictionary<int, ColosseumGiftPokemon>>(LoadGiftPokemon);
         _treasures = new Lazy<IReadOnlyDictionary<int, ColosseumTreasure>>(LoadTreasures);
+        _interactionPoints = new Lazy<IReadOnlyDictionary<int, ColosseumInteractionPoint>>(LoadInteractionPoints);
         _abilities = new Lazy<IReadOnlyDictionary<int, string>>(LoadAbilities);
         _battles = new Lazy<IReadOnlyDictionary<int, ColosseumBattle>>(LoadBattles);
     }
@@ -247,6 +281,9 @@ public sealed class ColosseumCommonRel
 
     public IReadOnlyList<ColosseumTreasure> Treasures
         => _treasures.Value.Values.OrderBy(treasure => treasure.Index).ToArray();
+
+    public IReadOnlyList<ColosseumInteractionPoint> InteractionPoints
+        => _interactionPoints.Value.Values.OrderBy(point => point.Index).ToArray();
 
     public IReadOnlyList<ColosseumNamedResource> Items
         => _items.Value
@@ -773,6 +810,94 @@ public sealed class ColosseumCommonRel
         }
     }
 
+    public void WriteInteractionPoint(ColosseumInteractionPointUpdate point)
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberOfInteractionPoints);
+        if (point.Index < 0 || point.Index >= count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(point), $"Interaction point index {point.Index} is outside the table.");
+        }
+
+        var offset = PointerFor(ColosseumCommonIndex.InteractionPoints) + (point.Index * InteractionPointSize);
+        for (var index = 0; index < InteractionPointSize; index++)
+        {
+            _data.WriteByte(offset + index, 0);
+        }
+
+        _data.WriteByte(offset + InteractionMethodOffset, ClampByte(point.InteractionMethodId));
+        _data.WriteUInt16(offset + InteractionRoomIdOffset, ClampUInt16(point.RoomId));
+        _data.WriteByte(offset + InteractionRegionIdOffset, ClampByte(point.RegionId));
+
+        var scriptIdentifier = point.InfoKind == ColosseumInteractionInfoKind.None
+            ? 0
+            : point.InfoKind == ColosseumInteractionInfoKind.CurrentScript
+                ? InteractionCurrentScriptIdentifier
+                : InteractionCommonScriptIdentifier;
+        _data.WriteUInt16(offset + InteractionScriptValueOffset, ClampUInt16(scriptIdentifier));
+        _data.WriteUInt16(offset + InteractionScriptIndexOffset, ClampUInt16(ScriptIndexFor(point)));
+
+        switch (point.InfoKind)
+        {
+            case ColosseumInteractionInfoKind.None:
+                break;
+            case ColosseumInteractionInfoKind.Warp:
+                _data.WriteUInt16(offset + InteractionWarpTargetRoomIdOffset, ClampUInt16(point.TargetRoomId));
+                _data.WriteByte(offset + InteractionWarpTargetEntryIdOffset, ClampByte(point.TargetEntryId));
+                _data.WriteByte(offset + InteractionWarpSoundOffset, point.Sound ? (byte)1 : (byte)0);
+                break;
+            case ColosseumInteractionInfoKind.Door:
+                _data.WriteUInt16(offset + InteractionDoorIdOffset, ClampUInt16(point.DoorId));
+                break;
+            case ColosseumInteractionInfoKind.Text:
+                _data.WriteUInt16(offset + InteractionStringIdOffset, ClampUInt16(point.StringId));
+                break;
+            case ColosseumInteractionInfoKind.Elevator:
+                _data.WriteUInt16(offset + InteractionElevatorIdOffset, ClampUInt16(point.ElevatorId));
+                _data.WriteUInt16(offset + InteractionElevatorTargetRoomIdOffset, ClampUInt16(point.TargetRoomId));
+                _data.WriteUInt16(offset + InteractionTargetElevatorIdOffset, ClampUInt16(point.TargetElevatorId));
+                _data.WriteByte(offset + InteractionElevatorDirectionOffset, ClampByte(point.DirectionId));
+                break;
+            case ColosseumInteractionInfoKind.CutsceneWarp:
+                _data.WriteUInt16(offset + InteractionWarpTargetRoomIdOffset, ClampUInt16(point.TargetRoomId));
+                _data.WriteByte(offset + InteractionWarpTargetEntryIdOffset, ClampByte(point.TargetEntryId));
+                _data.WriteUInt16(offset + InteractionCutsceneIdOffset, ClampUInt16(point.CutsceneId));
+                _data.WriteUInt16(offset + InteractionCameraIdOffset, ClampUInt16(point.CameraFsysId));
+                _data.WriteByte(offset + InteractionCameraIdOffset + 1, 0x18);
+                break;
+            case ColosseumInteractionInfoKind.Pc:
+                _data.WriteUInt16(offset + InteractionPcRoomIdOffset, ClampUInt16(point.TargetRoomId));
+                _data.WriteByte(offset + InteractionPcUnknownOffset, ClampByte(point.PcUnknown));
+                break;
+            case ColosseumInteractionInfoKind.CurrentScript:
+            case ColosseumInteractionInfoKind.CommonScript:
+                _data.WriteUInt32(offset + InteractionParameter1Offset, point.Parameter1);
+                _data.WriteUInt32(offset + InteractionParameter2Offset, point.Parameter2);
+                _data.WriteUInt32(offset + InteractionParameter3Offset, point.Parameter3);
+                _data.WriteUInt32(offset + InteractionParameter4Offset, point.Parameter4);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(point), $"Unsupported interaction info kind {point.InfoKind}.");
+        }
+
+        if (_interactionPoints.IsValueCreated && _interactionPoints.Value is Dictionary<int, ColosseumInteractionPoint> interactionPoints)
+        {
+            interactionPoints[point.Index] = ReadInteractionPoint(point.Index);
+        }
+    }
+
+    private static int ScriptIndexFor(ColosseumInteractionPointUpdate point)
+        => point.InfoKind switch
+        {
+            ColosseumInteractionInfoKind.None => 0,
+            ColosseumInteractionInfoKind.Warp => InteractionWarpScriptIndex,
+            ColosseumInteractionInfoKind.Door => InteractionDoorScriptIndex,
+            ColosseumInteractionInfoKind.Text => InteractionTextScriptIndex,
+            ColosseumInteractionInfoKind.Elevator => InteractionElevatorScriptIndex,
+            ColosseumInteractionInfoKind.CutsceneWarp => InteractionCutsceneScriptIndex,
+            ColosseumInteractionInfoKind.Pc => InteractionPcScriptIndex,
+            _ => point.ScriptIndex
+        };
+
     public void WriteGiftPokemon(ColosseumGiftPokemonUpdate gift)
     {
         var dol = _dol ?? throw new InvalidOperationException("Start.dol was not loaded.");
@@ -828,6 +953,9 @@ public sealed class ColosseumCommonRel
 
     public ColosseumTreasure? TreasureById(int id)
         => _treasures.Value.TryGetValue(id, out var treasure) ? treasure : null;
+
+    public ColosseumInteractionPoint? InteractionPointById(int id)
+        => _interactionPoints.Value.TryGetValue(id, out var point) ? point : null;
 
     public ColosseumGiftPokemon? GiftPokemonByRow(int rowId)
         => _giftPokemon.Value.TryGetValue(rowId, out var gift) ? gift : null;
@@ -1172,6 +1300,129 @@ public sealed class ColosseumCommonRel
             ReadSingle(offset + TreasureXOffset),
             ReadSingle(offset + TreasureYOffset),
             ReadSingle(offset + TreasureZOffset));
+    }
+
+    private IReadOnlyDictionary<int, ColosseumInteractionPoint> LoadInteractionPoints()
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberOfInteractionPoints);
+        var points = new Dictionary<int, ColosseumInteractionPoint>();
+        for (var index = 0; index < count; index++)
+        {
+            points[index] = ReadInteractionPoint(index);
+        }
+
+        return points;
+    }
+
+    private ColosseumInteractionPoint ReadInteractionPoint(int index)
+    {
+        var offset = PointerFor(ColosseumCommonIndex.InteractionPoints) + (index * InteractionPointSize);
+        var roomId = _data.ReadUInt16(offset + InteractionRoomIdOffset);
+        var roomName = RoomName(roomId);
+        var methodId = _data.ReadByte(offset + InteractionMethodOffset);
+        var scriptIdentifier = _data.ReadUInt16(offset + InteractionScriptValueOffset);
+        var scriptIndex = _data.ReadUInt16(offset + InteractionScriptIndexOffset);
+        var infoKind = ColosseumInteractionInfoKind.None;
+        var targetRoomId = 0;
+        var targetEntryId = 0;
+        var sound = false;
+        var doorId = 0;
+        var elevatorId = 0;
+        var targetElevatorId = 0;
+        var directionId = 0;
+        var stringId = 0;
+        var cutsceneId = 0;
+        var cameraFsysId = 0;
+        var pcUnknown = 0;
+        var parameter1 = 0u;
+        var parameter2 = 0u;
+        var parameter3 = 0u;
+        var parameter4 = 0u;
+
+        if (scriptIdentifier == InteractionCurrentScriptIdentifier)
+        {
+            infoKind = ColosseumInteractionInfoKind.CurrentScript;
+            parameter1 = _data.ReadUInt32(offset + InteractionParameter1Offset);
+            parameter2 = _data.ReadUInt32(offset + InteractionParameter2Offset);
+            parameter3 = _data.ReadUInt32(offset + InteractionParameter3Offset);
+            parameter4 = _data.ReadUInt32(offset + InteractionParameter4Offset);
+        }
+        else if (scriptIdentifier == InteractionCommonScriptIdentifier)
+        {
+            switch (scriptIndex)
+            {
+                case InteractionWarpScriptIndex:
+                    infoKind = ColosseumInteractionInfoKind.Warp;
+                    targetRoomId = _data.ReadUInt16(offset + InteractionWarpTargetRoomIdOffset);
+                    targetEntryId = _data.ReadByte(offset + InteractionWarpTargetEntryIdOffset);
+                    sound = _data.ReadByte(offset + InteractionWarpSoundOffset) == 1;
+                    break;
+                case InteractionDoorScriptIndex:
+                    infoKind = ColosseumInteractionInfoKind.Door;
+                    doorId = _data.ReadUInt16(offset + InteractionDoorIdOffset);
+                    break;
+                case InteractionElevatorScriptIndex:
+                    infoKind = ColosseumInteractionInfoKind.Elevator;
+                    elevatorId = _data.ReadUInt16(offset + InteractionElevatorIdOffset);
+                    targetRoomId = _data.ReadUInt16(offset + InteractionElevatorTargetRoomIdOffset);
+                    targetElevatorId = _data.ReadUInt16(offset + InteractionTargetElevatorIdOffset);
+                    directionId = _data.ReadByte(offset + InteractionElevatorDirectionOffset);
+                    break;
+                case InteractionTextScriptIndex:
+                    infoKind = ColosseumInteractionInfoKind.Text;
+                    stringId = _data.ReadUInt16(offset + InteractionStringIdOffset);
+                    break;
+                case InteractionCutsceneScriptIndex:
+                    infoKind = ColosseumInteractionInfoKind.CutsceneWarp;
+                    targetRoomId = _data.ReadUInt16(offset + InteractionWarpTargetRoomIdOffset);
+                    targetEntryId = _data.ReadByte(offset + InteractionWarpTargetEntryIdOffset);
+                    cutsceneId = _data.ReadUInt16(offset + InteractionCutsceneIdOffset);
+                    cameraFsysId = _data.ReadUInt16(offset + InteractionCameraIdOffset);
+                    break;
+                case InteractionPcScriptIndex:
+                    infoKind = ColosseumInteractionInfoKind.Pc;
+                    targetRoomId = _data.ReadUInt16(offset + InteractionPcRoomIdOffset);
+                    pcUnknown = _data.ReadByte(offset + InteractionPcUnknownOffset);
+                    break;
+                default:
+                    infoKind = ColosseumInteractionInfoKind.CommonScript;
+                    parameter1 = _data.ReadUInt32(offset + InteractionParameter1Offset);
+                    parameter2 = _data.ReadUInt32(offset + InteractionParameter2Offset);
+                    parameter3 = _data.ReadUInt32(offset + InteractionParameter3Offset);
+                    parameter4 = _data.ReadUInt32(offset + InteractionParameter4Offset);
+                    break;
+            }
+        }
+
+        return new ColosseumInteractionPoint(
+            index,
+            offset,
+            roomId,
+            roomName,
+            _data.ReadByte(offset + InteractionRegionIdOffset),
+            methodId,
+            InteractionMethodName(methodId),
+            scriptIdentifier,
+            scriptIndex,
+            infoKind,
+            targetRoomId,
+            RoomName(targetRoomId),
+            targetEntryId,
+            sound,
+            doorId,
+            elevatorId,
+            targetElevatorId,
+            directionId,
+            ElevatorDirectionName(directionId),
+            stringId,
+            cutsceneId,
+            cameraFsysId,
+            pcUnknown,
+            parameter1,
+            parameter2,
+            parameter3,
+            parameter4,
+            InteractionPointDescription(index, roomName, methodId, _data.ReadByte(offset + InteractionRegionIdOffset), infoKind, targetRoomId, targetEntryId, sound, doorId, elevatorId, targetElevatorId, directionId, stringId, cutsceneId, cameraFsysId, pcUnknown, parameter1, parameter2, parameter3, parameter4, scriptIndex));
     }
 
     private IReadOnlyDictionary<int, string> LoadAbilities()
@@ -1549,6 +1800,62 @@ public sealed class ColosseumCommonRel
 
     private static string RoomName(int id)
         => ColosseumRoomCatalog.NameFor(id);
+
+    private static string InteractionMethodName(int id)
+        => id switch
+        {
+            0 => "None",
+            1 => "Walk Through",
+            2 => "Walk In Front Of",
+            3 => "Press A",
+            4 => "Press A 2",
+            _ => $"Method {id}"
+        };
+
+    private static string ElevatorDirectionName(int id)
+        => id == 1 ? "Down" : "Up";
+
+    private static string InteractionPointDescription(
+        int index,
+        string roomName,
+        int methodId,
+        int regionId,
+        ColosseumInteractionInfoKind infoKind,
+        int targetRoomId,
+        int targetEntryId,
+        bool sound,
+        int doorId,
+        int elevatorId,
+        int targetElevatorId,
+        int directionId,
+        int stringId,
+        int cutsceneId,
+        int cameraFsysId,
+        int pcUnknown,
+        uint parameter1,
+        uint parameter2,
+        uint parameter3,
+        uint parameter4,
+        int scriptIndex)
+    {
+        var method = InteractionMethodName(methodId);
+        var trigger = methodId == 0 ? string.Empty : $"{method} region {regionId}. ";
+        var info = infoKind switch
+        {
+            ColosseumInteractionInfoKind.None => "-",
+            ColosseumInteractionInfoKind.Warp => $"Warp to {RoomName(targetRoomId)} entry {targetEntryId} {(sound ? "with" : "without")} sound.",
+            ColosseumInteractionInfoKind.Door => $"Open door {doorId}.",
+            ColosseumInteractionInfoKind.Text => $"Display text {stringId}.",
+            ColosseumInteractionInfoKind.Elevator => $"Elevator {elevatorId} {ElevatorDirectionName(directionId)} to {RoomName(targetRoomId)} elevator {targetElevatorId}.",
+            ColosseumInteractionInfoKind.CutsceneWarp => $"Cutscene {cutsceneId:X} to {RoomName(targetRoomId)} entry {targetEntryId}, camera {cameraFsysId:X}.",
+            ColosseumInteractionInfoKind.Pc => $"Use PC room {RoomName(targetRoomId)}, unknown {pcUnknown}.",
+            ColosseumInteractionInfoKind.CurrentScript => $"Current room script {scriptIndex}: {parameter1}, {parameter2}, {parameter3}, {parameter4}.",
+            ColosseumInteractionInfoKind.CommonScript => $"Common script {scriptIndex}: {parameter1}, {parameter2}, {parameter3}, {parameter4}.",
+            _ => "-"
+        };
+
+        return $"{index} - {roomName}. {trigger}{info}";
+    }
 
     private static string ShinyValueName(int id)
         => id switch

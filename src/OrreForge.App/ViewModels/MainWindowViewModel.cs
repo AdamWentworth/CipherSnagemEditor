@@ -20,6 +20,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<GiftPokemonEntryViewModel> _allGiftPokemon = [];
     private readonly List<TypeEntryViewModel> _allTypes = [];
     private readonly List<TreasureEntryViewModel> _allTreasures = [];
+    private readonly List<InteractionEntryViewModel> _allInteractions = [];
     private readonly List<MessageStringEntryViewModel> _allMessageStrings = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
     private PokemonStatsEditorResources _pokemonStatsResources = PokemonStatsEditorResources.Empty;
@@ -27,6 +28,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private ItemEditorResources _itemEditorResources = ItemEditorResources.Empty;
     private GiftPokemonEditorResources _giftPokemonResources = GiftPokemonEditorResources.Empty;
     private TreasureEditorResources _treasureEditorResources = TreasureEditorResources.Empty;
+    private InteractionEditorResources _interactionEditorResources = InteractionEditorResources.Empty;
 
     [ObservableProperty]
     private ToolEntryViewModel? _selectedTool;
@@ -90,6 +92,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private TreasureEditorViewModel? _selectedTreasureDetail;
+
+    [ObservableProperty]
+    private InteractionEntryViewModel? _selectedInteraction;
+
+    [ObservableProperty]
+    private InteractionEditorViewModel? _selectedInteractionDetail;
 
     [ObservableProperty]
     private MessageTableViewModel? _selectedMessageTable;
@@ -231,6 +239,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<TreasureEntryViewModel> TreasureEntries { get; } = [];
 
+    public ObservableCollection<InteractionEntryViewModel> InteractionEntries { get; } = [];
+
     public ObservableCollection<MessageTableViewModel> MessageTables { get; } = [];
 
     public ObservableCollection<MessageStringEntryViewModel> MessageStrings { get; } = [];
@@ -269,6 +279,8 @@ public partial class MainWindowViewModel : ViewModelBase
             _allTypes.Clear();
             _allTreasures.Clear();
             _treasureEditorResources = TreasureEditorResources.Empty;
+            _allInteractions.Clear();
+            _interactionEditorResources = InteractionEditorResources.Empty;
             _allMessageStrings.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
@@ -277,6 +289,7 @@ public partial class MainWindowViewModel : ViewModelBase
             GiftPokemonEntries.Clear();
             TypeEntries.Clear();
             TreasureEntries.Clear();
+            InteractionEntries.Clear();
             MessageTables.Clear();
             MessageStrings.Clear();
             TrainerSearchText = string.Empty;
@@ -300,6 +313,8 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTypeDetail = null;
             SelectedTreasure = null;
             SelectedTreasureDetail = null;
+            SelectedInteraction = null;
+            SelectedInteractionDetail = null;
             SelectedMessageTable = null;
             SelectedMessageString = null;
             SelectedMessageIdText = string.Empty;
@@ -329,6 +344,8 @@ public partial class MainWindowViewModel : ViewModelBase
             _allTypes.Clear();
             _allTreasures.Clear();
             _treasureEditorResources = TreasureEditorResources.Empty;
+            _allInteractions.Clear();
+            _interactionEditorResources = InteractionEditorResources.Empty;
             _allMessageStrings.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
@@ -337,6 +354,7 @@ public partial class MainWindowViewModel : ViewModelBase
             GiftPokemonEntries.Clear();
             TypeEntries.Clear();
             TreasureEntries.Clear();
+            InteractionEntries.Clear();
             MessageTables.Clear();
             MessageStrings.Clear();
             TrainerSearchText = string.Empty;
@@ -361,6 +379,8 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTypeDetail = null;
             SelectedTreasure = null;
             SelectedTreasureDetail = null;
+            SelectedInteraction = null;
+            SelectedInteractionDetail = null;
             SelectedMessageTable = null;
             SelectedMessageString = null;
             SelectedMessageIdText = string.Empty;
@@ -613,6 +633,35 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSaveInteraction))]
+    private async Task SaveInteractionAsync()
+    {
+        if (CurrentProject is null || SelectedInteractionDetail is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var index = SelectedInteractionDetail.Interaction.Index;
+        Logs.Add($"Saving interaction point {index}");
+
+        try
+        {
+            var update = SelectedInteractionDetail.ToUpdate();
+            var path = await Task.Run(() => CurrentProject.SaveInteractionPoint(update));
+            RefreshSavedInteractionEntry(index);
+            Logs.Add($"Interaction point saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"Interaction save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanSaveMessage))]
     private async Task SaveMessageAsync()
     {
@@ -721,6 +770,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanSaveTreasure()
         => CurrentProject?.Iso is not null && SelectedTreasureDetail is not null && !IsBusy;
 
+    private bool CanSaveInteraction()
+        => CurrentProject?.Iso is not null && SelectedInteractionDetail is not null && !IsBusy;
+
     private bool CanSaveMessage()
         => CurrentProject is not null
             && SelectedMessageTable is not null
@@ -758,6 +810,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 return true;
             case "Treasure Editor":
                 LoadTreasureRows();
+                return true;
+            case "Interaction Editor":
+                LoadInteractionRows();
                 return true;
             case "Message Editor":
                 LoadMessageRows();
@@ -875,6 +930,19 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveTreasureCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedInteractionChanged(InteractionEntryViewModel? value)
+    {
+        foreach (var interaction in _allInteractions)
+        {
+            interaction.IsSelected = ReferenceEquals(interaction, value);
+        }
+
+        SelectedInteractionDetail = value is null
+            ? null
+            : new InteractionEditorViewModel(value.Interaction, _interactionEditorResources, OnInteractionChanged);
+        SaveInteractionCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSelectedMessageTableChanged(MessageTableViewModel? value)
     {
         LoadMessageStrings(value);
@@ -953,6 +1021,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveGiftPokemonCommand.NotifyCanExecuteChanged();
         SaveTypeCommand.NotifyCanExecuteChanged();
         SaveTreasureCommand.NotifyCanExecuteChanged();
+        SaveInteractionCommand.NotifyCanExecuteChanged();
         SaveMessageCommand.NotifyCanExecuteChanged();
     }
 
@@ -1287,6 +1356,57 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTreasureDetail = null;
             SelectedToolDetail = $"Treasure Editor\n{ex.Message}";
             Logs.Add($"Treasure load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadInteractionRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allInteractions.Clear();
+            _interactionEditorResources = InteractionEditorResources.Empty;
+            InteractionEntries.Clear();
+            SelectedInteraction = null;
+            SelectedInteractionDetail = null;
+            return;
+        }
+
+        if (_allInteractions.Count > 0)
+        {
+            InteractionEntries.Clear();
+            foreach (var interaction in _allInteractions)
+            {
+                InteractionEntries.Add(interaction);
+            }
+
+            SelectedInteraction ??= InteractionEntries.FirstOrDefault();
+            return;
+        }
+
+        try
+        {
+            var commonRel = CurrentProject.LoadCommonRel();
+            _interactionEditorResources = InteractionEditorResources.FromCommonRel(commonRel);
+            foreach (var interaction in commonRel.InteractionPoints)
+            {
+                _allInteractions.Add(new InteractionEntryViewModel(interaction));
+            }
+
+            InteractionEntries.Clear();
+            foreach (var interaction in _allInteractions)
+            {
+                InteractionEntries.Add(interaction);
+            }
+
+            SelectedInteraction = InteractionEntries.FirstOrDefault();
+            Logs.Add($"Interaction Editor loaded: {_allInteractions.Count} interaction points.");
+        }
+        catch (Exception ex)
+        {
+            SelectedInteraction = null;
+            SelectedInteractionDetail = null;
+            SelectedToolDetail = $"Interaction Editor\n{ex.Message}";
+            Logs.Add($"Interaction load failed: {ex.Message}");
         }
     }
 
@@ -1810,6 +1930,11 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveTreasureCommand.NotifyCanExecuteChanged();
     }
 
+    private void OnInteractionChanged()
+    {
+        SaveInteractionCommand.NotifyCanExecuteChanged();
+    }
+
     private void RefreshSavedPokemonStatsEntry(int index)
     {
         var updated = CurrentProject?.LoadCommonRel().PokemonStatsFor(index);
@@ -1929,6 +2054,31 @@ public partial class MainWindowViewModel : ViewModelBase
 
         ApplyTreasureFilter(TreasureSearchText);
         SelectedTreasure = TreasureEntries.FirstOrDefault(entry => entry.Treasure.Index == index) ?? replacement;
+    }
+
+    private void RefreshSavedInteractionEntry(int index)
+    {
+        var updated = CurrentProject?.LoadCommonRel().InteractionPointById(index);
+        if (updated is null)
+        {
+            SelectedInteractionDetail?.MarkSaved();
+            return;
+        }
+
+        var replacement = new InteractionEntryViewModel(updated);
+        var listIndex = _allInteractions.FindIndex(entry => entry.Interaction.Index == index);
+        if (listIndex >= 0)
+        {
+            _allInteractions[listIndex] = replacement;
+        }
+
+        InteractionEntries.Clear();
+        foreach (var interaction in _allInteractions)
+        {
+            InteractionEntries.Add(interaction);
+        }
+
+        SelectedInteraction = InteractionEntries.FirstOrDefault(entry => entry.Interaction.Index == index) ?? replacement;
     }
 
     private void LoadMessageStrings(MessageTableViewModel? table)

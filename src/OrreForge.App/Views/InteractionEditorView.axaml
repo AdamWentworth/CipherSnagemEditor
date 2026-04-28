@@ -1,0 +1,253 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:OrreForge.App.Controls"
+             xmlns:vm="using:OrreForge.App.ViewModels"
+             x:Class="OrreForge.App.Views.InteractionEditorView"
+             x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
+             FontFamily="Arial"
+             Background="#303030">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.LegacyInteractionLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyInteractionField">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="21"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyInteractionField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+        <Style Selector="TextBox.LegacyInteractionField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#7D7D7D"/>
+        </Style>
+        <Style Selector="TextBox.LegacyInteractionText">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#3D3D3D"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="ComboBox.LegacyInteractionCombo">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="21"/>
+            <Setter Property="Padding" Value="4,0,2,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#6A6A6A"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="RadioButton.LegacyInteractionRadio">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="CheckBox.LegacyInteractionCheck">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+        </Style>
+        <Style Selector="Button.LegacyInteractionButton">
+            <Setter Property="Background" Value="#6E6E6E"/>
+            <Setter Property="BorderBrush" Value="#7B7B7B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="200,330"
+          Width="530"
+          Height="425"
+          Background="#303030">
+        <Border Grid.Column="0" Background="#222222">
+            <ScrollViewer VerticalScrollBarVisibility="Visible">
+                <ItemsControl ItemsSource="{Binding InteractionEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:InteractionEntryViewModel">
+                            <Border PointerPressed="InteractionPointerPressed"
+                                    Cursor="Hand"
+                                    Height="40"
+                                    Background="{Binding BackgroundBrush}"
+                                    BorderBrush="{Binding SelectionBorderBrush}"
+                                    BorderThickness="{Binding SelectionBorderThickness}">
+                                <StackPanel VerticalAlignment="Center" Margin="5,0">
+                                    <TextBlock Text="{Binding RowText}"
+                                               FontSize="12"
+                                               Foreground="#000000"
+                                               TextAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding DetailText}"
+                                               FontSize="11"
+                                               Foreground="#000000"
+                                               TextAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <Canvas Grid.Column="1"
+                Width="330"
+                Height="425"
+                Background="#303030">
+            <controls:LegacyPokemonComboBox Classes="LegacyInteractionCombo"
+                                            Canvas.Left="7"
+                                            Canvas.Top="10"
+                                            Width="317"
+                                            ItemsSource="{Binding SelectedInteractionDetail.RoomOptions}"
+                                            SelectedItem="{Binding SelectedInteractionDetail.SelectedRoom, Mode=TwoWay}"
+                                            MaxDropDownHeight="260"/>
+
+            <TextBlock Text="Region ID" Classes="LegacyInteractionLabel" Canvas.Left="8" Canvas.Top="41" Width="64" Height="20"/>
+            <TextBox Text="{Binding SelectedInteractionDetail.RegionId, Mode=TwoWay}"
+                     Classes="LegacyInteractionField"
+                     Canvas.Left="120"
+                     Canvas.Top="41"
+                     Width="200"/>
+
+            <TextBlock Text="Trigger" Classes="LegacyInteractionLabel" Canvas.Left="8" Canvas.Top="71" Width="314" Height="20"/>
+            <RadioButton Classes="LegacyInteractionRadio"
+                         GroupName="InteractionTrigger"
+                         Content="{Binding SelectedInteractionDetail.TriggerNoneTitle}"
+                         IsChecked="{Binding SelectedInteractionDetail.IsTriggerPressA2, Mode=TwoWay}"
+                         Canvas.Left="18"
+                         Canvas.Top="100"
+                         Width="142"
+                         Height="22"/>
+            <RadioButton Classes="LegacyInteractionRadio"
+                         GroupName="InteractionTrigger"
+                         Content="Press A"
+                         IsChecked="{Binding SelectedInteractionDetail.IsTriggerPressA, Mode=TwoWay}"
+                         Canvas.Left="168"
+                         Canvas.Top="100"
+                         Width="142"
+                         Height="22"/>
+            <RadioButton Classes="LegacyInteractionRadio"
+                         GroupName="InteractionTrigger"
+                         Content="Walk up to"
+                         IsChecked="{Binding SelectedInteractionDetail.IsTriggerWalkUp, Mode=TwoWay}"
+                         Canvas.Left="18"
+                         Canvas.Top="130"
+                         Width="142"
+                         Height="22"/>
+            <RadioButton Classes="LegacyInteractionRadio"
+                         GroupName="InteractionTrigger"
+                         Content="Walk through"
+                         IsChecked="{Binding SelectedInteractionDetail.IsTriggerWalkThrough, Mode=TwoWay}"
+                         Canvas.Left="168"
+                         Canvas.Top="130"
+                         Width="142"
+                         Height="22"/>
+
+            <controls:LegacyPokemonComboBox Classes="LegacyInteractionCombo"
+                                            Canvas.Left="17"
+                                            Canvas.Top="190"
+                                            Width="142"
+                                            ItemsSource="{Binding SelectedInteractionDetail.ScriptTypeOptions}"
+                                            SelectedItem="{Binding SelectedInteractionDetail.SelectedScriptType, Mode=TwoWay}"/>
+            <controls:LegacyPokemonComboBox Classes="LegacyInteractionCombo"
+                                            Canvas.Left="172"
+                                            Canvas.Top="190"
+                                            Width="142"
+                                            ItemsSource="{Binding SelectedInteractionDetail.ScriptIndexOptions}"
+                                            SelectedItem="{Binding SelectedInteractionDetail.SelectedScriptIndex, Mode=TwoWay}"
+                                            MaxDropDownHeight="260"/>
+
+            <TextBlock Text="Parameters" Classes="LegacyInteractionLabel" Canvas.Left="8" Canvas.Top="241" Width="314" Height="16"/>
+
+            <TextBlock Text="{Binding SelectedInteractionDetail.Label1}" Classes="LegacyInteractionLabel" IsVisible="{Binding SelectedInteractionDetail.IsField1Visible}" Canvas.Left="18" Canvas.Top="272" Width="144" Height="20"/>
+            <TextBox Text="{Binding SelectedInteractionDetail.Field1, Mode=TwoWay}" Classes="LegacyInteractionField" IsVisible="{Binding SelectedInteractionDetail.IsField1Visible}" Canvas.Left="20" Canvas.Top="297" Width="140"/>
+
+            <TextBlock Text="{Binding SelectedInteractionDetail.Label2}" Classes="LegacyInteractionLabel" IsVisible="{Binding SelectedInteractionDetail.IsField2Visible}" Canvas.Left="168" Canvas.Top="272" Width="144" Height="20"/>
+            <TextBox Text="{Binding SelectedInteractionDetail.Field2, Mode=TwoWay}" Classes="LegacyInteractionField" IsVisible="{Binding SelectedInteractionDetail.IsField2Visible}" Canvas.Left="170" Canvas.Top="297" Width="140"/>
+
+            <TextBlock Text="{Binding SelectedInteractionDetail.Label3}" Classes="LegacyInteractionLabel" IsVisible="{Binding SelectedInteractionDetail.IsField3Visible}" Canvas.Left="18" Canvas.Top="328" Width="144" Height="20"/>
+            <TextBox Text="{Binding SelectedInteractionDetail.Field3, Mode=TwoWay}" Classes="LegacyInteractionField" IsVisible="{Binding SelectedInteractionDetail.IsField3Visible}" Canvas.Left="20" Canvas.Top="353" Width="140"/>
+
+            <TextBlock Text="{Binding SelectedInteractionDetail.Label4}" Classes="LegacyInteractionLabel" IsVisible="{Binding SelectedInteractionDetail.IsField4Visible}" Canvas.Left="168" Canvas.Top="328" Width="144" Height="20"/>
+            <TextBox Text="{Binding SelectedInteractionDetail.Field4, Mode=TwoWay}" Classes="LegacyInteractionField" IsVisible="{Binding SelectedInteractionDetail.IsField4Visible}" Canvas.Left="170" Canvas.Top="353" Width="140"/>
+
+            <CheckBox Content="Sound"
+                      Classes="LegacyInteractionCheck"
+                      IsVisible="{Binding SelectedInteractionDetail.IsSoundVisible}"
+                      IsChecked="{Binding SelectedInteractionDetail.Sound, Mode=TwoWay}"
+                      Canvas.Left="170"
+                      Canvas.Top="297"
+                      Width="140"
+                      Height="22"/>
+
+            <controls:LegacyPokemonComboBox Classes="LegacyInteractionCombo"
+                                            IsVisible="{Binding SelectedInteractionDetail.IsDirectionVisible}"
+                                            Canvas.Left="20"
+                                            Canvas.Top="353"
+                                            Width="140"
+                                            ItemsSource="{Binding SelectedInteractionDetail.DirectionOptions}"
+                                            SelectedItem="{Binding SelectedInteractionDetail.SelectedDirection, Mode=TwoWay}"/>
+
+            <controls:LegacyPokemonComboBox Classes="LegacyInteractionCombo"
+                                            IsVisible="{Binding SelectedInteractionDetail.IsTargetRoomVisible}"
+                                            Canvas.Left="170"
+                                            Canvas.Top="353"
+                                            Width="140"
+                                            ItemsSource="{Binding SelectedInteractionDetail.RoomOptions}"
+                                            SelectedItem="{Binding SelectedInteractionDetail.SelectedTargetRoom, Mode=TwoWay}"
+                                            MaxDropDownHeight="260"/>
+
+            <TextBox Text="{Binding SelectedInteractionDetail.TextPreview, Mode=OneWay}"
+                     Classes="LegacyInteractionText"
+                     IsReadOnly="True"
+                     IsVisible="{Binding SelectedInteractionDetail.IsTextPreviewVisible}"
+                     TextWrapping="Wrap"
+                     AcceptsReturn="True"
+                     Canvas.Left="170"
+                     Canvas.Top="328"
+                     Width="140"
+                     Height="46"/>
+
+            <Button Classes="LegacyInteractionButton"
+                    Canvas.Left="130"
+                    Canvas.Top="389"
+                    Width="69"
+                    Height="21"
+                    Content="Save"
+                    Command="{Binding SaveInteractionCommand}"/>
+        </Canvas>
+    </Grid>
+</UserControl>

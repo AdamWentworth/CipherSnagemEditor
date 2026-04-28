@@ -210,6 +210,7 @@ public partial class MainWindow : Window
             "Type Editor" => new TypeEditorView(),
             "Treasure Editor" => new TreasureEditorView(),
             "Message Editor" => new MessageEditorView(),
+            "Interaction Editor" => new InteractionEditorView(),
             "ISO Explorer" => new IsoExplorerView(),
             _ => new LegacySimpleToolView(tool.Title, ToolContentSize(tool.Title))
         };
