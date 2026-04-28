@@ -5,6 +5,7 @@ public sealed record ColosseumTrainer(
     int TrainerClassId,
     string TrainerClassName,
     int TrainerModelId,
+    string TrainerModelName,
     int Ai,
     int NameId,
     string Name,
@@ -13,7 +14,8 @@ public sealed record ColosseumTrainer(
     IReadOnlyList<int> ItemIds,
     int PreBattleTextId,
     int VictoryTextId,
-    int DefeatTextId)
+    int DefeatTextId,
+    ColosseumBattle? Battle)
 {
     public bool HasShadow => Pokemon.Any(pokemon => pokemon.IsShadow);
 

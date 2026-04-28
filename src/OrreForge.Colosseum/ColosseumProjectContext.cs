@@ -1,3 +1,4 @@
+using OrreForge.Core.Binary;
 using OrreForge.Core.Archives;
 using OrreForge.Core.Files;
 using OrreForge.Core.GameCube;
@@ -9,6 +10,9 @@ namespace OrreForge.Colosseum;
 
 public sealed class ColosseumProjectContext
 {
+    private const int NumberOfTrainerModels = 0x4b;
+    private const int ModelDictionaryModelOffset = 0x04;
+
     private ColosseumProjectContext(
         string sourcePath,
         ColosseumSourceKind sourceKind,
@@ -48,6 +52,8 @@ public sealed class ColosseumProjectContext
     public Dictionary<string, GameStringTable> LoadedStringTables { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public ColosseumCommonRel? CommonRel { get; private set; }
+
+    private IReadOnlyDictionary<int, string>? TrainerModelNames { get; set; }
 
     public string ExtractIsoFile(GameCubeIsoFileEntry entry, string? outputPath = null, bool overwrite = true)
     {
@@ -197,7 +203,7 @@ public sealed class ColosseumProjectContext
 
         var commonRelBytes = commonArchive.Extract(commonRelEntry);
         LoadedFiles["common.rel"] = commonRelBytes;
-        CommonRel = ColosseumCommonRel.Parse(Iso.Region, commonRelBytes, LoadStartDol());
+        CommonRel = ColosseumCommonRel.Parse(Iso.Region, commonRelBytes, LoadStartDol(), BuildTrainerModelNames());
         return CommonRel;
     }
 
@@ -206,6 +212,80 @@ public sealed class ColosseumProjectContext
 
     public IReadOnlyList<ColosseumPokemonStats> LoadPokemonStats()
         => LoadCommonRel().PokemonStats;
+
+    private IReadOnlyDictionary<int, string> BuildTrainerModelNames()
+    {
+        if (TrainerModelNames is not null)
+        {
+            return TrainerModelNames;
+        }
+
+        if (Iso is null)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var dol = new BinaryData(LoadStartDol());
+        var modelTableOffset = TrainerPkxIdentifierOffset(Iso.Region);
+        if (modelTableOffset <= 0 || modelTableOffset >= dol.Length)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var pkxNamesByIdentifier = new Dictionary<uint, string>();
+        foreach (var entry in Iso.Files)
+        {
+            if (!entry.Name.Contains("pkx", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(Path.GetExtension(entry.Name), ".fsys", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            try
+            {
+                var archive = FsysArchive.Parse(entry.Name, GameCubeIsoReader.ReadFile(Iso, entry));
+                var firstEntry = archive.Entries.FirstOrDefault();
+                if (firstEntry is not null)
+                {
+                    pkxNamesByIdentifier[firstEntry.Identifier] = Path.GetFileNameWithoutExtension(entry.Name);
+                }
+            }
+            catch (InvalidDataException)
+            {
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+            }
+        }
+
+        var names = new Dictionary<int, string>();
+        for (var modelId = 0; modelId < NumberOfTrainerModels; modelId++)
+        {
+            var offset = modelTableOffset + (modelId * 12) + ModelDictionaryModelOffset;
+            if (offset + 4 > dol.Length)
+            {
+                break;
+            }
+
+            var identifier = dol.ReadUInt32(offset);
+            if (pkxNamesByIdentifier.TryGetValue(identifier, out var name))
+            {
+                names[modelId] = name;
+            }
+        }
+
+        TrainerModelNames = names;
+        return names;
+    }
+
+    private static int TrainerPkxIdentifierOffset(GameCubeRegion region)
+        => region switch
+        {
+            GameCubeRegion.Japan => 0x359fa8,
+            GameCubeRegion.UnitedStates => 0x36d840,
+            GameCubeRegion.Europe => 0x3ba938,
+            _ => 0
+        };
 
     public string SaveTrainerPokemon(IEnumerable<ColosseumTrainerPokemonUpdate> updates)
     {

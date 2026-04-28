@@ -82,6 +82,15 @@ public sealed class ColosseumCommonRel
     private const int ItemCount = 0x18d;
     private const int ItemSize = 0x28;
     private const int ItemNameIdOffset = 0x10;
+
+    private const int BattleSize = 0x38;
+    private const int BattleTypeOffset = 0x00;
+    private const int BattleStyleOffset = 0x01;
+    private const int BattleBgmOffset = 0x0c;
+    private const int BattlePlayersOffset = 0x18;
+    private const int BattlePlayerSize = 0x08;
+    private const int BattlePlayerTrainerIdOffset = 0x00;
+
     private static readonly int[] PokemonUnsetFillOffsets =
     [
         0x00, 0x01, 0x02, 0x08, 0x09, 0x10, 0x11, 0x10, 0x13, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
@@ -99,19 +108,29 @@ public sealed class ColosseumCommonRel
     private readonly Lazy<IReadOnlyDictionary<int, ColosseumMove>> _moves;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _items;
     private readonly Lazy<IReadOnlyDictionary<int, string>> _abilities;
+    private readonly Lazy<IReadOnlyDictionary<int, ColosseumBattle>> _battles;
+    private readonly IReadOnlyDictionary<int, string> _trainerModelNames;
 
-    private ColosseumCommonRel(GameCubeRegion region, byte[] bytes, byte[]? startDolBytes, RelocationTable table, GameStringTable strings)
+    private ColosseumCommonRel(
+        GameCubeRegion region,
+        byte[] bytes,
+        byte[]? startDolBytes,
+        RelocationTable table,
+        GameStringTable strings,
+        IReadOnlyDictionary<int, string>? trainerModelNames)
     {
         _region = region;
         _data = new BinaryData(bytes);
         _dol = startDolBytes is null ? null : new BinaryData(startDolBytes);
         RelocationTable = table;
         Strings = strings;
+        _trainerModelNames = trainerModelNames ?? new Dictionary<int, string>();
         _trainerClasses = new Lazy<IReadOnlyDictionary<int, ColosseumTrainerClass>>(LoadTrainerClasses);
         _pokemonStats = new Lazy<IReadOnlyDictionary<int, ColosseumPokemonStats>>(LoadPokemonStats);
         _moves = new Lazy<IReadOnlyDictionary<int, ColosseumMove>>(LoadMoves);
         _items = new Lazy<IReadOnlyDictionary<int, string>>(LoadItems);
         _abilities = new Lazy<IReadOnlyDictionary<int, string>>(LoadAbilities);
+        _battles = new Lazy<IReadOnlyDictionary<int, ColosseumBattle>>(LoadBattles);
     }
 
     public RelocationTable RelocationTable { get; }
@@ -145,7 +164,11 @@ public sealed class ColosseumCommonRel
 
     public byte[] ToArray() => _data.ToArray();
 
-    public static ColosseumCommonRel Parse(GameCubeRegion region, byte[] bytes, byte[]? startDolBytes = null)
+    public static ColosseumCommonRel Parse(
+        GameCubeRegion region,
+        byte[] bytes,
+        byte[]? startDolBytes = null,
+        IReadOnlyDictionary<int, string>? trainerModelNames = null)
     {
         var table = RelocationTable.Parse(bytes);
         var stringIndex = ColosseumCommonIndexes.IndexFor(ColosseumCommonIndex.StringTable1, region);
@@ -155,7 +178,7 @@ public sealed class ColosseumCommonRel
             throw new InvalidDataException("Could not locate the Colosseum common.rel string table.");
         }
 
-        return new ColosseumCommonRel(region, bytes, startDolBytes, table, GameStringTable.Parse(stringBytes));
+        return new ColosseumCommonRel(region, bytes, startDolBytes, table, GameStringTable.Parse(stringBytes), trainerModelNames);
     }
 
     public IReadOnlyList<ColosseumTrainer> LoadStoryTrainers()
@@ -198,6 +221,7 @@ public sealed class ColosseumCommonRel
             classId,
             trainerClass.Name,
             modelId,
+            TrainerModelName(modelId),
             ai,
             nameId,
             Strings.StringWithId(nameId),
@@ -206,8 +230,12 @@ public sealed class ColosseumCommonRel
             items,
             preBattleTextId,
             victoryTextId,
-            defeatTextId);
+            defeatTextId,
+            BattleForTrainer(index));
     }
+
+    public ColosseumBattle? BattleForTrainer(int trainerId)
+        => _battles.Value.Values.FirstOrDefault(battle => battle.TrainerIds.Contains(trainerId));
 
     private IReadOnlyList<ColosseumTrainerPokemon> ReadTrainerPokemon(int firstPokemonIndex)
     {
@@ -775,6 +803,41 @@ public sealed class ColosseumCommonRel
             _ => $"Type {id}"
         };
 
+    private static string BattleStyleName(int id)
+        => id switch
+        {
+            0 => "None",
+            1 => "Single",
+            2 => "Double",
+            3 => "Multi",
+            _ => $"Battle Style {id}"
+        };
+
+    private static string BattleTypeName(int id)
+        => id switch
+        {
+            0 => "None",
+            1 => "Admin Battle",
+            2 => "Story Battle",
+            3 => "Colosseum Preliminary Round",
+            4 => "Test",
+            5 => "Colosseum Final Round",
+            6 => "Phenac Colosseum Preliminary Round",
+            7 => "Phenac Colosseum Final Round",
+            8 => "Mt. Battle",
+            9 => "Mt. Battle Final",
+            10 => "E-Card Panel Battle",
+            11 => "E-Card Endless Battle",
+            12 => "Battle Mode Battle Now",
+            13 => "Battle Mode Solo Colosseum",
+            14 => "Battle Mode Solo Colosseum Final",
+            15 => "Battle Mode Mt. Battle",
+            16 => "Link Battle",
+            17 => "E-Card Special Battle",
+            18 => "Battle Mode Mt. Battle Final",
+            _ => $"Battle Type {id}"
+        };
+
     private static int FirstItemOffset(GameCubeRegion region)
         => region switch
         {
@@ -817,6 +880,51 @@ public sealed class ColosseumCommonRel
         }
 
         return classes;
+    }
+
+    private IReadOnlyDictionary<int, ColosseumBattle> LoadBattles()
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberOfBattles);
+        var start = PointerFor(ColosseumCommonIndex.Battles);
+        var battles = new Dictionary<int, ColosseumBattle>();
+
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * BattleSize);
+            var battleType = _data.ReadByte(offset + BattleTypeOffset);
+            var battleStyle = _data.ReadByte(offset + BattleStyleOffset);
+            var bgmId = checked((int)_data.ReadUInt32(offset + BattleBgmOffset));
+            var trainerIds = new List<int>(4);
+
+            for (var player = 0; player < 4; player++)
+            {
+                var playerOffset = offset + BattlePlayersOffset + (player * BattlePlayerSize);
+                trainerIds.Add(_data.ReadUInt16(playerOffset + BattlePlayerTrainerIdOffset));
+            }
+
+            battles[index] = new ColosseumBattle(
+                index,
+                battleType,
+                BattleTypeName(battleType),
+                battleStyle,
+                BattleStyleName(battleStyle),
+                bgmId,
+                trainerIds);
+        }
+
+        return battles;
+    }
+
+    private string TrainerModelName(int modelId)
+    {
+        if (modelId == 0)
+        {
+            return "-";
+        }
+
+        return _trainerModelNames.TryGetValue(modelId, out var name) && !string.IsNullOrWhiteSpace(name)
+            ? name
+            : $"Model {modelId}";
     }
 
     private int PointerFor(ColosseumCommonIndex index)

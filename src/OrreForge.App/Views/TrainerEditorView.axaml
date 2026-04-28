@@ -63,6 +63,22 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <Style Selector="Border.LegacyHeaderField">
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Background" Value="#B895FF"/>
+            <Setter Property="BorderBrush" Value="#C7AEFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyHeaderText">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="246,*">
@@ -141,54 +157,50 @@
                                Stretch="Uniform"/>
                     </Border>
 
-                    <ComboBox Grid.Column="1"
-                              Classes="LegacyHeaderField"
-                              SelectedIndex="0"
-                              Foreground="#FFFFFF">
-                        <ComboBoxItem Content="{Binding SelectedTrainerClass}"/>
-                    </ComboBox>
-                    <TextBox Grid.Column="2"
-                             Classes="LegacyHeaderField"
-                             Text="{Binding SelectedTrainerName}"
-                             IsReadOnly="True"
-                             Foreground="#FFFFFF"/>
-                    <TextBox Grid.Column="3"
-                             Classes="LegacyHeaderField"
-                             Text="{Binding SelectedTrainerAi}"
-                             IsReadOnly="True"
-                             Foreground="#FFFFFF"/>
-                    <ComboBox Grid.Column="4"
-                              Classes="LegacyHeaderField"
-                              SelectedIndex="0"
-                              Foreground="#FFFFFF">
-                        <ComboBoxItem Content="{Binding SelectedTrainerBattleStyle}"/>
-                    </ComboBox>
-                    <TextBox Grid.Column="5"
-                             Classes="LegacyHeaderField"
-                             Text="{Binding SelectedTrainerBattleId}"
-                             IsReadOnly="True"
-                             Foreground="#FFFFFF"/>
+                    <Border Grid.Column="1"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerClass}"/>
+                    </Border>
+                    <Border Grid.Column="2"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerName}"/>
+                    </Border>
+                    <Border Grid.Column="3"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerAi}"/>
+                    </Border>
+                    <Border Grid.Column="4"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerBattleStyle}"/>
+                    </Border>
+                    <Border Grid.Column="5"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerBattleId}"/>
+                    </Border>
 
-                    <ComboBox Grid.Row="1"
-                              Grid.Column="1"
-                              Classes="LegacyHeaderField"
-                              SelectedIndex="0"
-                              Foreground="#FFFFFF">
-                        <ComboBoxItem Content="{Binding SelectedTrainerModel}"/>
-                    </ComboBox>
-                    <TextBox Grid.Row="1"
-                             Grid.Column="3"
-                             Classes="LegacyHeaderField"
-                             Text="{Binding SelectedTrainerBgm}"
-                             IsReadOnly="True"
-                             Foreground="#FFFFFF"/>
-                    <ComboBox Grid.Row="1"
-                              Grid.Column="4"
-                              Classes="LegacyHeaderField"
-                              SelectedIndex="0"
-                              Foreground="#FFFFFF">
-                        <ComboBoxItem Content="{Binding SelectedTrainerBattleType}"/>
-                    </ComboBox>
+                    <Border Grid.Row="1"
+                            Grid.Column="1"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerModel}"/>
+                    </Border>
+                    <Border Grid.Row="1"
+                            Grid.Column="3"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerBgm}"/>
+                    </Border>
+                    <Border Grid.Row="1"
+                            Grid.Column="4"
+                            Classes="LegacyHeaderField">
+                        <TextBlock Classes="LegacyHeaderText"
+                                   Text="{Binding SelectedTrainerBattleType}"/>
+                    </Border>
                     <TextBlock Grid.Row="1"
                                Grid.Column="6"
                                Text="{Binding SelectedTrainerStringIds}"

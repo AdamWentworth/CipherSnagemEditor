@@ -65,8 +65,11 @@ static void PrintTrainers(string isoPath)
     {
         var firstPokemon = trainer.Pokemon.FirstOrDefault(pokemon => pokemon.IsSet);
         var firstMove = firstPokemon?.Moves.FirstOrDefault(move => move.Index > 0);
+        var battle = trainer.Battle is null
+            ? "battle -"
+            : $"battle {trainer.Battle.Index}: {trainer.Battle.BattleStyleLabel}, {trainer.Battle.BattleTypeLabel}, bgm {trainer.Battle.BgmHex}";
         Console.WriteLine(
-            $"{trainer.Index,3}: {trainer.FullName} | model {trainer.TrainerModelId} | pokemon {trainer.FirstPokemonIndex}"
+            $"{trainer.Index,3}: {trainer.FullName} | model {trainer.TrainerModelId}: {trainer.TrainerModelName} | {battle} | pokemon {trainer.FirstPokemonIndex}"
             + (firstPokemon is null
                 ? string.Empty
                 : $" | first: {firstPokemon.SpeciesName} Lv.{firstPokemon.Level}, {firstPokemon.ItemName}, {firstMove?.Name ?? "-"}"));

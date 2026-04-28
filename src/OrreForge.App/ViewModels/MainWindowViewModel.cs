@@ -722,13 +722,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var trainer = value.Trainer;
         SelectedTrainerName = trainer.Name;
-        SelectedTrainerClass = trainer.TrainerClassName;
-        SelectedTrainerModel = $"Model {trainer.TrainerModelId}";
+        SelectedTrainerClass = $"{trainer.TrainerClassName} ({trainer.TrainerClassId})";
+        SelectedTrainerModel = trainer.TrainerModelName;
         SelectedTrainerAi = trainer.Ai.ToString();
-        SelectedTrainerBattleStyle = "-";
-        SelectedTrainerBattleType = "-";
-        SelectedTrainerBattleId = "0";
-        SelectedTrainerBgm = "-";
+        SelectedTrainerBattleStyle = trainer.Battle?.BattleStyleLabel ?? "-";
+        SelectedTrainerBattleType = trainer.Battle?.BattleTypeLabel ?? "-";
+        SelectedTrainerBattleId = trainer.Battle?.Index.ToString() ?? "0";
+        SelectedTrainerBgm = trainer.Battle?.BgmHex ?? "-";
         SelectedTrainerStringIds = $"Name ID: {trainer.NameId}   Pre: {trainer.PreBattleTextId}   Win: {trainer.VictoryTextId}   Loss: {trainer.DefeatTextId}";
         TrainerDetailBackgroundBrush = trainer.HasShadow ? TrainerShadowBrush : TrainerNormalBrush;
 

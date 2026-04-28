@@ -146,9 +146,10 @@ public partial class MainWindow : Window
             MinHeight = Math.Min(size.Height, 560),
             FontFamily = FontFamily,
             Background = SolidColorBrush.Parse("#F0F0FC"),
-            Content = content,
+            WindowDecorations = Avalonia.Controls.WindowDecorations.None,
             DataContext = viewModel
         };
+        window.Content = CreateToolWindowShell(window, tool.Title, content);
 
         if (Icon is not null)
         {
@@ -171,6 +172,90 @@ public partial class MainWindow : Window
             "ISO Explorer" => new IsoExplorerView(),
             _ => CreatePlaceholderContent(tool)
         };
+
+    private static Control CreateToolWindowShell(Window window, string title, Control content)
+    {
+        var root = new Grid
+        {
+            RowDefinitions = new RowDefinitions("24,*"),
+            Background = SolidColorBrush.Parse("#242424")
+        };
+
+        var titleBar = new Border
+        {
+            Background = SolidColorBrush.Parse("#3A3A3A"),
+            Height = 24
+        };
+        titleBar.PointerPressed += (_, e) =>
+        {
+            if (e.GetCurrentPoint(titleBar).Properties.IsLeftButtonPressed)
+            {
+                window.BeginMoveDrag(e);
+            }
+        };
+
+        var titleLayout = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("80,*,80")
+        };
+
+        var trafficControls = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        trafficControls.Children.Add(CreateTitleDot("#FF5F57", window.Close));
+        trafficControls.Children.Add(CreateTitleDot("#FFBD2E", () => window.WindowState = WindowState.Minimized));
+        trafficControls.Children.Add(CreateTitleDot("#28C840", () =>
+        {
+            window.WindowState = window.WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }));
+        titleLayout.Children.Add(trafficControls);
+
+        var titleText = new TextBlock
+        {
+            Text = title,
+            Foreground = SolidColorBrush.Parse("#CFCFCF"),
+            FontSize = 12,
+            FontWeight = FontWeight.Bold,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(titleText, 1);
+        titleLayout.Children.Add(titleText);
+
+        titleBar.Child = titleLayout;
+        root.Children.Add(titleBar);
+
+        Grid.SetRow(content, 1);
+        root.Children.Add(content);
+        return root;
+    }
+
+    private static Border CreateTitleDot(string color, Action action)
+    {
+        var dot = new Border
+        {
+            Width = 12,
+            Height = 12,
+            CornerRadius = new CornerRadius(6),
+            Background = SolidColorBrush.Parse(color)
+        };
+        dot.PointerPressed += (_, e) =>
+        {
+            if (e.GetCurrentPoint(dot).Properties.IsLeftButtonPressed)
+            {
+                action();
+                e.Handled = true;
+            }
+        };
+
+        return dot;
+    }
 
     private static Size ToolWindowSize(string title)
         => title switch
