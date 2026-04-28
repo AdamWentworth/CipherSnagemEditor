@@ -309,7 +309,7 @@
                     Width="105"
                     Height="220">
                 <Grid Margin="5,20,5,0"
-                      RowDefinitions="20,20,20,20,20,20,20,20,20,20,20"
+                      RowDefinitions="20,15,20,15,20,15,20,15,20,15,20"
                       ColumnDefinitions="50,45"
                       RowSpacing="0">
                     <TextBlock Text="HP EV" Classes="LegacyStatsMiniLabel"/>

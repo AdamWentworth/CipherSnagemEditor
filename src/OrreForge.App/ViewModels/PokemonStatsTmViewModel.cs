@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using OrreForge.App.Services;
 using OrreForge.Colosseum.Data;
 
 namespace OrreForge.App.ViewModels;
@@ -60,7 +61,7 @@ public sealed partial class PokemonStatsTmViewModel : ObservableObject
 
             try
             {
-                var image = new Bitmap(path);
+                var image = ApngImageLoader.Load(path).FirstOrDefault()?.Image;
                 TypeImageCache[typeId] = image;
                 return image;
             }

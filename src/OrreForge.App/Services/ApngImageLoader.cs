@@ -19,7 +19,7 @@ public static class ApngImageLoader
         var png = Parse(bytes);
         if (png.Frames.Count == 0)
         {
-            return [new PokemonBodyFrame(new Bitmap(path), DefaultFrameDuration)];
+            return [new PokemonBodyFrame(DecodeStaticImage(png), DefaultFrameDuration)];
         }
 
         return DecodeAnimation(png);
@@ -75,7 +75,14 @@ public static class ApngImageLoader
                         data[25]);
                     break;
                 case "IDAT":
-                    currentFrame?.CompressedChunks.Add(data.ToArray());
+                    if (currentFrame is null)
+                    {
+                        png.StaticImageChunks.Add(data.ToArray());
+                    }
+                    else
+                    {
+                        currentFrame.CompressedChunks.Add(data.ToArray());
+                    }
                     break;
                 case "fdAT":
                     currentFrame?.CompressedChunks.Add(data[4..].ToArray());
@@ -140,6 +147,36 @@ public static class ApngImageLoader
             : frames;
     }
 
+    private static Bitmap DecodeStaticImage(ParsedPng png)
+    {
+        ValidateDecodableImage(png, "PNG");
+
+        if (png.StaticImageChunks.Count == 0)
+        {
+            throw new InvalidDataException("PNG has no image data.");
+        }
+
+        var frame = new FrameData(
+            png.Width,
+            png.Height,
+            0,
+            0,
+            10,
+            100,
+            0,
+            0);
+
+        foreach (var chunk in png.StaticImageChunks)
+        {
+            frame.CompressedChunks.Add(chunk);
+        }
+
+        var pixels = DecodeFramePixels(png, frame);
+        var canvas = new byte[png.Width * png.Height * 4];
+        BlendFrame(canvas, png.Width, png.Height, frame, pixels);
+        return CreateBitmap(canvas, png.Width, png.Height);
+    }
+
     private static byte[] DecodeFramePixels(ParsedPng png, FrameData frame)
     {
         var compressed = Concatenate(frame.CompressedChunks);
@@ -191,6 +228,24 @@ public static class ApngImageLoader
         }
 
         return result;
+    }
+
+    private static void ValidateDecodableImage(ParsedPng png, string formatName)
+    {
+        if (png.Width <= 0 || png.Height <= 0)
+        {
+            throw new InvalidDataException($"{formatName} missing IHDR dimensions.");
+        }
+
+        if (png.BitDepth != 8)
+        {
+            throw new NotSupportedException($"Only 8-bit {formatName} images are currently supported.");
+        }
+
+        if (png.InterlaceMethod != 0)
+        {
+            throw new NotSupportedException($"Interlaced {formatName} images are currently unsupported.");
+        }
     }
 
     private static byte[] ToRgba(byte[] pixels, int width, int height, ParsedPng png)
@@ -492,6 +547,8 @@ public static class ApngImageLoader
         public byte[]? Palette { get; set; }
 
         public byte[]? Transparency { get; set; }
+
+        public List<byte[]> StaticImageChunks { get; } = [];
 
         public List<FrameData> Frames { get; } = [];
     }
