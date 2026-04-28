@@ -233,25 +233,8 @@ public partial class MainWindow : Window
 
         var titleLayout = new Grid
         {
-            ColumnDefinitions = new ColumnDefinitions("80,*,80")
+            ColumnDefinitions = new ColumnDefinitions("138,*,138")
         };
-
-        var trafficControls = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            Margin = new Thickness(8, 0, 0, 0),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        trafficControls.Children.Add(CreateTitleDot("#FF5F57", window.Close));
-        trafficControls.Children.Add(CreateTitleDot("#FFBD2E", () => window.WindowState = WindowState.Minimized));
-        trafficControls.Children.Add(CreateTitleDot("#28C840", () =>
-        {
-            window.WindowState = window.WindowState == WindowState.Maximized
-                ? WindowState.Normal
-                : WindowState.Maximized;
-        }));
-        titleLayout.Children.Add(trafficControls);
 
         var titleText = new TextBlock
         {
@@ -265,6 +248,23 @@ public partial class MainWindow : Window
         Grid.SetColumn(titleText, 1);
         titleLayout.Children.Add(titleText);
 
+        var windowControls = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        windowControls.Children.Add(CreateTitleButton("-", false, () => window.WindowState = WindowState.Minimized));
+        windowControls.Children.Add(CreateTitleButton("□", false, () =>
+        {
+            window.WindowState = window.WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }));
+        windowControls.Children.Add(CreateTitleButton("X", true, window.Close));
+        Grid.SetColumn(windowControls, 2);
+        titleLayout.Children.Add(windowControls);
+
         titleBar.Child = titleLayout;
         root.Children.Add(titleBar);
 
@@ -273,25 +273,35 @@ public partial class MainWindow : Window
         return root;
     }
 
-    private static Border CreateTitleDot(string color, Action action)
+    private static Button CreateTitleButton(string text, bool isClose, Action action)
     {
-        var dot = new Border
+        var button = new Button
         {
-            Width = 12,
-            Height = 12,
-            CornerRadius = new CornerRadius(6),
-            Background = SolidColorBrush.Parse(color)
+            Content = text,
+            Width = 46,
+            Height = 24,
+            MinHeight = 0,
+            Padding = new Thickness(0),
+            FontSize = 12,
+            Foreground = SolidColorBrush.Parse("#DCDCDC"),
+            Background = SolidColorBrush.Parse("#3A3A3A"),
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(0),
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
         };
-        dot.PointerPressed += (_, e) =>
+        button.PointerEntered += (_, _) => button.Background = SolidColorBrush.Parse(isClose ? "#E81123" : "#505050");
+        button.PointerExited += (_, _) => button.Background = SolidColorBrush.Parse("#3A3A3A");
+        button.PointerPressed += (_, e) =>
         {
-            if (e.GetCurrentPoint(dot).Properties.IsLeftButtonPressed)
+            if (e.GetCurrentPoint(button).Properties.IsLeftButtonPressed)
             {
                 action();
                 e.Handled = true;
             }
         };
 
-        return dot;
+        return button;
     }
 
     private static Size ToolWindowSize(string title)

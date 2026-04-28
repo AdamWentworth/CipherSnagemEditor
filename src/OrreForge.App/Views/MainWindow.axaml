@@ -44,34 +44,42 @@
         <Style Selector="Button.LegacyOpenButton:pressed">
             <Setter Property="Background" Value="#C4C4C4"/>
         </Style>
+        <Style Selector="Button.TitleBarButton">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#DCDCDC"/>
+            <Setter Property="Background" Value="#3A3A3A"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_Border"
+                            Background="{TemplateBinding Background}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalContentAlignment="Center"
+                                          VerticalContentAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.TitleBarButton:pointerover /template/ Border#PART_Border">
+            <Setter Property="Background" Value="#505050"/>
+        </Style>
+        <Style Selector="Button.TitleBarClose:pointerover /template/ Border#PART_Border">
+            <Setter Property="Background" Value="#E81123"/>
+        </Style>
     </Window.Styles>
 
     <Grid RowDefinitions="24,*"
           Background="#F0F0FC">
         <Border Background="#3A3A3A"
                 PointerPressed="MainTitleBarPointerPressed">
-            <Grid ColumnDefinitions="80,*,96">
-                <StackPanel Orientation="Horizontal"
-                            Spacing="8"
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Center">
-                    <Border Width="12"
-                            Height="12"
-                            CornerRadius="6"
-                            Background="#FF5F57"
-                            PointerPressed="MainClosePointerPressed"/>
-                    <Border Width="12"
-                            Height="12"
-                            CornerRadius="6"
-                            Background="#FFBD2E"
-                            PointerPressed="MainMinimizePointerPressed"/>
-                    <Border Width="12"
-                            Height="12"
-                            CornerRadius="6"
-                            Background="#28C840"
-                            PointerPressed="MainZoomPointerPressed"/>
-                </StackPanel>
-
+            <Grid ColumnDefinitions="138,*,138">
                 <TextBlock Grid.Column="1"
                            Text="Colosseum Tool"
                            Foreground="#CFCFCF"
@@ -79,6 +87,20 @@
                            FontWeight="Bold"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
+                    <Button Classes="TitleBarButton"
+                            Content="-"
+                            PointerPressed="MainMinimizePointerPressed"/>
+                    <Button Classes="TitleBarButton"
+                            Content="□"
+                            PointerPressed="MainZoomPointerPressed"/>
+                    <Button Classes="TitleBarButton TitleBarClose"
+                            Content="X"
+                            PointerPressed="MainClosePointerPressed"/>
+                </StackPanel>
             </Grid>
         </Border>
 
