@@ -22,6 +22,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<TreasureEntryViewModel> _allTreasures = [];
     private readonly List<InteractionEntryViewModel> _allInteractions = [];
     private readonly List<MessageStringEntryViewModel> _allMessageStrings = [];
+    private readonly List<TableEditorEntryViewModel> _allTableEditorEntries = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
     private PokemonStatsEditorResources _pokemonStatsResources = PokemonStatsEditorResources.Empty;
     private MoveEditorResources _moveEditorResources = MoveEditorResources.Empty;
@@ -106,6 +107,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private MessageStringEntryViewModel? _selectedMessageString;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedTableEditorEntry))]
+    [NotifyPropertyChangedFor(nameof(SelectedTableEditorName))]
+    [NotifyPropertyChangedFor(nameof(SelectedTableEditorDetails))]
+    private TableEditorEntryViewModel? _selectedTableEditorEntry;
+
+    [ObservableProperty]
     private string _selectedMessageIdText = string.Empty;
 
     [ObservableProperty]
@@ -134,6 +141,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _messageSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _tableEditorSearchText = string.Empty;
 
     [ObservableProperty]
     private bool _showIsoExplorer;
@@ -245,7 +255,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<MessageStringEntryViewModel> MessageStrings { get; } = [];
 
+    public ObservableCollection<TableEditorEntryViewModel> TableEditorEntries { get; } = [];
+
     public ObservableCollection<TrainerPokemonSlotViewModel> SelectedTrainerPokemon { get; } = [];
+
+    public bool HasSelectedTableEditorEntry => SelectedTableEditorEntry is not null;
+
+    public string SelectedTableEditorName => SelectedTableEditorEntry?.Name ?? "Data Table";
+
+    public string SelectedTableEditorDetails => SelectedTableEditorEntry?.Details ?? "Details: -";
 
     public ColosseumProjectContext? CurrentProject { get; private set; }
 
@@ -282,6 +300,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _allInteractions.Clear();
             _interactionEditorResources = InteractionEditorResources.Empty;
             _allMessageStrings.Clear();
+            _allTableEditorEntries.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -292,6 +311,7 @@ public partial class MainWindowViewModel : ViewModelBase
             InteractionEntries.Clear();
             MessageTables.Clear();
             MessageStrings.Clear();
+            TableEditorEntries.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
@@ -300,6 +320,7 @@ public partial class MainWindowViewModel : ViewModelBase
             TypeSearchText = string.Empty;
             TreasureSearchText = string.Empty;
             MessageSearchText = string.Empty;
+            TableEditorSearchText = string.Empty;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
             SelectedPokemonStatsDetail = null;
@@ -317,6 +338,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedInteractionDetail = null;
             SelectedMessageTable = null;
             SelectedMessageString = null;
+            SelectedTableEditorEntry = null;
             SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
@@ -347,6 +369,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _allInteractions.Clear();
             _interactionEditorResources = InteractionEditorResources.Empty;
             _allMessageStrings.Clear();
+            _allTableEditorEntries.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -357,6 +380,7 @@ public partial class MainWindowViewModel : ViewModelBase
             InteractionEntries.Clear();
             MessageTables.Clear();
             MessageStrings.Clear();
+            TableEditorEntries.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
@@ -365,6 +389,7 @@ public partial class MainWindowViewModel : ViewModelBase
             TypeSearchText = string.Empty;
             TreasureSearchText = string.Empty;
             MessageSearchText = string.Empty;
+            TableEditorSearchText = string.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
@@ -383,6 +408,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedInteractionDetail = null;
             SelectedMessageTable = null;
             SelectedMessageString = null;
+            SelectedTableEditorEntry = null;
             SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
@@ -696,6 +722,30 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
+    private void EncodeTableEditor()
+    {
+        LogTableEditorAction("Encode for editing via text files");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
+    private void DecodeTableEditor()
+    {
+        LogTableEditorAction("Decode edited files back into the game");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
+    private void DocumentTableEditor()
+    {
+        LogTableEditorAction("Document as text files for reference");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
+    private void EditTableEditor()
+    {
+        LogTableEditorAction("Edit");
+    }
+
     [RelayCommand]
     private void ReturnHome()
     {
@@ -779,6 +829,19 @@ public partial class MainWindowViewModel : ViewModelBase
             && TryParseMessageId(SelectedMessageIdText, out _)
             && !IsBusy;
 
+    private bool CanRunTableEditorAction()
+        => SelectedTableEditorEntry is not null && !IsBusy;
+
+    private void LogTableEditorAction(string action)
+    {
+        if (SelectedTableEditorEntry is null)
+        {
+            return;
+        }
+
+        Logs.Add($"{action}: {SelectedTableEditorEntry.Name} is queued for the universal table backend.");
+    }
+
     public bool PrepareToolWindow(ToolEntryViewModel tool)
     {
         SelectedTool = tool;
@@ -816,6 +879,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 return true;
             case "Message Editor":
                 LoadMessageRows();
+                return true;
+            case "Table Editor":
+                LoadTableEditorRows();
                 return true;
             default:
                 return true;
@@ -961,6 +1027,19 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveMessageCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedTableEditorEntryChanged(TableEditorEntryViewModel? value)
+    {
+        foreach (var table in _allTableEditorEntries)
+        {
+            table.IsSelected = ReferenceEquals(table, value);
+        }
+
+        EncodeTableEditorCommand.NotifyCanExecuteChanged();
+        DecodeTableEditorCommand.NotifyCanExecuteChanged();
+        DocumentTableEditorCommand.NotifyCanExecuteChanged();
+        EditTableEditorCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSelectedMessageIdTextChanged(string value)
     {
         SaveMessageCommand.NotifyCanExecuteChanged();
@@ -1011,6 +1090,11 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyMessageFilter(value);
     }
 
+    partial void OnTableEditorSearchTextChanged(string value)
+    {
+        ApplyTableEditorFilter(value);
+    }
+
     partial void OnIsBusyChanged(bool value)
     {
         NotifyIsoExplorerCommands();
@@ -1023,6 +1107,10 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveTreasureCommand.NotifyCanExecuteChanged();
         SaveInteractionCommand.NotifyCanExecuteChanged();
         SaveMessageCommand.NotifyCanExecuteChanged();
+        EncodeTableEditorCommand.NotifyCanExecuteChanged();
+        DecodeTableEditorCommand.NotifyCanExecuteChanged();
+        DocumentTableEditorCommand.NotifyCanExecuteChanged();
+        EditTableEditorCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSelectedToolView(ToolEntryViewModel? value)
@@ -1451,6 +1539,42 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void LoadTableEditorRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allTableEditorEntries.Clear();
+            TableEditorEntries.Clear();
+            SelectedTableEditorEntry = null;
+            return;
+        }
+
+        if (_allTableEditorEntries.Count > 0)
+        {
+            ApplyTableEditorFilter(TableEditorSearchText);
+            return;
+        }
+
+        try
+        {
+            var commonRel = CurrentProject.LoadCommonRel();
+            foreach (var table in BuildTableEditorEntries(commonRel, CurrentProject))
+            {
+                _allTableEditorEntries.Add(table);
+            }
+
+            ApplyTableEditorFilter(TableEditorSearchText);
+            SelectedTableEditorEntry = TableEditorEntries.FirstOrDefault();
+            Logs.Add($"Table Editor loaded: {_allTableEditorEntries.Count} universal tables.");
+        }
+        catch (Exception ex)
+        {
+            SelectedTableEditorEntry = null;
+            SelectedToolDetail = $"Table Editor\n{ex.Message}";
+            Logs.Add($"Table Editor load failed: {ex.Message}");
+        }
+    }
+
     private void ApplyTrainerFilter(string? filterText)
     {
         if (_allTrainers.Count == 0)
@@ -1706,6 +1830,199 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         }
     }
+
+    private void ApplyTableEditorFilter(string? filterText)
+    {
+        if (_allTableEditorEntries.Count == 0)
+        {
+            TableEditorEntries.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allTableEditorEntries
+            : _allTableEditorEntries.Where(table => Contains(table.SearchText, filter)).ToList();
+
+        TableEditorEntries.Clear();
+        foreach (var table in filtered)
+        {
+            TableEditorEntries.Add(table);
+        }
+
+        if (SelectedTableEditorEntry is null || !TableEditorEntries.Contains(SelectedTableEditorEntry))
+        {
+            SelectedTableEditorEntry = TableEditorEntries.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var table in _allTableEditorEntries)
+            {
+                table.IsSelected = ReferenceEquals(table, SelectedTableEditorEntry);
+            }
+        }
+    }
+
+    private static IReadOnlyList<TableEditorEntryViewModel> BuildTableEditorEntries(
+        ColosseumCommonRel commonRel,
+        ColosseumProjectContext project)
+    {
+        var entries = new List<TableEditorDefinition>
+        {
+            Common("AI Weight Effect", 56),
+            Common("Battle", 50),
+            Common("Battle Styles", 42),
+            Common("Battle Types", 32),
+            Common("Battlefield", 28),
+            Common("Character", 6),
+            Common("Character Model", 72),
+            Common("Door", 30),
+            Common("Interaction Point", 86),
+            Common("Move", 62),
+            Common("Multiplier", 70),
+            Common("Nature", 64),
+            Common("Pokemon AI Roles", 58),
+            Common("Pokemon Stats", 68),
+            Common("Pokeface", 4),
+            Common("Room", 14),
+            Common("Shadow Pokemon Data", 80),
+            Common("Sounds", 52),
+            Common("Trainer AI", 46),
+            Common("Trainer Class", 24),
+            Common("Treasure", 60),
+            Common("Trainer Pokemon", 48, category: TableEditorCategoryDeckPokemon),
+            Common("Trainer", 44, category: TableEditorCategoryDeckTrainer),
+            Dol("Ability", project, count: commonRel.Abilities.Count),
+            Dol("Item", project, count: commonRel.ItemData.Count, entryLength: 0x28),
+            Dol("PKX Pokemon Model", project, count: 417, entryLength: 0x0c),
+            Dol("PKX Trainer Model", project, count: 76, entryLength: 0x0c),
+            Dol("Script Functions", project, count: 242, entryLength: 0x0c),
+            Dol("Status Effects", project),
+            Dol("Texture", project, count: 0x3da),
+            Dol("Texture Rendering Info", project, count: 0x12d2),
+            Dol("TM Or HM", project, count: 58, entryLength: 0x05),
+            Dol("Type", project, count: commonRel.TypeData.Count, entryLength: 0x2c),
+            Dol("Valid Item", project, count: 1220, entryLength: 0x02),
+            Dol("Valid Item 2", project, count: 1220, entryLength: 0x02),
+            Codable("Gift Pokemon", 4),
+            Codable("Shops", null),
+            Codable("Starter Pokemon", 2)
+        };
+
+        return entries
+            .Select(definition => BuildTableEditorEntry(definition, commonRel, project))
+            .ToArray();
+    }
+
+    private static TableEditorDefinition Common(string name, int commonIndex, string category = TableEditorCategoryCommon)
+        => new(name, category, "common.rel", commonIndex, commonIndex + 1, null, null);
+
+    private static TableEditorDefinition Dol(
+        string name,
+        ColosseumProjectContext project,
+        int? count = null,
+        int? entryLength = null)
+        => new(name, TableEditorCategoryOther, "Start.dol", null, null, count, entryLength);
+
+    private static TableEditorDefinition Codable(string name, int? count)
+        => new(name, TableEditorCategoryCodable, string.Empty, null, null, count, null);
+
+    private static TableEditorEntryViewModel BuildTableEditorEntry(
+        TableEditorDefinition definition,
+        ColosseumCommonRel commonRel,
+        ColosseumProjectContext project)
+    {
+        var details = definition.CommonIndex is null
+            ? BuildStaticTableDetails(definition)
+            : BuildCommonTableDetails(definition, commonRel, project);
+        var searchText = $"{definition.Name} {definition.Category} {details}";
+        return new TableEditorEntryViewModel(
+            definition.Name,
+            definition.Category,
+            searchText,
+            details,
+            ColourForTableEditorCategory(definition.Category));
+    }
+
+    private static string BuildCommonTableDetails(
+        TableEditorDefinition definition,
+        ColosseumCommonRel commonRel,
+        ColosseumProjectContext project)
+    {
+        var commonIndex = definition.CommonIndex!.Value;
+        var countIndex = definition.CountIndex!.Value;
+        var startOffset = commonRel.RelocationTable.GetPointer(commonIndex);
+        var count = commonRel.RelocationTable.GetValueAtPointer(countIndex);
+        var symbolLength = commonRel.RelocationTable.GetSymbolLength(commonIndex);
+        var entryLength = count > 0 && symbolLength > 0 && symbolLength % count == 0
+            ? symbolLength / count
+            : definition.EntryLength;
+
+        return BuildDetails(
+            PathForTableFile(project, "common.rel"),
+            startOffset,
+            count,
+            entryLength);
+    }
+
+    private static string BuildStaticTableDetails(TableEditorDefinition definition)
+    {
+        if (definition.Category == TableEditorCategoryCodable)
+        {
+            return definition.Count is null
+                ? "Details:\nNumber of Entries: -"
+                : $"Details:\nNumber of Entries: {HexAndDecimal(definition.Count.Value)}";
+        }
+
+        return BuildDetails(definition.FileName, null, definition.Count, definition.EntryLength);
+    }
+
+    private static string BuildDetails(string file, int? startOffset, int? count, int? entryLength)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Details:");
+        builder.AppendLine($"File: {file}");
+        builder.AppendLine($"Start Offset: {HexAndDecimal(startOffset)}");
+        builder.AppendLine($"Number of Entries: {HexAndDecimal(count)}");
+        builder.Append($"Entry Length: {HexAndDecimal(entryLength)}");
+        return builder.ToString();
+    }
+
+    private static string HexAndDecimal(int? value)
+        => value is null || value < 0 ? "-" : $"0x{value.Value:X} ({value.Value})";
+
+    private static string PathForTableFile(ColosseumProjectContext project, string fileName)
+    {
+        if (project.WorkspaceDirectory is null)
+        {
+            return fileName;
+        }
+
+        return Path.Combine(project.WorkspaceDirectory, "Game Files", "common.fsys", fileName);
+    }
+
+    private static string ColourForTableEditorCategory(string category)
+        => category switch
+        {
+            TableEditorCategorySaveData => "#FC80F6",
+            TableEditorCategoryEReader => "#FFE8D0",
+            TableEditorCategoryDeckTrainer => "#B8F0FF",
+            TableEditorCategoryDeckPokemon => "#D0FFD0",
+            TableEditorCategoryDeckAi => "#FC6848",
+            TableEditorCategoryCommon => "#F8F888",
+            TableEditorCategoryOther => "#FFD080",
+            TableEditorCategoryCodable => "#F0F0FC",
+            _ => "#F0F0FC"
+        };
+
+    private const string TableEditorCategorySaveData = "Save Data";
+    private const string TableEditorCategoryEReader = "E-Reader";
+    private const string TableEditorCategoryDeckTrainer = "Deck Trainer";
+    private const string TableEditorCategoryDeckPokemon = "Deck Pokemon";
+    private const string TableEditorCategoryDeckAi = "Deck AI";
+    private const string TableEditorCategoryCommon = "Common";
+    private const string TableEditorCategoryOther = "Other";
+    private const string TableEditorCategoryCodable = "Codable";
 
     private static bool TrainerMatchesFilter(TrainerEntryViewModel entry, IReadOnlyList<string> filterTokens)
     {
@@ -2199,4 +2516,13 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => "File loaded."
         };
     }
+
+    private sealed record TableEditorDefinition(
+        string Name,
+        string Category,
+        string FileName,
+        int? CommonIndex,
+        int? CountIndex,
+        int? Count,
+        int? EntryLength);
 }

@@ -211,6 +211,7 @@ public partial class MainWindow : Window
             "Treasure Editor" => new TreasureEditorView(),
             "Message Editor" => new MessageEditorView(),
             "Interaction Editor" => new InteractionEditorView(),
+            "Table Editor" => new TableEditorView(),
             "ISO Explorer" => new IsoExplorerView(),
             _ => new LegacySimpleToolView(tool.Title, ToolContentSize(tool.Title))
         };
