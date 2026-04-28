@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 
 namespace OrreForge.App.Controls;
 
@@ -17,7 +18,7 @@ public sealed class LegacyPokemonComboBox : ComboBox
     {
         MinHeight = 0;
         Height = 20;
-        Padding = new Thickness(3, 0, 20, 0);
+        Padding = new Thickness(3, 0, 2, 0);
         HorizontalAlignment = HorizontalAlignment.Stretch;
         HorizontalContentAlignment = HorizontalAlignment.Center;
         VerticalContentAlignment = VerticalAlignment.Center;
@@ -47,6 +48,12 @@ public sealed class LegacyPokemonComboBox : ComboBox
                 VerticalAlignment = VerticalAlignment.Center,
                 IsHitTestVisible = false
             };
+
+            if (overlay.GetVisualParent() is Grid templateGrid
+                && templateGrid.ColumnDefinitions.Count > 1)
+            {
+                templateGrid.ColumnDefinitions[1].Width = new GridLength(18);
+            }
         }
 
         if (e.NameScope.Find<Control>("DropDownGlyph") is { } stockGlyph)
