@@ -237,7 +237,7 @@
                                         Margin="5"
                                         Opacity="{Binding Opacity}"
                                         ClipToBounds="True">
-                                    <Grid RowDefinitions="18,20,20,20,12,16,12,16,21,13,16"
+                                    <Grid RowDefinitions="20,20,20,20,20,16,12,16,21,13,16"
                                           ColumnDefinitions="64,*,*"
                                           Margin="4"
                                           ColumnSpacing="6"
@@ -285,116 +285,82 @@
                                                   VerticalAlignment="Center"
                                                   Margin="34,0"/>
 
-                                        <Border Grid.Row="1"
-                                                Grid.Column="1"
-                                                IsVisible="{Binding IsSet}"
-                                                Height="20"
-                                                Background="{Binding FieldBackgroundBrush}"
-                                                BorderBrush="{Binding FieldBorderBrush}"
-                                                BorderThickness="1">
-                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField"
-                                                      Background="{Binding FieldBackgroundBrush}"
-                                                      BorderBrush="{Binding FieldBorderBrush}"
-                                                      Foreground="{Binding TextBrush}"
-                                                      ItemsSource="{Binding LevelOptions}"
-                                                      SelectedItem="{Binding Level, Mode=TwoWay}"
-                                                      MaxDropDownHeight="260">
-                                                <ComboBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock Text="{Binding StringFormat='Lv. {0}'}"
-                                                                   HorizontalAlignment="Center"/>
-                                                    </DataTemplate>
-                                                </ComboBox.ItemTemplate>
-                                            </controls:LegacyPokemonComboBox>
-                                        </Border>
-                                        <Border Grid.Row="1"
-                                                Grid.Column="2"
-                                                IsVisible="{Binding IsSet}"
-                                                Height="20"
-                                                Background="{Binding FieldBackgroundBrush}"
-                                                BorderBrush="{Binding FieldBorderBrush}"
-                                                BorderThickness="1">
-                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField"
-                                                      Background="{Binding FieldBackgroundBrush}"
-                                                      BorderBrush="{Binding FieldBorderBrush}"
-                                                      Foreground="{Binding TextBrush}"
-                                                      ItemsSource="{Binding SpeciesOptions}"
-                                                      SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
-                                                      MaxDropDownHeight="260"/>
-                                        </Border>
+                                        <controls:LegacyPokemonComboBox Grid.Row="1"
+                                                  Grid.Column="1"
+                                                  IsVisible="{Binding IsSet}"
+                                                  Classes="LegacyPokemonField"
+                                                  Background="{Binding FieldBackgroundBrush}"
+                                                  BorderBrush="{Binding FieldBorderBrush}"
+                                                  Foreground="{Binding TextBrush}"
+                                                  ItemsSource="{Binding LevelOptions}"
+                                                  SelectedItem="{Binding Level, Mode=TwoWay}"
+                                                  MaxDropDownHeight="260">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StringFormat='Lv. {0}'}"
+                                                               HorizontalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </controls:LegacyPokemonComboBox>
+                                        <controls:LegacyPokemonComboBox Grid.Row="1"
+                                                  Grid.Column="2"
+                                                  IsVisible="{Binding IsSet}"
+                                                  Classes="LegacyPokemonField"
+                                                  Background="{Binding FieldBackgroundBrush}"
+                                                  BorderBrush="{Binding FieldBorderBrush}"
+                                                  Foreground="{Binding TextBrush}"
+                                                  ItemsSource="{Binding SpeciesOptions}"
+                                                  SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                                  MaxDropDownHeight="260"/>
 
-                                        <Border Grid.Row="2"
-                                                Grid.Column="1"
-                                                IsVisible="{Binding IsSet}"
-                                                Height="20"
-                                                Background="{Binding FieldBackgroundBrush}"
-                                                BorderBrush="{Binding FieldBorderBrush}"
-                                                BorderThickness="1">
-                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField"
-                                                      Background="{Binding FieldBackgroundBrush}"
-                                                      BorderBrush="{Binding FieldBorderBrush}"
-                                                      Foreground="{Binding TextBrush}"
-                                                      ItemsSource="{Binding AbilityOptions}"
-                                                      SelectedItem="{Binding SelectedAbility, Mode=TwoWay}"/>
-                                        </Border>
-                                        <Border Grid.Row="2"
-                                                Grid.Column="2"
-                                                IsVisible="{Binding IsSet}"
-                                                Height="20"
-                                                Background="{Binding FieldBackgroundBrush}"
-                                                BorderBrush="{Binding FieldBorderBrush}"
-                                                BorderThickness="1">
-                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField"
-                                                      Background="{Binding FieldBackgroundBrush}"
-                                                      BorderBrush="{Binding FieldBorderBrush}"
-                                                      Foreground="{Binding TextBrush}"
-                                                      ItemsSource="{Binding ItemOptions}"
-                                                      SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                                                      MaxDropDownHeight="260"/>
-                                        </Border>
+                                        <controls:LegacyPokemonComboBox Grid.Row="2"
+                                                  Grid.Column="1"
+                                                  IsVisible="{Binding IsSet}"
+                                                  Classes="LegacyPokemonField"
+                                                  Background="{Binding FieldBackgroundBrush}"
+                                                  BorderBrush="{Binding FieldBorderBrush}"
+                                                  Foreground="{Binding TextBrush}"
+                                                  ItemsSource="{Binding AbilityOptions}"
+                                                  SelectedItem="{Binding SelectedAbility, Mode=TwoWay}"/>
+                                        <controls:LegacyPokemonComboBox Grid.Row="2"
+                                                  Grid.Column="2"
+                                                  IsVisible="{Binding IsSet}"
+                                                  Classes="LegacyPokemonField"
+                                                  Background="{Binding FieldBackgroundBrush}"
+                                                  BorderBrush="{Binding FieldBorderBrush}"
+                                                  Foreground="{Binding TextBrush}"
+                                                  ItemsSource="{Binding ItemOptions}"
+                                                  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                                                  MaxDropDownHeight="260"/>
 
-                                        <Border Grid.Row="3"
-                                                Grid.Column="1"
-                                                IsVisible="{Binding IsSet}"
-                                                Height="20"
-                                                Background="{Binding FieldBackgroundBrush}"
-                                                BorderBrush="{Binding FieldBorderBrush}"
-                                                BorderThickness="1">
-                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField"
-                                                      Background="{Binding FieldBackgroundBrush}"
-                                                      BorderBrush="{Binding FieldBorderBrush}"
-                                                      Foreground="{Binding TextBrush}"
-                                                      ItemsSource="{Binding NatureOptions}"
-                                                      SelectedItem="{Binding SelectedNature, Mode=TwoWay}"/>
-                                        </Border>
-                                        <Border Grid.Row="3"
-                                                Grid.Column="2"
-                                                IsVisible="{Binding IsSet}"
-                                                Height="20"
-                                                Background="{Binding FieldBackgroundBrush}"
-                                                BorderBrush="{Binding FieldBorderBrush}"
-                                                BorderThickness="1">
-                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField"
-                                                      Background="{Binding FieldBackgroundBrush}"
-                                                      BorderBrush="{Binding FieldBorderBrush}"
-                                                      Foreground="{Binding TextBrush}"
-                                                      ItemsSource="{Binding GenderOptions}"
-                                                      SelectedItem="{Binding SelectedGender, Mode=TwoWay}"/>
-                                        </Border>
+                                        <controls:LegacyPokemonComboBox Grid.Row="3"
+                                                  Grid.Column="1"
+                                                  IsVisible="{Binding IsSet}"
+                                                  Classes="LegacyPokemonField"
+                                                  Background="{Binding FieldBackgroundBrush}"
+                                                  BorderBrush="{Binding FieldBorderBrush}"
+                                                  Foreground="{Binding TextBrush}"
+                                                  ItemsSource="{Binding NatureOptions}"
+                                                  SelectedItem="{Binding SelectedNature, Mode=TwoWay}"/>
+                                        <controls:LegacyPokemonComboBox Grid.Row="3"
+                                                  Grid.Column="2"
+                                                  IsVisible="{Binding IsSet}"
+                                                  Classes="LegacyPokemonField"
+                                                  Background="{Binding FieldBackgroundBrush}"
+                                                  BorderBrush="{Binding FieldBorderBrush}"
+                                                  Foreground="{Binding TextBrush}"
+                                                  ItemsSource="{Binding GenderOptions}"
+                                                  SelectedItem="{Binding SelectedGender, Mode=TwoWay}"/>
 
-                                        <Border Grid.Row="4"
-                                                IsVisible="{Binding IsSet}"
-                                                Background="{Binding FieldBackgroundBrush}"
-                                                BorderBrush="{Binding FieldBorderBrush}"
-                                                BorderThickness="1">
-                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField"
-                                                      Background="{Binding FieldBackgroundBrush}"
-                                                      BorderBrush="{Binding FieldBorderBrush}"
-                                                      Foreground="{Binding TextBrush}"
-                                                      ItemsSource="{Binding PokeballOptions}"
-                                                      SelectedItem="{Binding SelectedPokeball, Mode=TwoWay}"
-                                                      MaxDropDownHeight="260"/>
-                                        </Border>
+                                        <controls:LegacyPokemonComboBox Grid.Row="4"
+                                                  IsVisible="{Binding IsSet}"
+                                                  Classes="LegacyPokemonField"
+                                                  Background="{Binding FieldBackgroundBrush}"
+                                                  BorderBrush="{Binding FieldBorderBrush}"
+                                                  Foreground="{Binding TextBrush}"
+                                                  ItemsSource="{Binding PokeballOptions}"
+                                                  SelectedItem="{Binding SelectedPokeball, Mode=TwoWay}"
+                                                  MaxDropDownHeight="260"/>
                                         <Grid Grid.Row="4"
                                               Grid.Column="1"
                                               Grid.ColumnSpan="2"
@@ -404,12 +370,14 @@
                                             <TextBlock Text="IVs"
                                                        Foreground="{Binding TextBrush}"
                                                        FontSize="10"
-                                                       HorizontalAlignment="Center"/>
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Bottom"/>
                                             <TextBlock Grid.Column="1"
                                                        Text="Happiness"
                                                        Foreground="{Binding TextBrush}"
                                                        FontSize="10"
-                                                       HorizontalAlignment="Center"/>
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Bottom"/>
                                         </Grid>
                                         <Grid Grid.Row="5"
                                               Grid.Column="1"
@@ -483,18 +451,10 @@
                                               ColumnDefinitions="*,*,*,*"
                                               ColumnSpacing="7"
                                               ClipToBounds="True">
-                                            <Border Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" BorderThickness="1">
-                                                <controls:LegacyPokemonComboBox Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove1, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                                            </Border>
-                                            <Border Grid.Column="1" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" BorderThickness="1">
-                                                <controls:LegacyPokemonComboBox Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove2, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                                            </Border>
-                                            <Border Grid.Column="2" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" BorderThickness="1">
-                                                <controls:LegacyPokemonComboBox Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove3, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                                            </Border>
-                                            <Border Grid.Column="3" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" BorderThickness="1">
-                                                <controls:LegacyPokemonComboBox Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove4, Mode=TwoWay}" MaxDropDownHeight="260"/>
-                                            </Border>
+                                            <controls:LegacyPokemonComboBox Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove1, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                            <controls:LegacyPokemonComboBox Grid.Column="1" Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove2, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                            <controls:LegacyPokemonComboBox Grid.Column="2" Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove3, Mode=TwoWay}" MaxDropDownHeight="260"/>
+                                            <controls:LegacyPokemonComboBox Grid.Column="3" Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" FontSize="8" ItemsSource="{Binding MoveOptions}" SelectedItem="{Binding SelectedMove4, Mode=TwoWay}" MaxDropDownHeight="260"/>
                                         </Grid>
                                         <Grid Grid.Row="9"
                                               Grid.RowSpan="2"
