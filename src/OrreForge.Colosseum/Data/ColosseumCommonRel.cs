@@ -75,11 +75,28 @@ public sealed class ColosseumCommonRel
     private const int PokemonStatsLevelUpMoveMoveOffset = 0x02;
 
     private const int MoveSize = 0x38;
+    private const int MovePriorityOffset = 0x00;
     private const int MovePpOffset = 0x01;
     private const int MoveTypeOffset = 0x02;
+    private const int MoveTargetsOffset = 0x03;
     private const int MoveAccuracyOffset = 0x04;
+    private const int MoveEffectAccuracyOffset = 0x05;
+    private const int MoveContactFlagOffset = 0x06;
+    private const int MoveProtectFlagOffset = 0x07;
+    private const int MoveMagicCoatFlagOffset = 0x08;
+    private const int MoveSnatchFlagOffset = 0x09;
+    private const int MoveMirrorMoveFlagOffset = 0x0a;
+    private const int MoveKingsRockFlagOffset = 0x0b;
+    private const int MoveSoundBasedFlagOffset = 0x10;
+    private const int MoveHmFlagOffset = 0x12;
     private const int MoveBasePowerOffset = 0x17;
+    private const int MoveEffectOffset = 0x1a;
+    private const int MoveAnimationIndexOffset = 0x1c;
+    private const int MoveCategoryOffset = 0x1f;
     private const int MoveNameIdOffset = 0x20;
+    private const int MoveDescriptionIdOffset = 0x2c;
+    private const int MoveAnimation2IndexOffset = 0x32;
+    private const int MoveEffectTypeOffset = 0x34;
 
     private const int TrainerClassSize = 0x0c;
     private const int TrainerClassPayoutOffset = 0x00;
@@ -542,6 +559,44 @@ public sealed class ColosseumCommonRel
         }
     }
 
+    public void WriteMove(ColosseumMoveUpdate move)
+    {
+        var count = GetCount(ColosseumCommonIndex.NumberOfMoves);
+        if (move.Index <= 0 || move.Index >= count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(move), $"Move index {move.Index} is outside the editable table.");
+        }
+
+        var offset = PointerFor(ColosseumCommonIndex.Moves) + (move.Index * MoveSize);
+        _data.WriteByte(offset + MovePriorityOffset, SignedPriorityByte(move.Priority));
+        _data.WriteByte(offset + MovePpOffset, ClampByte(move.Pp));
+        _data.WriteByte(offset + MoveTypeOffset, ClampByte(move.TypeId));
+        _data.WriteByte(offset + MoveTargetsOffset, ClampByte(move.TargetId));
+        _data.WriteByte(offset + MoveAccuracyOffset, ClampByte(move.Accuracy));
+        _data.WriteByte(offset + MoveEffectAccuracyOffset, ClampByte(move.EffectAccuracy));
+        _data.WriteByte(offset + MoveContactFlagOffset, BoolByte(move.ContactFlag));
+        _data.WriteByte(offset + MoveProtectFlagOffset, BoolByte(move.ProtectFlag));
+        _data.WriteByte(offset + MoveMagicCoatFlagOffset, BoolByte(move.MagicCoatFlag));
+        _data.WriteByte(offset + MoveSnatchFlagOffset, BoolByte(move.SnatchFlag));
+        _data.WriteByte(offset + MoveMirrorMoveFlagOffset, BoolByte(move.MirrorMoveFlag));
+        _data.WriteByte(offset + MoveKingsRockFlagOffset, BoolByte(move.KingsRockFlag));
+        _data.WriteByte(offset + MoveSoundBasedFlagOffset, BoolByte(move.SoundBasedFlag));
+        _data.WriteByte(offset + MoveHmFlagOffset, BoolByte(move.HmFlag));
+        _data.WriteByte(offset + MoveBasePowerOffset, ClampByte(move.Power));
+        _data.WriteUInt16(offset + MoveEffectOffset, ClampUInt16(move.EffectId));
+        _data.WriteUInt16(offset + MoveAnimationIndexOffset, ClampUInt16(move.AnimationId));
+        _data.WriteByte(offset + MoveCategoryOffset, ClampByte(move.CategoryId));
+        _data.WriteUInt32(offset + MoveNameIdOffset, checked((uint)Math.Clamp(move.NameId, 0, int.MaxValue)));
+        _data.WriteUInt32(offset + MoveDescriptionIdOffset, checked((uint)Math.Clamp(move.DescriptionId, 0, int.MaxValue)));
+        _data.WriteUInt16(offset + MoveAnimation2IndexOffset, ClampUInt16(move.Animation2Id));
+        _data.WriteByte(offset + MoveEffectTypeOffset, ClampByte(move.EffectTypeId));
+
+        if (_moves.IsValueCreated && _moves.Value is Dictionary<int, ColosseumMove> moves)
+        {
+            moves[move.Index] = ReadMove(move.Index, PointerFor(ColosseumCommonIndex.Moves), UseHmFlagForShadowMoves(count));
+        }
+    }
+
     public ColosseumPokemonStats? PokemonStatsFor(int id)
         => _pokemonStats.Value.TryGetValue(id, out var pokemon) ? pokemon : null;
 
@@ -558,24 +613,65 @@ public sealed class ColosseumCommonRel
     {
         var count = GetCount(ColosseumCommonIndex.NumberOfMoves);
         var start = PointerFor(ColosseumCommonIndex.Moves);
+        var useHmFlagForShadowMoves = UseHmFlagForShadowMoves(count);
         var moves = new Dictionary<int, ColosseumMove>();
 
         for (var index = 0; index < count; index++)
         {
-            var offset = start + (index * MoveSize);
-            var nameId = checked((int)_data.ReadUInt32(offset + MoveNameIdOffset));
-            var typeId = _data.ReadByte(offset + MoveTypeOffset);
-            moves[index] = new ColosseumMove(
-                index,
-                Strings.StringWithId(nameId),
-                typeId,
-                TypeName(typeId),
-                _data.ReadByte(offset + MoveBasePowerOffset),
-                _data.ReadByte(offset + MoveAccuracyOffset),
-                _data.ReadByte(offset + MovePpOffset));
+            moves[index] = ReadMove(index, start, useHmFlagForShadowMoves);
         }
 
         return moves;
+    }
+
+    private ColosseumMove ReadMove(int index, int tableStart, bool useHmFlagForShadowMoves)
+    {
+        var offset = tableStart + (index * MoveSize);
+        var nameId = checked((int)_data.ReadUInt32(offset + MoveNameIdOffset));
+        var descriptionId = checked((int)_data.ReadUInt32(offset + MoveDescriptionIdOffset));
+        var typeId = _data.ReadByte(offset + MoveTypeOffset);
+        var targetId = _data.ReadByte(offset + MoveTargetsOffset);
+        var categoryId = _data.ReadByte(offset + MoveCategoryOffset);
+        var effectId = _data.ReadUInt16(offset + MoveEffectOffset);
+        var effectTypeId = _data.ReadByte(offset + MoveEffectTypeOffset);
+        var hmFlag = _data.ReadByte(offset + MoveHmFlagOffset) == 1;
+        var isShadow = useHmFlagForShadowMoves
+            ? hmFlag
+            : index is >= 0x164 and <= 0x164;
+
+        return new ColosseumMove(
+            index,
+            offset,
+            Strings.StringWithId(nameId),
+            nameId,
+            descriptionId == 0 ? "-" : $"String {descriptionId}",
+            descriptionId,
+            typeId,
+            TypeName(typeId),
+            targetId,
+            MoveTargetName(targetId),
+            categoryId,
+            MoveCategoryName(categoryId),
+            _data.ReadUInt16(offset + MoveAnimationIndexOffset),
+            _data.ReadUInt16(offset + MoveAnimation2IndexOffset),
+            effectId,
+            MoveEffectName(effectId),
+            effectTypeId,
+            MoveEffectTypeName(effectTypeId),
+            _data.ReadByte(offset + MoveBasePowerOffset),
+            _data.ReadByte(offset + MoveAccuracyOffset),
+            _data.ReadByte(offset + MovePpOffset),
+            SignedByte(_data.ReadByte(offset + MovePriorityOffset)),
+            _data.ReadByte(offset + MoveEffectAccuracyOffset),
+            hmFlag,
+            _data.ReadByte(offset + MoveSoundBasedFlagOffset) == 1,
+            _data.ReadByte(offset + MoveContactFlagOffset) == 1,
+            _data.ReadByte(offset + MoveKingsRockFlagOffset) == 1,
+            _data.ReadByte(offset + MoveProtectFlagOffset) == 1,
+            _data.ReadByte(offset + MoveSnatchFlagOffset) == 1,
+            _data.ReadByte(offset + MoveMagicCoatFlagOffset) == 1,
+            _data.ReadByte(offset + MoveMirrorMoveFlagOffset) == 1,
+            isShadow);
     }
 
     private IReadOnlyList<ColosseumTmMove> LoadTmMoves()
@@ -708,7 +804,39 @@ public sealed class ColosseumCommonRel
     private ColosseumMove MoveFor(int id)
         => _moves.Value.TryGetValue(id, out var move)
             ? move
-            : new ColosseumMove(id, id == 0 ? "-" : $"Move {id}", 0, TypeName(0), 0, 0, 0);
+            : new ColosseumMove(
+                id,
+                0,
+                id == 0 ? "-" : $"Move {id}",
+                0,
+                "-",
+                0,
+                0,
+                TypeName(0),
+                0,
+                MoveTargetName(0),
+                0,
+                MoveCategoryName(0),
+                0,
+                0,
+                0,
+                MoveEffectName(0),
+                0,
+                MoveEffectTypeName(0),
+                0,
+                0,
+                0,
+                0,
+                0,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false);
 
     private ColosseumPokemonStats UnknownPokemonStats(int id)
         => new(
@@ -835,6 +963,31 @@ public sealed class ColosseumCommonRel
 
     private static ushort ClampScaledUInt16(double value)
         => (ushort)Math.Clamp((int)Math.Round(value * 10d), ushort.MinValue, ushort.MaxValue);
+
+    private static byte BoolByte(bool value)
+        => value ? (byte)1 : (byte)0;
+
+    private static int SignedByte(byte value)
+        => value > 127 ? value - 256 : value;
+
+    private static byte SignedPriorityByte(int value)
+    {
+        var clamped = Math.Clamp(value, -128, 127);
+        return (byte)(clamped < 0 ? 256 + clamped : clamped);
+    }
+
+    private bool UseHmFlagForShadowMoves(int moveCount)
+    {
+        const int firstShadowMove = 0x164;
+        if (moveCount <= firstShadowMove)
+        {
+            return false;
+        }
+
+        var start = PointerFor(ColosseumCommonIndex.Moves) + (firstShadowMove * MoveSize);
+        return start + MoveHmFlagOffset < _data.Length
+            && _data.ReadByte(start + MoveHmFlagOffset) == 1;
+    }
 
     private static int NormalizeItemIndex(int index)
         => index > ItemCount && index < 0x250 ? index - 151 : index;
@@ -969,6 +1122,53 @@ public sealed class ColosseumCommonRel
             16 => "Dragon",
             17 => "Dark",
             _ => $"Type {id}"
+        };
+
+    private static string MoveTargetName(int id)
+        => id switch
+        {
+            0 => "Selected Target",
+            1 => "Depends On Move",
+            2 => "All Pokemon",
+            3 => "Random",
+            4 => "Both Foes",
+            5 => "User",
+            6 => "Both Foes and Ally",
+            7 => "Opponent's Feet",
+            _ => $"Target {id}"
+        };
+
+    private static string MoveCategoryName(int id)
+        => id switch
+        {
+            0 => "Neither",
+            1 => "Physical",
+            2 => "Special",
+            _ => $"Category {id}"
+        };
+
+    private static string MoveEffectName(int id)
+        => id == 0 ? "-" : $"Effect {id}";
+
+    private static string MoveEffectTypeName(int id)
+        => id switch
+        {
+            0x00 => "None",
+            0x01 => "Attack",
+            0x02 => "Healing",
+            0x03 => "Stat Nerf",
+            0x04 => "Stat Buff",
+            0x05 => "Status Effect",
+            0x06 => "Field Effect",
+            0x07 => "Affects Incoming Move",
+            0x08 => "OHKO",
+            0x09 => "Multi-Turn",
+            0x0a => "Misc",
+            0x0b => "Misc2",
+            0x0c => "Misc3",
+            0x0d => "Misc4",
+            0x0e => "Unknown",
+            _ => $"Effect Type {id}"
         };
 
     private static string BattleStyleName(int id)
