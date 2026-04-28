@@ -33,6 +33,7 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style Selector="TextBox.LegacyPokemonField">
+            <Setter Property="MinWidth" Value="0"/>
             <Setter Property="MinHeight" Value="0"/>
             <Setter Property="Height" Value="17"/>
             <Setter Property="Padding" Value="3,0"/>
@@ -409,8 +410,8 @@
                                         <Grid Grid.Row="6"
                                               IsVisible="{Binding IsSet}"
                                               Grid.ColumnSpan="3"
-                                              ColumnDefinitions="50,50,50,50,50,50"
-                                              ColumnSpacing="8"
+                                              ColumnDefinitions="42,42,42,42,42,42"
+                                              ColumnSpacing="6"
                                               HorizontalAlignment="Center">
                                             <TextBlock Text="HP" Foreground="{Binding TextBrush}" FontSize="10" HorizontalAlignment="Center"/>
                                             <TextBlock Grid.Column="1" Text="Atk" Foreground="{Binding TextBrush}" FontSize="10" HorizontalAlignment="Center"/>
@@ -422,8 +423,8 @@
                                         <Grid Grid.Row="7"
                                               IsVisible="{Binding IsSet}"
                                               Grid.ColumnSpan="3"
-                                              ColumnDefinitions="50,50,50,50,50,50"
-                                              ColumnSpacing="8"
+                                              ColumnDefinitions="42,42,42,42,42,42"
+                                              ColumnSpacing="6"
                                               HorizontalAlignment="Center">
                                             <Border Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" BorderThickness="1">
                                                 <TextBox Classes="LegacyPokemonField" Background="{Binding FieldBackgroundBrush}" BorderBrush="{Binding FieldBorderBrush}" Foreground="{Binding TextBrush}" Text="{Binding HpEv, Mode=TwoWay}"/>
