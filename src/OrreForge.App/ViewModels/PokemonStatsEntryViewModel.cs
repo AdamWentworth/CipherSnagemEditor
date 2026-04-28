@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -7,8 +8,8 @@ namespace OrreForge.App.ViewModels;
 
 public sealed partial class PokemonStatsEntryViewModel : ObservableObject
 {
-    private static readonly IBrush NormalBrush = SolidColorBrush.Parse("#80ACFF");
-    private static readonly IBrush SelectedBrush = SolidColorBrush.Parse("#F7B409");
+    private static readonly IBrush SelectionBrush = SolidColorBrush.Parse("#000000");
+    private static readonly IBrush TransparentSelectionBrush = SolidColorBrush.Parse("#00000000");
     private static readonly Dictionary<int, Bitmap?> FaceImageCache = [];
     private static readonly Dictionary<int, Bitmap?> TypeImageCache = [];
 
@@ -22,6 +23,8 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BackgroundBrush))]
     [NotifyPropertyChangedFor(nameof(TypeImageOpacity))]
+    [NotifyPropertyChangedFor(nameof(SelectionBorderBrush))]
+    [NotifyPropertyChangedFor(nameof(SelectionBorderThickness))]
     private bool _isSelected;
 
     public ColosseumPokemonStats Stats { get; }
@@ -34,9 +37,13 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
 
     public string SearchText => $"{Stats.Index} {Stats.NationalIndex} {Stats.Name} {Stats.Type1Name} {Stats.Type2Name}";
 
-    public IBrush BackgroundBrush => IsSelected ? SelectedBrush : NormalBrush;
+    public IBrush BackgroundBrush => TypeFallbackBrush(Stats.Type1);
 
-    public double TypeImageOpacity => IsSelected ? 0.35 : 1;
+    public double TypeImageOpacity => 1;
+
+    public IBrush SelectionBorderBrush => IsSelected ? SelectionBrush : TransparentSelectionBrush;
+
+    public Thickness SelectionBorderThickness => IsSelected ? new Thickness(1) : new Thickness(0);
 
     private static Bitmap? LoadFaceImage(int speciesId)
         => LoadCachedImage(FaceImageCache, speciesId, "PokeFace", $"face_{speciesId:000}.png");
@@ -68,12 +75,7 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
             cache[id] = image;
             return image;
         }
-        catch (IOException)
-        {
-            cache[id] = null;
-            return null;
-        }
-        catch (UnauthorizedAccessException)
+        catch
         {
             cache[id] = null;
             return null;
@@ -112,4 +114,28 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
             }
         }
     }
+
+    private static IBrush TypeFallbackBrush(int typeId)
+        => SolidColorBrush.Parse(typeId switch
+        {
+            0 => "#D0D0D0",
+            1 => "#E0A060",
+            2 => "#B8D8FF",
+            3 => "#E080F8",
+            4 => "#E8C878",
+            5 => "#C8B070",
+            6 => "#A8E868",
+            7 => "#A070FF",
+            8 => "#B0B0C0",
+            9 => "#C0C0C8",
+            10 => "#FC6848",
+            11 => "#80ACFF",
+            12 => "#20F020",
+            13 => "#F8F888",
+            14 => "#FF90C8",
+            15 => "#B8F0FF",
+            16 => "#B090F8",
+            17 => "#707080",
+            _ => "#80ACFF"
+        });
 }
