@@ -1339,10 +1339,10 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var filter = SimplifySearchText(filterText);
-        var filtered = string.IsNullOrEmpty(filter)
+        var filterTokens = SimplifySearchTokens(filterText);
+        var filtered = filterTokens.Count == 0
             ? _allTrainers
-            : _allTrainers.Where(trainer => TrainerMatchesFilter(trainer, filter)).ToList();
+            : _allTrainers.Where(trainer => TrainerMatchesFilter(trainer, filterTokens)).ToList();
 
         Trainers.Clear();
         foreach (var trainer in filtered)
@@ -1587,21 +1587,24 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private static bool TrainerMatchesFilter(TrainerEntryViewModel entry, string filter)
+    private static bool TrainerMatchesFilter(TrainerEntryViewModel entry, IReadOnlyList<string> filterTokens)
     {
         var trainer = entry.Trainer;
-        if (filter == "shadow" && trainer.HasShadow)
+        if (filterTokens.Count == 1 && filterTokens[0] == "shadow" && trainer.HasShadow)
         {
             return true;
         }
 
-        return Contains(trainer.Index.ToString(), filter)
-            || Contains(trainer.Name, filter)
-            || Contains(trainer.TrainerClassName, filter)
-            || Contains(trainer.FullName, filter)
-            || trainer.Pokemon.Any(pokemon =>
-                Contains(pokemon.SpeciesName, filter)
-                || pokemon.Moves.Any(move => Contains(move.Name, filter)));
+        if (filterTokens.Count == 1
+            && int.TryParse(filterTokens[0], out var numericFilter)
+            && trainer.Index == numericFilter)
+        {
+            return true;
+        }
+
+        var visibleTokens = SimplifySearchTokens($"{trainer.Name} {trainer.TrainerClassName}");
+        return filterTokens.All(filter =>
+            visibleTokens.Any(token => token.StartsWith(filter, StringComparison.Ordinal)));
     }
 
     private static bool PokemonStatsMatchesFilter(PokemonStatsEntryViewModel entry, string filter)
@@ -1660,6 +1663,41 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private static bool Contains(string value, string filter)
         => SimplifySearchText(value).Contains(filter, StringComparison.Ordinal);
+
+    private static List<string> SimplifySearchTokens(string? value)
+    {
+        var tokens = new List<string>();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return tokens;
+        }
+
+        var builder = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(char.ToLowerInvariant(character));
+                continue;
+            }
+
+            FlushToken(tokens, builder);
+        }
+
+        FlushToken(tokens, builder);
+        return tokens;
+    }
+
+    private static void FlushToken(ICollection<string> tokens, StringBuilder builder)
+    {
+        if (builder.Length == 0)
+        {
+            return;
+        }
+
+        tokens.Add(builder.ToString());
+        builder.Clear();
+    }
 
     private static string SimplifySearchText(string? value)
     {
