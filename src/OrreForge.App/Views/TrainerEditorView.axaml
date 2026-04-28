@@ -126,6 +126,29 @@
             <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="BorderBrush" Value="#777777"/>
         </Style>
+        <Style Selector="TextBox.LegacyTrainerSearch /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#5C5C5C"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTrainerSearch:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTrainerSearch:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTrainerSearch:focus-within /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
+        <Style Selector="TextBox.LegacyTrainerSearch:focus-within">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="246,*">

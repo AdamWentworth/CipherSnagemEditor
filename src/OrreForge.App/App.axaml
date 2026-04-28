@@ -17,16 +17,5 @@
             <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="PlaceholderForeground" Value="#666666"/>
         </Style>
-        <Style Selector="TextBox:pointerover">
-            <Setter Property="Foreground" Value="#000000"/>
-            <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="CaretBrush" Value="#000000"/>
-        </Style>
-        <Style Selector="TextBox:focus">
-            <Setter Property="Foreground" Value="#000000"/>
-            <Setter Property="Background" Value="#FFFFFF"/>
-            <Setter Property="CaretBrush" Value="#000000"/>
-            <Setter Property="SelectionBrush" Value="#80ACFF"/>
-        </Style>
     </Application.Styles>
 </Application>
