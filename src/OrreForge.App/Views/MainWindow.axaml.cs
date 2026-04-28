@@ -312,15 +312,15 @@ public partial class MainWindow : Window
         {
             TitleButtonKind.Minimize => new Border
             {
-                Width = 10,
+                Width = 12,
                 Height = 1,
                 Background = foreground,
                 VerticalAlignment = VerticalAlignment.Center
             },
             TitleButtonKind.Maximize => new Border
             {
-                Width = 10,
-                Height = 10,
+                Width = 12,
+                Height = 12,
                 BorderBrush = foreground,
                 BorderThickness = new Thickness(1),
                 Background = Brushes.Transparent
@@ -332,13 +332,13 @@ public partial class MainWindow : Window
     private static Control CreateCloseIcon(IBrush foreground)
         => new Avalonia.Controls.Shapes.Path
         {
-            Width = 10,
-            Height = 10,
+            Width = 12,
+            Height = 12,
             Stretch = Stretch.None,
             Stroke = foreground,
-            StrokeThickness = 1,
+            StrokeThickness = 1.2,
             StrokeLineCap = PenLineCap.Square,
-            Data = Geometry.Parse("M 2,2 L 8,8 M 8,2 L 2,8")
+            Data = Geometry.Parse("M 2,2 L 10,10 M 10,2 L 2,10")
         };
 
     private enum TitleButtonKind
