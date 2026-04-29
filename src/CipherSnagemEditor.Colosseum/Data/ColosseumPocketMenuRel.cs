@@ -75,9 +75,9 @@ public sealed class ColosseumPocketMenuRel
     private static bool IsEligibleShopItem(ColosseumItem item)
         => item.BagSlotId < 5 && item.Price > 0;
 
-    private static int NormalizeScriptItemId(int itemId, int itemCount)
-        => itemId > itemCount && itemId < 0x250 ? itemId - 150 : itemId;
+    internal static int NormalizeScriptItemId(int itemId, int itemCount)
+        => itemId > itemCount && itemId < 0x250 ? itemId - 151 : itemId;
 
-    private static int ScriptItemId(int itemId)
-        => itemId >= 0x15e ? itemId + 150 : itemId;
+    internal static int ScriptItemId(int itemId)
+        => itemId >= 0x15e ? itemId + 151 : itemId;
 }

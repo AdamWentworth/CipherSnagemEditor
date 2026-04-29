@@ -38,8 +38,8 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 | Gift Pokemon Editor | Near parity | Starter Espeon/Umbreon and Agate/Colosseum gift naming were corrected from the Swift manager mapping. Saves Start.dol-backed gift data. |
 | Type Editor | Near parity | Swift-style category radio buttons and labeled matchup grid are present. Saves Start.dol-backed type/matchup data. |
 | Treasure Editor | Near parity | Swift-style room list and detail layout are present. Treasure room/name resolution was corrected for blank entries. Saves common.rel data. |
-| Patches | Catalog parity, backend partial by risk | The Colosseum patch list matches `XGPatcher.swift`. Most commonly requested patches have C# implementations, but every ASM patch should continue to receive fixture or Dolphin verification because small instruction mistakes are high risk. |
-| Randomizer | UI parity, backend partial by scope | Colosseum-visible options match the Swift controller. The backend covers the main editor data groups, but the Swift randomizer has broad game-wide behavior and should be treated as needing more golden tests. |
+| Patches | Catalog parity, backend parity with regression coverage | The Colosseum patch list matches `XGPatcher.swift`, and the PowerPC helper encodings used by ASM patches now have regression tests. Targeted Dolphin smoke tests are still valuable for game-behavior verification. |
+| Randomizer | Backend parity pass complete for Colosseum-visible options | Colosseum-visible options match the Swift controller. The backend now follows the Swift option buckets more closely, including Type 9 exclusion while it is `???`, evolution-line duplicate avoidance, all-randomized-trainer happiness, and Colosseum shop item script IDs. |
 | Message Editor | Functional parity target | Message table loading/editing/saving exists. Needs deeper comparison of text control behavior, special characters, and fixed-size table edge cases. |
 | Collision Viewer | Visual parity target | Window exists and mirrors the legacy purpose, but collision rendering/import behavior needs source-by-source comparison before calling it complete. |
 | Interaction Editor | Near parity | Swift-style list/detail pass is done and saves common.rel interaction data. Needs broad room/script spot checks. |
@@ -49,8 +49,8 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 
 ## Highest Confidence Remaining Gaps
 
-1. Patch verification depth: the visible patch list matches Swift, but ASM patch parity should be proven with per-patch byte tests and targeted Dolphin smoke tests.
-2. Randomizer golden tests: the UI options match Swift, but randomizer output should be compared against the Swift algorithm for deterministic seeds or narrow fixtures where possible.
+1. Patch Dolphin smoke tests: the visible patch list and ASM helper encodings now have coverage, but game-behavior smoke tests are still the best final confirmation for patches that inject branches.
+2. Randomizer fixture tests: behavior now tracks the Swift buckets, but deterministic fixture tests would catch regressions in specific table writes.
 3. Message special characters: verify newline/control-code round trips against Swift string table behavior.
 4. Collision and Vertex Filters: verify on real exported assets because their correctness is mostly visual/data-format dependent.
 

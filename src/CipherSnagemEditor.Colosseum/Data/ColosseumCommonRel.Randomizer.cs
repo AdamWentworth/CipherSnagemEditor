@@ -168,7 +168,7 @@ public sealed partial class ColosseumCommonRel
                     newSpecies.Index,
                     LevelUpMovesFor(newSpecies.Index, pokemon.Level),
                     pokemon.IsShadow ? newSpecies.CatchRate : pokemon.ShadowData?.CatchRate ?? 0,
-                    happiness: pokemon.IsShadow ? 128 : pokemon.Happiness));
+                    happiness: LegacyRandomizedTrainerHappiness));
                 trainerCount++;
             }
         }
@@ -210,7 +210,7 @@ public sealed partial class ColosseumCommonRel
             giftCount++;
         }
 
-        foreach (var pokemon in PokemonStats.Where(IsUsablePokemon))
+        foreach (var pokemon in PokemonStats.Where(HasPokemonName))
         {
             var usedMoveIds = new HashSet<int>();
             var levelUpMoves = pokemon.LevelUpMoves
@@ -236,7 +236,7 @@ public sealed partial class ColosseumCommonRel
     {
         var typeIds = RandomTypeIds();
         var count = 0;
-        foreach (var pokemon in PokemonStats.Where(IsUsablePokemon))
+        foreach (var pokemon in PokemonStats.Where(HasPokemonName))
         {
             WritePokemonStats(PokemonStatsUpdateFor(
                 pokemon,
@@ -260,7 +260,7 @@ public sealed partial class ColosseumCommonRel
         }
 
         var count = 0;
-        foreach (var pokemon in PokemonStats.Where(IsUsablePokemon))
+        foreach (var pokemon in PokemonStats.Where(HasPokemonName))
         {
             if (IsWonderGuard(pokemon.Ability1Name) || IsWonderGuard(pokemon.Ability2Name))
             {
@@ -280,7 +280,7 @@ public sealed partial class ColosseumCommonRel
     private int RandomizePokemonBaseStats()
     {
         var count = 0;
-        foreach (var pokemon in PokemonStats.Where(IsUsablePokemon))
+        foreach (var pokemon in PokemonStats)
         {
             var randomized = RandomBaseStatsFor(pokemon);
             WritePokemonStats(PokemonStatsUpdateFor(
@@ -301,7 +301,7 @@ public sealed partial class ColosseumCommonRel
     {
         var eligibleSpecies = EligiblePokemonSpecies();
         var count = 0;
-        foreach (var pokemon in PokemonStats.Where(IsUsablePokemon))
+        foreach (var pokemon in PokemonStats.Where(HasPokemonName))
         {
             var evolutions = pokemon.Evolutions
                 .Select(evolution =>
@@ -311,7 +311,12 @@ public sealed partial class ColosseumCommonRel
                         return evolution;
                     }
 
-                    var species = RandomSpeciesFor(evolution.EvolvedSpeciesId, eligibleSpecies, similarBaseStatTotal: false, usedSpecies: null);
+                    var species = RandomSpeciesFor(
+                        evolution.EvolvedSpeciesId,
+                        eligibleSpecies,
+                        similarBaseStatTotal: false,
+                        usedSpecies: null,
+                        preserveInvalidOldSpecies: false);
                     count++;
                     return evolution with { EvolvedSpeciesId = species.Index, EvolvedSpeciesName = species.Name };
                 })
@@ -327,7 +332,7 @@ public sealed partial class ColosseumCommonRel
     {
         var typeIds = RandomTypeIds();
         var count = 0;
-        foreach (var move in Moves.Where(IsUsableMove))
+        foreach (var move in Moves)
         {
             WriteMove(MoveUpdateFor(move, typeId: RandomElement(typeIds)));
             count++;
@@ -400,7 +405,7 @@ public sealed partial class ColosseumCommonRel
     }
 
     private IReadOnlyList<ColosseumPokemonStats> EligiblePokemonSpecies()
-        => PokemonStats.Where(IsUsablePokemon).ToArray();
+        => PokemonStats.Where(IsEligibleRandomSpecies).ToArray();
 
     private IReadOnlyList<ColosseumItem> EligibleRandomItems()
         => ItemData
@@ -420,17 +425,24 @@ public sealed partial class ColosseumCommonRel
         int oldSpeciesId,
         IReadOnlyList<ColosseumPokemonStats> eligibleSpecies,
         bool similarBaseStatTotal,
-        HashSet<int>? usedSpecies)
+        HashSet<int>? usedSpecies,
+        bool preserveInvalidOldSpecies = true)
     {
         var options = eligibleSpecies;
         var oldSpecies = PokemonStatsFor(oldSpeciesId);
-        if (oldSpecies is { CatchRate: > 0 })
+        if (preserveInvalidOldSpecies && (oldSpecies is null || oldSpecies.Index <= 0 || oldSpecies.CatchRate <= 0))
         {
-            var filtered = options.Where(species => species.Index != oldSpecies.Index).ToArray();
-            if (filtered.Length > 0)
-            {
-                options = filtered;
-            }
+            return oldSpecies ?? UnknownPokemonStats(oldSpeciesId);
+        }
+
+        if (usedSpecies is not null && usedSpecies.Count >= eligibleSpecies.Count)
+        {
+            usedSpecies.Clear();
+        }
+
+        if (usedSpecies is not null && options.Any(species => !usedSpecies.Contains(species.Index)))
+        {
+            options = options.Where(species => !usedSpecies.Contains(species.Index)).ToArray();
         }
 
         if (similarBaseStatTotal && oldSpecies is not null)
@@ -452,19 +464,23 @@ public sealed partial class ColosseumCommonRel
             }
         }
 
-        if (usedSpecies is not null && usedSpecies.Count < options.Count)
+        if (options.Count == 0)
         {
-            var unused = options.Where(species => !usedSpecies.Contains(species.Index)).ToArray();
-            if (unused.Length > 0)
+            var fallback = oldSpecies ?? UnknownPokemonStats(oldSpeciesId);
+            if (usedSpecies is not null)
             {
-                options = unused;
+                StrikeEvolutionLineForSpecies(fallback.Index, eligibleSpecies, usedSpecies);
             }
+
+            return fallback;
         }
 
-        var selected = options.Count == 0
-            ? oldSpecies ?? UnknownPokemonStats(oldSpeciesId)
-            : RandomElement(options);
-        usedSpecies?.Add(selected.Index);
+        var selected = RandomElement(options);
+        if (usedSpecies is not null)
+        {
+            StrikeEvolutionLineForSpecies(selected.Index, eligibleSpecies, usedSpecies);
+        }
+
         return selected;
     }
 
@@ -510,9 +526,20 @@ public sealed partial class ColosseumCommonRel
     }
 
     private IReadOnlyList<int> RandomTypeIds()
-        => TypeData.Count > 0
-            ? TypeData.Select(type => type.Index).ToArray()
-            : Enumerable.Range(0, TypeCount).ToArray();
+        => RandomTypeIdsFor(TypeData);
+
+    internal static IReadOnlyList<int> RandomTypeIdsFor(IReadOnlyList<ColosseumTypeData> typeData)
+    {
+        if (typeData.Count == 0)
+        {
+            return Enumerable.Range(0, TypeCount).Where(id => id != 9).ToArray();
+        }
+
+        return typeData
+            .Where(type => type.Index != 9 || !type.Name.Contains('?', StringComparison.Ordinal))
+            .Select(type => type.Index)
+            .ToArray();
+    }
 
     private static RandomizedStats RandomBaseStatsFor(ColosseumPokemonStats pokemon)
     {
@@ -592,8 +619,55 @@ public sealed partial class ColosseumCommonRel
         return shuffled;
     }
 
-    private static bool IsUsablePokemon(ColosseumPokemonStats pokemon)
+    internal static void StrikeEvolutionLineForSpecies(
+        int speciesId,
+        IReadOnlyList<ColosseumPokemonStats> eligibleSpecies,
+        ISet<int> usedSpecies)
+    {
+        usedSpecies.Add(speciesId);
+
+        var firstPreEvolution = eligibleSpecies.FirstOrDefault(pokemon =>
+            pokemon.Evolutions.Any(evolution => evolution.EvolvedSpeciesId == speciesId));
+        if (firstPreEvolution is not null)
+        {
+            usedSpecies.Add(firstPreEvolution.Index);
+            var secondPreEvolution = eligibleSpecies.FirstOrDefault(pokemon =>
+                pokemon.Evolutions.Any(evolution => evolution.EvolvedSpeciesId == firstPreEvolution.Index));
+            if (secondPreEvolution is not null)
+            {
+                usedSpecies.Add(secondPreEvolution.Index);
+            }
+        }
+
+        var species = eligibleSpecies.FirstOrDefault(pokemon => pokemon.Index == speciesId);
+        if (species is null)
+        {
+            return;
+        }
+
+        foreach (var evolution in species.Evolutions.Where(evolution => evolution.EvolvedSpeciesId > 0))
+        {
+            usedSpecies.Add(evolution.EvolvedSpeciesId);
+            var evolvedSpecies = eligibleSpecies.FirstOrDefault(pokemon => pokemon.Index == evolution.EvolvedSpeciesId);
+            if (evolvedSpecies is null)
+            {
+                continue;
+            }
+
+            foreach (var secondEvolution in evolvedSpecies.Evolutions.Where(evolution => evolution.EvolvedSpeciesId > 0))
+            {
+                usedSpecies.Add(secondEvolution.EvolvedSpeciesId);
+            }
+        }
+    }
+
+    private const int LegacyRandomizedTrainerHappiness = 128;
+
+    private static bool IsEligibleRandomSpecies(ColosseumPokemonStats pokemon)
         => pokemon.Index > 0 && pokemon.NameId > 0 && pokemon.CatchRate > 0;
+
+    private static bool HasPokemonName(ColosseumPokemonStats pokemon)
+        => pokemon.Index > 0 && pokemon.NameId > 0;
 
     private static bool IsUsableMove(ColosseumMove move)
         => move.Index > 0 && move.NameId > 0 && move.DescriptionId > 0;
