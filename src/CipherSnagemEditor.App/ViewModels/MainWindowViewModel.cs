@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -371,6 +372,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<PickerOptionViewModel> VertexFilterOptions { get; } = [];
 
+    public bool CanAddFileToSelectedIsoFile => CanExportSelectedIsoFile() && SelectedIsoFile?.IsFsys == true;
+
     public int SelectedCollisionInteractionValue => SelectedCollisionInteraction?.Value ?? -1;
 
     public int SelectedCollisionSectionValue => SelectedCollisionSection?.Value ?? -1;
@@ -675,6 +678,43 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsoExplorerStatus = ex.Message;
             Logs.Add($"Delete failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task AddFileToSelectedFsysAsync(string sourcePath, string identifierText)
+    {
+        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        {
+            return;
+        }
+
+        if (!TryParseFsysIdentifier(identifierText, out var identifier))
+        {
+            IsoExplorerStatus = "File identifier must be a unique number between 1-4 hexadecimal digits.";
+            Logs.Add($"Add file failed: {IsoExplorerStatus}");
+            return;
+        }
+
+        IsBusy = true;
+        var fileName = SelectedIsoFile.Name;
+        var selectedEntry = SelectedIsoFile.Entry;
+        Logs.Add($"Add file to {fileName}: {Path.GetFileName(sourcePath)} as 0x{identifier:x4}");
+
+        try
+        {
+            var result = await Task.Run(() => CurrentProject.AddFileToIsoFsys(selectedEntry, sourcePath, identifier));
+            IsoExplorerStatus = $"Added {result.EntryName} (0x{result.ShortIdentifier:x4}) to {fileName}; wrote {result.ImportResult.WrittenBytes:N0} bytes.";
+            Logs.Add(IsoExplorerStatus);
+            RepopulateIsoFiles(fileName);
+        }
+        catch (Exception ex)
+        {
+            IsoExplorerStatus = ex.Message;
+            Logs.Add($"Add file failed: {ex.Message}");
         }
         finally
         {
@@ -3324,6 +3364,31 @@ public partial class MainWindowViewModel : ViewModelBase
         ImportSelectedIsoFileCommand.NotifyCanExecuteChanged();
         EncodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
         DeleteSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanAddFileToSelectedIsoFile));
+    }
+
+    private static bool TryParseFsysIdentifier(string? text, out ushort identifier)
+    {
+        identifier = 0;
+        var normalized = (text ?? string.Empty).Trim();
+        if (normalized.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[2..];
+        }
+
+        if (normalized.Length is < 1 or > 4)
+        {
+            return false;
+        }
+
+        if (!ushort.TryParse(normalized, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value)
+            || value == 0)
+        {
+            return false;
+        }
+
+        identifier = value;
+        return true;
     }
 
     private static string BuildIsoExportStatus(string fileName, IsoExportResult result)

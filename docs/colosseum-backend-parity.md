@@ -7,6 +7,7 @@ This note tracks the backend behaviors copied from the Swift Colosseum Tool so t
 - ISO workspace layout uses the legacy sibling `"<iso name> CM Tool"` folder and `Game Files/<stem>/` extraction folders.
 - ISO import can replace larger files by shifting later ISO files and updating the FST metadata.
 - FSYS archives can extract, repack, preserve compression state, delete entries through the legacy marker, and import edited workspace files.
+- FSYS archives can add a new compressed inner file with a user-provided 4-digit identifier and import the expanded archive back into the ISO.
 - `.msg.json` files are encoded back into `.msg` tables before FSYS repack.
 - LZSS compressed FSYS entries are decoded on extract and re-encoded on import.
 - `.gtx` and `.atx` textures decode to PNG and import matching PNG edits.
@@ -21,8 +22,10 @@ This note tracks the backend behaviors copied from the Swift Colosseum Tool so t
 - `ProjectContextTests.DecodesAndRepacksPkxDatThroughFsysIsoExplorerFlow`
 - `ProjectContextTests.DecodesAndRepacksWzxEmbeddedModelsThroughFsysIsoExplorerFlow`
 - `ProjectContextTests.CombinesAndSplitsThpHeaderBodyThroughFsysIsoExplorerFlow`
+- `ProjectContextTests.AddsFileToFsysAndImportsArchiveIntoIso`
 - `ProjectContextTests.EncodesMessageJsonAndPacksFsysWorkspaceFile`
 - `ProjectContextTests.ImportsLargerFileByShiftingLaterIsoFiles`
+- `FsysArchiveTests` for direct FSYS add-file pointer/name/details updates, including pointer-table expansion.
 - `ColosseumLegacyFileCodecsTests` for direct PKX, WZX, and THP codec behavior.
 - `ColosseumTextureCodecTests` for texture, DAT texture, and GSW texture behavior.
 

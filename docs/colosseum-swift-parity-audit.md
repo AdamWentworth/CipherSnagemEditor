@@ -45,15 +45,14 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 | Interaction Editor | Near parity | Swift-style list/detail pass is done and saves common.rel interaction data. Needs broad room/script spot checks. |
 | Vertex Filters | Functional parity target | Lists exported `wzx.dat`-style model files and applies vertex color filters. Swift source itself is limited and file-dependent, so parity should be judged from exported model fixtures. |
 | Table Editor | Parity for Swift capability | Swift has Decode, Encode, and Document; its Edit button is empty. Editable raw tables are therefore not required for Colosseum parity unless we intentionally exceed the Swift tool later. |
-| ISO Explorer | Strong backend parity, one UI/backend gap | Export/decode, import/encode, delete, FSYS repack, `.msg.json`, LZSS, texture/model helpers, THP-style split/combine, shifting, GID display, and FSYS entry identifiers are covered. Swift also exposes Add File for FSYS archives; this is still missing. |
+| ISO Explorer | Strong backend parity | Export/decode, import/encode, delete, Add File for FSYS archives, FSYS repack, `.msg.json`, LZSS, texture/model helpers, THP-style split/combine, shifting, GID display, and FSYS entry identifiers are covered. |
 
 ## Highest Confidence Remaining Gaps
 
-1. ISO Explorer Add File: Swift can add a new file into the selected non-empty FSYS archive with a user-entered 4-digit hex identifier, compress it, save the FSYS, and import it back into the ISO.
-2. Patch verification depth: the visible patch list matches Swift, but ASM patch parity should be proven with per-patch byte tests and targeted Dolphin smoke tests.
-3. Randomizer golden tests: the UI options match Swift, but randomizer output should be compared against the Swift algorithm for deterministic seeds or narrow fixtures where possible.
-4. Message special characters: verify newline/control-code round trips against Swift string table behavior.
-5. Collision and Vertex Filters: verify on real exported assets because their correctness is mostly visual/data-format dependent.
+1. Patch verification depth: the visible patch list matches Swift, but ASM patch parity should be proven with per-patch byte tests and targeted Dolphin smoke tests.
+2. Randomizer golden tests: the UI options match Swift, but randomizer output should be compared against the Swift algorithm for deterministic seeds or narrow fixtures where possible.
+3. Message special characters: verify newline/control-code round trips against Swift string table behavior.
+4. Collision and Vertex Filters: verify on real exported assets because their correctness is mostly visual/data-format dependent.
 
 ## Intentional Non-Gaps
 

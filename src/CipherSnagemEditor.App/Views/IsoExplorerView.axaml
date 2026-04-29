@@ -181,6 +181,15 @@
                             Height="24"
                             Content="Delete"
                             Command="{Binding DeleteSelectedIsoFileCommand}"/>
+                    <Button Classes="LegacyIsoButton"
+                            Canvas.Left="128"
+                            Canvas.Top="188"
+                            Width="94"
+                            Height="24"
+                            Content="Add File"
+                            Click="AddFileClick"
+                            IsVisible="{Binding CanAddFileToSelectedIsoFile}"
+                            IsEnabled="{Binding CanAddFileToSelectedIsoFile}"/>
 
                     <TextBlock Classes="LegacyIsoHeader"
                                Text="Files"

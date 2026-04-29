@@ -209,6 +209,46 @@ public sealed partial class ColosseumProjectContext
         return new IsoDeleteResult(entry.Name, replacement.Length, backupPath);
     }
 
+    public IsoFsysAddFileResult AddFileToIsoFsys(GameCubeIsoFileEntry entry, string sourcePath, ushort shortIdentifier)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        if (GameFileTypes.FromExtension(entry.Name) != GameFileType.Fsys)
+        {
+            throw new InvalidDataException($"{entry.Name} is not an FSYS archive.");
+        }
+
+        var targetPath = EnsureRawIsoWorkspaceFile(entry);
+        var folder = GetIsoExportDirectory(entry.Name);
+        Directory.CreateDirectory(folder);
+
+        var archive = FsysArchive.Load(targetPath);
+        var addResult = archive.AddFile(sourcePath, shortIdentifier, compress: true);
+        File.WriteAllBytes(targetPath, addResult.ArchiveBytes);
+        LoadedFsys[targetPath] = FsysArchive.Parse(targetPath, addResult.ArchiveBytes);
+        LoadedFiles[entry.Name] = addResult.ArchiveBytes;
+
+        var workspaceFilePath = Path.Combine(folder, addResult.EntryName);
+        if (!string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(workspaceFilePath), StringComparison.OrdinalIgnoreCase))
+        {
+            File.Copy(sourcePath, workspaceFilePath, overwrite: true);
+        }
+
+        var importResult = ImportIsoFile(entry, encode: false);
+        return new IsoFsysAddFileResult(
+            targetPath,
+            workspaceFilePath,
+            addResult.EntryName,
+            addResult.ShortIdentifier,
+            addResult.SourceSize,
+            addResult.ArchiveSize,
+            addResult.Compressed,
+            importResult);
+    }
+
     public FsysArchive ReadIsoFsysArchive(GameCubeIsoFileEntry entry)
     {
         if (Iso is null)

@@ -154,6 +154,34 @@ public sealed class ProjectContextTests
     }
 
     [Fact]
+    public void AddsFileToFsysAndImportsArchiveIntoIso()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var isoPath = Path.Combine(temp, "Sample.iso");
+        var fsysBytes = CreateSingleEntryFsys();
+        var bytes = CreateSingleFileIso("sample.fsys", fsysBytes, fileSlotSize: 0x500);
+        File.WriteAllBytes(isoPath, bytes);
+        var sourcePath = Path.Combine(temp, "added.msg");
+        File.WriteAllBytes(sourcePath, [9, 8, 7, 6]);
+
+        var context = ColosseumProjectContext.Open(isoPath);
+        var entry = Assert.Single(context.Iso!.Files, file => file.Name == "sample.fsys");
+
+        var result = context.AddFileToIsoFsys(entry, sourcePath, 0x1234);
+
+        Assert.Equal("added.msg", result.EntryName);
+        Assert.True(File.Exists(result.WorkspaceFilePath));
+        var reopened = ColosseumProjectContext.Open(isoPath);
+        var updatedEntry = Assert.Single(reopened.Iso!.Files, file => file.Name == "sample.fsys");
+        var archive = reopened.ReadIsoFsysArchive(updatedEntry);
+        Assert.Equal(2, archive.Entries.Count);
+        var added = Assert.Single(archive.Entries, file => file.Name == "added.msg");
+        Assert.Equal(0x12340a00u, added.Identifier);
+        Assert.Equal([9, 8, 7, 6], archive.Extract(added));
+    }
+
+    [Fact]
     public void EncodesMessageJsonAndPacksFsysWorkspaceFile()
     {
         var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
@@ -399,11 +427,9 @@ public sealed class ProjectContextTests
         }
 
         const int pointerTableStart = 0x60;
-        const int detailsStart = 0x80;
-        const int detailsSize = 0x30;
-        var namesStart = Align16(detailsStart + (entries.Length * detailsSize));
+        const int namesStart = 0x70;
+        const int detailsSize = 0x50;
         var nameOffsets = new int[entries.Length];
-        var dataOffsets = new int[entries.Length];
 
         var cursor = namesStart;
         for (var index = 0; index < entries.Length; index++)
@@ -412,17 +438,24 @@ public sealed class ProjectContextTests
             cursor += System.Text.Encoding.ASCII.GetByteCount(entries[index].FileName) + 1;
         }
 
-        cursor = Align16(cursor);
+        var detailsStart = Align16(cursor);
+        var dataOffsets = new int[entries.Length];
+        cursor = Align16(detailsStart + (entries.Length * detailsSize));
         for (var index = 0; index < entries.Length; index++)
         {
             dataOffsets[index] = cursor;
             cursor = Align16(cursor + entries[index].FileBytes.Length);
         }
 
-        var bytes = new byte[Align16(cursor + 4)];
+        var bytes = new byte[Align16(cursor) + 4];
         BigEndian.WriteUInt32(bytes, 0x00, 0x46535953);
         BigEndian.WriteUInt32(bytes, 0x0c, checked((uint)entries.Length));
         BigEndian.WriteUInt32(bytes, 0x20, (uint)bytes.Length);
+        BigEndian.WriteUInt32(bytes, 0x40, pointerTableStart);
+        BigEndian.WriteUInt32(bytes, 0x44, namesStart);
+        BigEndian.WriteUInt32(bytes, 0x48, checked((uint)dataOffsets[0]));
+        BigEndian.WriteUInt32(bytes, 0x1c, checked((uint)dataOffsets[0]));
+        BigEndian.WriteUInt32(bytes, bytes.Length - 4, 0x46535953);
 
         for (var index = 0; index < entries.Length; index++)
         {
@@ -433,6 +466,7 @@ public sealed class ProjectContextTests
             BigEndian.WriteUInt32(bytes, detailsOffset + 0x04, checked((uint)dataOffsets[index]));
             BigEndian.WriteUInt32(bytes, detailsOffset + 0x08, checked((uint)entry.FileBytes.Length));
             BigEndian.WriteUInt32(bytes, detailsOffset + 0x14, checked((uint)entry.FileBytes.Length));
+            BigEndian.WriteUInt32(bytes, detailsOffset + 0x20, checked((uint)((int)entry.FileType / 2)));
             BigEndian.WriteUInt32(bytes, detailsOffset + 0x24, checked((uint)nameOffsets[index]));
 
             var fileNameBytes = System.Text.Encoding.ASCII.GetBytes(entry.FileName + "\0");
