@@ -145,7 +145,7 @@
                             Width="144"
                             Height="30"
                             Content="Encode and import"
-                            Command="{Binding ImportSelectedIsoFileCommand}"/>
+                            Command="{Binding EncodeAndImportSelectedIsoFileCommand}"/>
                     <Button Classes="LegacyIsoButton"
                             Canvas.Left="13"
                             Canvas.Top="91"

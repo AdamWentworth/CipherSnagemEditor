@@ -610,24 +610,76 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
-    private void ImportSelectedIsoFile()
+    private async Task EncodeAndImportSelectedIsoFileAsync()
     {
-        IsoExplorerStatus = "Import is not implemented yet.";
-        Logs.Add("Import is not implemented yet.");
+        await ImportSelectedIsoFileAsync(encode: true, label: "Encode and import");
     }
 
     [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
-    private void EncodeSelectedIsoFile()
+    private async Task ImportSelectedIsoFileAsync()
     {
-        IsoExplorerStatus = "Encode is not implemented yet.";
-        Logs.Add("Encode is not implemented yet.");
+        await ImportSelectedIsoFileAsync(encode: false, label: "Import");
     }
 
     [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
-    private void DeleteSelectedIsoFile()
+    private async Task EncodeSelectedIsoFileAsync()
     {
-        IsoExplorerStatus = "Delete is not implemented yet.";
-        Logs.Add("Delete is not implemented yet.");
+        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var selectedFile = SelectedIsoFile;
+        Logs.Add($"Encode: {selectedFile.Name}");
+
+        try
+        {
+            var result = await Task.Run(() => CurrentProject.EncodeIsoFile(selectedFile.Entry));
+            IsoExplorerStatus = BuildIsoEncodeStatus(selectedFile.Name, result);
+            Logs.Add(IsoExplorerStatus);
+            RefreshSelectedIsoFileDetails(selectedFile);
+        }
+        catch (Exception ex)
+        {
+            IsoExplorerStatus = ex.Message;
+            Logs.Add($"Encode failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
+    private async Task DeleteSelectedIsoFileAsync()
+    {
+        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var fileName = SelectedIsoFile.Name;
+        var selectedEntry = SelectedIsoFile.Entry;
+        Logs.Add($"Delete: {fileName}");
+
+        try
+        {
+            var result = await Task.Run(() => CurrentProject.DeleteIsoFile(selectedEntry));
+            IsoExplorerStatus = BuildIsoDeleteStatus(result);
+            Logs.Add(IsoExplorerStatus);
+            RepopulateIsoFiles(fileName);
+        }
+        catch (Exception ex)
+        {
+            IsoExplorerStatus = ex.Message;
+            Logs.Add($"Delete failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanSaveTrainer))]
@@ -1093,6 +1145,36 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsoExplorerStatus = ex.Message;
             Logs.Add($"Export failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task ImportSelectedIsoFileAsync(bool encode, string label)
+    {
+        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var fileName = SelectedIsoFile.Name;
+        var selectedEntry = SelectedIsoFile.Entry;
+        Logs.Add($"{label}: {fileName}");
+
+        try
+        {
+            var result = await Task.Run(() => CurrentProject.ImportIsoFile(selectedEntry, encode));
+            IsoExplorerStatus = BuildIsoImportStatus(fileName, result);
+            Logs.Add(IsoExplorerStatus);
+            RepopulateIsoFiles(fileName);
+        }
+        catch (Exception ex)
+        {
+            IsoExplorerStatus = ex.Message;
+            Logs.Add($"{label} failed: {ex.Message}");
         }
         finally
         {
@@ -1610,6 +1692,18 @@ public partial class MainWindowViewModel : ViewModelBase
                 string.Equals(Path.GetFileName(file.Name), "Start.dol", StringComparison.OrdinalIgnoreCase))
             ?? IsoFiles.FirstOrDefault();
         NotifyIsoExplorerCommands();
+    }
+
+    private void RepopulateIsoFiles(string selectedFileName)
+    {
+        if (CurrentProject is null)
+        {
+            return;
+        }
+
+        PopulateIsoFiles(CurrentProject);
+        SelectedIsoFile = IsoFiles.FirstOrDefault(file =>
+            string.Equals(file.Name, selectedFileName, StringComparison.OrdinalIgnoreCase)) ?? SelectedIsoFile;
     }
 
     private void LoadTrainerRows()
@@ -3170,6 +3264,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ExportAndDecodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
         QuickExportSelectedIsoFileCommand.NotifyCanExecuteChanged();
         DecodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
+        EncodeAndImportSelectedIsoFileCommand.NotifyCanExecuteChanged();
         ImportSelectedIsoFileCommand.NotifyCanExecuteChanged();
         EncodeSelectedIsoFileCommand.NotifyCanExecuteChanged();
         DeleteSelectedIsoFileCommand.NotifyCanExecuteChanged();
@@ -3186,6 +3281,52 @@ public partial class MainWindowViewModel : ViewModelBase
         if (result.DecodedFiles.Count > 0)
         {
             status += $" | decoded {result.DecodedFiles.Count} files";
+        }
+
+        return status;
+    }
+
+    private static string BuildIsoEncodeStatus(string fileName, IsoEncodeResult result)
+    {
+        var status = $"Encoded {fileName} workspace file: {result.FilePath}";
+        if (result.EncodedFiles.Count > 0)
+        {
+            status += $" | encoded {result.EncodedFiles.Count} message JSON file(s)";
+        }
+
+        if (result.PackedFiles.Count > 0)
+        {
+            status += $" | packed {result.PackedFiles.Count} archive file(s)";
+        }
+
+        return status;
+    }
+
+    private static string BuildIsoImportStatus(string fileName, IsoImportResult result)
+    {
+        var status = $"Imported {fileName} to ISO from {result.FilePath} ({result.WrittenBytes:N0}/{result.MaximumBytes:N0} bytes)";
+        if (result.EncodeResult is not null)
+        {
+            if (result.EncodeResult.EncodedFiles.Count > 0)
+            {
+                status += $" | encoded {result.EncodeResult.EncodedFiles.Count} message JSON file(s)";
+            }
+
+            if (result.EncodeResult.PackedFiles.Count > 0)
+            {
+                status += $" | packed {result.EncodeResult.PackedFiles.Count} archive file(s)";
+            }
+        }
+
+        return status;
+    }
+
+    private static string BuildIsoDeleteStatus(IsoDeleteResult result)
+    {
+        var status = $"Deleted {result.FileName} from ISO with legacy preserved marker ({result.WrittenBytes:N0} bytes)";
+        if (!string.IsNullOrWhiteSpace(result.BackupPath))
+        {
+            status += $" | backup/export: {result.BackupPath}";
         }
 
         return status;

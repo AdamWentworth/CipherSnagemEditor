@@ -19,4 +19,17 @@ public sealed class LzssCodecTests
 
         Assert.Equal([(byte)'A', (byte)'B', (byte)'C'], LzssCodec.DecodeFile(compressed));
     }
+
+    [Fact]
+    public void EncodesFileWithLegacyHeader()
+    {
+        var original = "ABABABABABABABABABABCDCDCDCD"u8.ToArray();
+
+        var encoded = LzssCodec.EncodeFile(original);
+
+        Assert.True(LzssCodec.HasHeader(encoded));
+        Assert.Equal((uint)original.Length, BigEndian.ReadUInt32(encoded, 4));
+        Assert.Equal((uint)encoded.Length, BigEndian.ReadUInt32(encoded, 8));
+        Assert.Equal(original, LzssCodec.DecodeFile(encoded));
+    }
 }

@@ -1,3 +1,3 @@
 namespace CipherSnagemEditor.Core.GameCube;
 
-public sealed record GameCubeIsoFileEntry(string Name, uint Offset, uint Size);
+public sealed record GameCubeIsoFileEntry(string Name, uint Offset, uint Size, uint? TocEntryOffset = null);

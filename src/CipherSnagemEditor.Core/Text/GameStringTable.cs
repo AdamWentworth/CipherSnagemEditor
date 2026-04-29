@@ -51,6 +51,18 @@ public sealed class GameStringTable
     public string StringWithId(int id)
         => id == 0 ? "-" : Strings.FirstOrDefault(text => text.Id == id)?.Text ?? $"#{id}";
 
+    public static GameStringTable FromStrings(IEnumerable<GameString> strings)
+    {
+        ArgumentNullException.ThrowIfNull(strings);
+
+        return new GameStringTable(strings
+            .Where(message => message.Id > 0)
+            .GroupBy(message => message.Id)
+            .Select(group => group.Last())
+            .OrderBy(message => message.Id)
+            .ToArray());
+    }
+
     public GameStringTable WithString(int id, string text)
     {
         if (id <= 0 || id > 0x000fffff)

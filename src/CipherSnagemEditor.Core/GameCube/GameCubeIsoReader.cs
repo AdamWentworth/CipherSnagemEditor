@@ -105,7 +105,7 @@ public static class GameCubeIsoReader
             var name = ReadNullTerminatedAscii(toc, firstStringOffset + nameOffset);
             if (!string.IsNullOrWhiteSpace(name))
             {
-                entries.Add(new GameCubeIsoFileEntry(name, fileOffset, fileSize));
+                entries.Add(new GameCubeIsoFileEntry(name, fileOffset, fileSize, tocStart + (uint)offset));
             }
         }
 

@@ -12,6 +12,11 @@ public sealed class ColosseumProjectContext
 {
     private const int NumberOfTrainerModels = 0x4b;
     private const int ModelDictionaryModelOffset = 0x04;
+    private static readonly JsonSerializerOptions GameStringJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
+    };
 
     private ColosseumProjectContext(
         string sourcePath,
@@ -37,7 +42,7 @@ public sealed class ColosseumProjectContext
 
     public string? WorkspaceDirectory { get; }
 
-    public GameCubeIso? Iso { get; }
+    public GameCubeIso? Iso { get; private set; }
 
     public FsysArchive? FsysArchive { get; }
 
@@ -126,6 +131,61 @@ public sealed class ColosseumProjectContext
         }
 
         return new IsoExportResult(targetPath, extractedFiles, decodedFiles);
+    }
+
+    public IsoEncodeResult EncodeIsoFile(GameCubeIsoFileEntry entry)
+        => PrepareWorkspaceIsoFile(entry, encodeDecodedFiles: true, packArchive: true);
+
+    public IsoImportResult ImportIsoFile(GameCubeIsoFileEntry entry, bool encode)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        if (string.Equals(entry.Name, "Game.toc", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NotSupportedException("Replacing Game.toc directly is not supported.");
+        }
+
+        var encodeResult = PrepareWorkspaceIsoFile(
+            entry,
+            encodeDecodedFiles: encode,
+            packArchive: GameFileTypes.FromExtension(entry.Name) == GameFileType.Fsys);
+        var sourceBytes = File.ReadAllBytes(encodeResult.FilePath);
+        var maximumBytes = WriteIsoEntry(entry, sourceBytes);
+        return new IsoImportResult(encodeResult.FilePath, sourceBytes.Length, maximumBytes, encodeResult);
+    }
+
+    public IsoDeleteResult DeleteIsoFile(GameCubeIsoFileEntry entry)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        if (string.Equals(entry.Name, "Start.dol", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entry.Name, "Game.toc", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NotSupportedException($"{entry.Name} cannot be deleted.");
+        }
+
+        var backupPath = ResolveIsoExtractPath(entry.Name, null);
+        if (!File.Exists(backupPath))
+        {
+            backupPath = ExportIsoFile(entry, extractFsysContents: true, decode: false, overwrite: false).FilePath;
+        }
+
+        var replacement = GameFileTypes.FromExtension(entry.Name) == GameFileType.Fsys
+            ? NullFsys()
+            : "DELETED DELETED\0"u8.ToArray();
+        if (replacement.Length > entry.Size)
+        {
+            throw new InvalidDataException($"{entry.Name} is too small to replace with the legacy deleted marker.");
+        }
+
+        WriteIsoEntry(entry, replacement);
+        return new IsoDeleteResult(entry.Name, replacement.Length, backupPath);
     }
 
     public FsysArchive ReadIsoFsysArchive(GameCubeIsoFileEntry entry)
@@ -786,6 +846,208 @@ public sealed class ColosseumProjectContext
         }
     }
 
+    private IsoEncodeResult PrepareWorkspaceIsoFile(
+        GameCubeIsoFileEntry entry,
+        bool encodeDecodedFiles,
+        bool packArchive)
+    {
+        var targetPath = EnsureRawIsoWorkspaceFile(entry);
+        var encodedFiles = new List<string>();
+        var packedFiles = new List<string>();
+
+        switch (GameFileTypes.FromExtension(entry.Name))
+        {
+            case GameFileType.Fsys:
+            {
+                var folder = GetIsoExportDirectory(entry.Name);
+                Directory.CreateDirectory(folder);
+                if (encodeDecodedFiles)
+                {
+                    encodedFiles.AddRange(EncodeDecodedMessageFiles(folder));
+                }
+
+                if (packArchive)
+                {
+                    var archive = FsysArchive.Load(targetPath);
+                    var result = archive.ReplaceFilesFromDirectory(folder, encodeCompressed: true);
+                    File.WriteAllBytes(targetPath, result.ArchiveBytes);
+                    LoadedFsys[targetPath] = FsysArchive.Parse(targetPath, result.ArchiveBytes);
+                    packedFiles.AddRange(result.ReplacedFiles.Select(file => file.SourcePath));
+                }
+
+                break;
+            }
+
+            case GameFileType.Message:
+            {
+                if (encodeDecodedFiles)
+                {
+                    var jsonPath = targetPath + ".json";
+                    if (File.Exists(jsonPath))
+                    {
+                        EncodeMessageJson(jsonPath, targetPath);
+                        encodedFiles.Add(jsonPath);
+                    }
+                }
+
+                break;
+            }
+        }
+
+        return new IsoEncodeResult(targetPath, encodedFiles, packedFiles);
+    }
+
+    private string EnsureRawIsoWorkspaceFile(GameCubeIsoFileEntry entry)
+    {
+        var targetPath = ResolveIsoExtractPath(entry.Name, null);
+        if (File.Exists(targetPath))
+        {
+            return targetPath;
+        }
+
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        var parent = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(parent))
+        {
+            Directory.CreateDirectory(parent);
+        }
+
+        var data = GameCubeIsoReader.ReadFile(Iso, entry);
+        File.WriteAllBytes(targetPath, data);
+        LoadedFiles[entry.Name] = data;
+        return targetPath;
+    }
+
+    private IEnumerable<string> EncodeDecodedMessageFiles(string folder)
+    {
+        if (!Directory.Exists(folder))
+        {
+            yield break;
+        }
+
+        foreach (var jsonPath in Directory.EnumerateFiles(folder, "*.msg.json", SearchOption.TopDirectoryOnly))
+        {
+            var messagePath = jsonPath[..^".json".Length];
+            EncodeMessageJson(jsonPath, messagePath);
+            yield return jsonPath;
+        }
+    }
+
+    private void EncodeMessageJson(string jsonPath, string messagePath)
+    {
+        var strings = JsonSerializer.Deserialize<GameString[]>(File.ReadAllText(jsonPath), GameStringJsonOptions);
+        if (strings is null)
+        {
+            throw new InvalidDataException($"Could not read message JSON: {jsonPath}");
+        }
+
+        var table = GameStringTable.FromStrings(strings);
+        var bytes = table.ToArray();
+        File.WriteAllBytes(messagePath, bytes);
+        LoadedStringTables[messagePath] = table;
+        LoadedFiles[messagePath] = bytes;
+    }
+
+    private uint WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        var maximumBytes = MaximumReplacementSize(entry);
+        if (sourceBytes.Length > maximumBytes)
+        {
+            throw new InvalidDataException(
+                $"{entry.Name} is {sourceBytes.Length:N0} bytes, but only {maximumBytes:N0} bytes are available before the next ISO file. File size shifting is not implemented yet.");
+        }
+
+        if (entry.TocEntryOffset is null && sourceBytes.Length > entry.Size)
+        {
+            throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
+        }
+
+        using (var stream = File.Open(Iso.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+        {
+            if ((long)entry.Offset + sourceBytes.Length > stream.Length)
+            {
+                throw new EndOfStreamException($"{entry.Name} would extend past the end of the ISO.");
+            }
+
+            stream.Position = entry.Offset;
+            stream.Write(sourceBytes);
+
+            if (entry.Size > sourceBytes.Length)
+            {
+                WriteZeros(stream, checked((int)(entry.Size - sourceBytes.Length)));
+            }
+
+            if (entry.TocEntryOffset is not null)
+            {
+                Span<byte> sizeBytes = stackalloc byte[4];
+                BigEndian.WriteUInt32(sizeBytes, 0, checked((uint)sourceBytes.Length));
+                stream.Position = entry.TocEntryOffset.Value + 8;
+                stream.Write(sizeBytes);
+            }
+        }
+
+        LoadedFiles[entry.Name] = sourceBytes;
+        Iso = GameCubeIsoReader.Open(Iso.Path);
+        return maximumBytes;
+    }
+
+    private uint MaximumReplacementSize(GameCubeIsoFileEntry entry)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No ISO is loaded.");
+        }
+
+        if (entry.TocEntryOffset is null)
+        {
+            return entry.Size;
+        }
+
+        var nextFile = Iso.Files
+            .Where(file => file.Offset > entry.Offset)
+            .OrderBy(file => file.Offset)
+            .FirstOrDefault();
+        var maxEnd = nextFile?.Offset ?? checked((uint)new FileInfo(Iso.Path).Length);
+        return maxEnd <= entry.Offset ? entry.Size : maxEnd - entry.Offset;
+    }
+
+    private static void WriteZeros(Stream stream, int count)
+    {
+        Span<byte> zeros = stackalloc byte[4096];
+        while (count > 0)
+        {
+            var length = Math.Min(count, zeros.Length);
+            stream.Write(zeros[..length]);
+            count -= length;
+        }
+    }
+
+    private static byte[] NullFsys()
+        =>
+        [
+            0x46, 0x53, 0x59, 0x53, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x4E, 0x55, 0x4C, 0x4C, 0x46, 0x53, 0x59, 0x53
+        ];
+
     public string GetIsoExportDirectory(string fileName)
     {
         if (WorkspaceDirectory is null)
@@ -938,7 +1200,7 @@ public sealed class ColosseumProjectContext
             }
 
             LoadedStringTables[messagePath] = table;
-            var json = JsonSerializer.Serialize(table.Strings, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(table.Strings, GameStringJsonOptions);
             File.WriteAllText(jsonPath, json);
             yield return jsonPath;
         }
