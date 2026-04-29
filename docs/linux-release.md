@@ -32,6 +32,7 @@ artifacts/
   packages/
     cipher-snagem-editor-linux-x64/
     cipher-snagem-editor-linux-x64.deb
+    cipher-snagem-editor-linux-x64-0.1.2.deb
     cipher-snagem-editor-linux-x64.tar.gz
 ```
 
@@ -53,11 +54,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1 -F
 
 ## Ubuntu Test
 
-Copy `artifacts/packages/cipher-snagem-editor-linux-x64.deb` to the Ubuntu
+Copy the versioned `.deb`, for example
+`artifacts/packages/cipher-snagem-editor-linux-x64-0.1.2.deb`, to the Ubuntu
 machine, then double-click it in GNOME Files or run:
 
 ```bash
-sudo apt install ./cipher-snagem-editor-linux-x64.deb
+sudo apt install ./cipher-snagem-editor-linux-x64-0.1.2.deb
 ```
 
 Launch `Cipher Snagem Editor` from the app grid.

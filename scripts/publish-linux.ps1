@@ -7,7 +7,7 @@ param(
     [switch]$NoArchive,
     [switch]$NoDeb,
     [switch]$NoReadyToRun,
-    [string]$PackageVersion = "0.1.1"
+    [string]$PackageVersion = "0.1.2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,6 +18,7 @@ $publishDir = Join-Path $outputRootFull "publish-$Runtime"
 $packageDir = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime"
 $archivePath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime.tar.gz"
 $debPath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime.deb"
+$versionedDebPath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime-$PackageVersion.deb"
 $projectPath = Join-Path $repoRoot "src\CipherSnagemEditor.App\CipherSnagemEditor.App.csproj"
 $linuxTemplateDir = Join-Path $repoRoot "packaging\linux"
 $iconPath = Join-Path $repoRoot "assets\ui\app-icons\colosseum\icon-256.png"
@@ -53,6 +54,7 @@ Assert-UnderPath -Path $publishDir -Root $outputRootFull
 Assert-UnderPath -Path $packageDir -Root $outputRootFull
 Assert-UnderPath -Path $archivePath -Root $outputRootFull
 Assert-UnderPath -Path $debPath -Root $outputRootFull
+Assert-UnderPath -Path $versionedDebPath -Root $outputRootFull
 
 foreach ($path in @($publishDir, $packageDir)) {
     if (Test-Path -LiteralPath $path) {
@@ -64,6 +66,9 @@ if (Test-Path -LiteralPath $archivePath) {
 }
 if (Test-Path -LiteralPath $debPath) {
     Remove-Item -LiteralPath $debPath -Force
+}
+if (Test-Path -LiteralPath $versionedDebPath) {
+    Remove-Item -LiteralPath $versionedDebPath -Force
 }
 
 $selfContained = if ($FrameworkDependent) { "false" } else { "true" }
@@ -113,6 +118,8 @@ if (-not $NoDeb) {
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to create Ubuntu package: $debPath"
     }
+
+    Copy-Item -LiteralPath $debPath -Destination $versionedDebPath -Force
 }
 
 Write-Host "Linux publish complete."
@@ -125,4 +132,5 @@ if (-not $NoArchive) {
 }
 if (-not $NoDeb) {
     Write-Host "Ubuntu package: $debPath"
+    Write-Host "Versioned Ubuntu package: $versionedDebPath"
 }
