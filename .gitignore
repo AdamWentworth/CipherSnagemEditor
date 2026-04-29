@@ -20,6 +20,8 @@ TestResults/
 *.raw
 * CM Tool/
 
-# Local reference assets copied from the legacy tool or extracted files.
-# Tracked application assets live under src/CipherSnagemEditor.App/Assets.
-/assets/
+# Generated or user-extracted asset scratch space.
+# Source-provided legacy assets under /assets are tracked.
+/assets/extracted/
+/assets/generated/
+/assets/workspaces/

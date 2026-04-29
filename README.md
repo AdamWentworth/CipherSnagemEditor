@@ -72,31 +72,32 @@ tests/
   *Tests.cs                       unit and parity-focused tests
 ```
 
-Local-only folders:
+Asset folders:
 
-- `assets/` is ignored and used for local reference assets copied from the
-  legacy tool or extracted during parity work. It should not mirror files that
-  are already bundled under the app project.
+- `assets/` is tracked when the files come from the original source repo and
+  are needed for parity. This keeps reusable images, JSON labels, and UI art in
+  one place instead of duplicating them per project.
+- `assets/extracted/`, `assets/generated/`, and `assets/workspaces/` are
+  ignored scratch space for anything produced from a user's ISO or local tools.
 - `artifacts/` is ignored and used for local publish builds, screenshots, and
   temporary outputs.
 
-Recommended local `assets/` layout:
+Tracked `assets/` layout:
 
 ```text
 assets/
-  images/   extracted/reference Pokemon, trainer, and type images
-  json/     local decoded table exports used for parity checks
-  reference/
-    original-ui/  non-shipped UI reference art from the original tool
+  images/   source-provided Pokemon, trainer, type, and pokeball images
+  json/     source-provided Colosseum/XD lookup data
+  ui/       source-provided UI art from the original tool
 ```
 
-Tracked app assets belong under `src/CipherSnagemEditor.App/Assets`:
+Packaging-only app assets belong under `src/CipherSnagemEditor.App/Assets`.
+When the app needs reusable art from root `assets/`, the project links it into
+the Avalonia bundle instead of keeping a second physical copy.
 
 ```text
 Assets/
   AppIcon.ico
-  Images/   images bundled into the app
-  Ui/       UI chrome and control artwork bundled into the app
 ```
 
 ## Development Setup
