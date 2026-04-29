@@ -14,6 +14,8 @@ param(
     [int]$Seconds = 30,
     [int]$MinimumSeconds = 8,
     [string]$VideoBackend = "Null",
+    [string]$AudioBackend = "No audio output",
+    [int]$AudioVolume = 0,
     [switch]$SkipDolphin,
     [switch]$NoBuild
 )
@@ -110,7 +112,11 @@ function Invoke-DolphinSmoke([string]$IsoPath, [string]$CaseOutputDir) {
         "-MinimumSeconds",
         $MinimumSeconds,
         "-VideoBackend",
-        $VideoBackend
+        $VideoBackend,
+        "-AudioBackend",
+        $AudioBackend,
+        "-AudioVolume",
+        $AudioVolume
     )
 
     if (-not [string]::IsNullOrWhiteSpace($DolphinExe)) {

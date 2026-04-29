@@ -18,7 +18,7 @@ Run a basic boot/crash smoke test:
 .\scripts\run-dolphin-smoke.ps1
 ```
 
-The runner launches Dolphin in batch mode with an isolated user folder, the Null video backend, and no frame limit. If Dolphin stays alive until the timeout, the smoke test passes. If it exits too early, returns a nonzero exit code, or writes known failure patterns to the logs, the smoke test fails.
+The runner launches Dolphin in batch mode with an isolated user folder, the Null video backend, no frame limit, and muted audio. It writes `Config/DSP.ini` with `Backend = No audio output` and `Volume = 0`, then passes the same values through Dolphin's command-line config overrides. If Dolphin stays alive until the timeout, the smoke test passes. If it exits too early, returns a nonzero exit code, or writes known failure patterns to the logs, the smoke test fails.
 
 Useful overrides:
 
@@ -26,7 +26,8 @@ Useful overrides:
 .\scripts\run-dolphin-smoke.ps1 `
   -DolphinExe "D:\Tools\Dolphin\Dolphin.exe" `
   -IsoPath "D:\Temp\patched-colosseum.iso" `
-  -Seconds 90
+  -Seconds 90 `
+  -AudioVolume 0
 ```
 
 This is a crash/boot smoke layer, not full gameplay verification. Deeper parity tests should add save states or DTM input recordings that exercise specific patched behavior.

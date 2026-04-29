@@ -6,6 +6,8 @@ param(
     [int]$Seconds = 45,
     [int]$MinimumSeconds = 10,
     [string]$VideoBackend = "Null",
+    [string]$AudioBackend = "No audio output",
+    [int]$AudioVolume = 0,
     [switch]$AllowEarlyExit
 )
 
@@ -38,6 +40,14 @@ if (-not (Test-Path -LiteralPath $IsoPath)) {
 }
 
 New-Item -ItemType Directory -Force -Path $UserDir, $OutputDir | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $UserDir "Config") | Out-Null
+
+$dspConfigPath = Join-Path $UserDir "Config\DSP.ini"
+@(
+    "[DSP]",
+    "Backend = $AudioBackend",
+    "Volume = $AudioVolume"
+) | Set-Content -LiteralPath $dspConfigPath
 
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $stdoutPath = Join-Path $OutputDir "dolphin-$stamp.out.log"
@@ -59,7 +69,10 @@ $arguments = @(
     "--exec=$IsoPath",
     "--video_backend=$VideoBackend",
     "--config=Core.Framelimit=0",
-    "--config=DSP.Backend=No audio output"
+    "--config=Dolphin.DSP.Backend=$AudioBackend",
+    "--config=Dolphin.DSP.Volume=$AudioVolume",
+    "--config=DSP.Backend=$AudioBackend",
+    "--config=DSP.Volume=$AudioVolume"
 ) | ForEach-Object { ConvertTo-CommandLineArg $_ }
 
 $startedAt = Get-Date
@@ -130,6 +143,9 @@ foreach ($pattern in $badPatterns) {
     "Dolphin: $DolphinExe",
     "ISO: $IsoPath",
     "UserDir: $UserDir",
+    "AudioBackend: $AudioBackend",
+    "AudioVolume: $AudioVolume",
+    "DSPConfig: $dspConfigPath",
     "Started: $startedAt",
     "Ended: $endedAt",
     "Stdout: $stdoutPath",
