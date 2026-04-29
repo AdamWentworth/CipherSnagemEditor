@@ -115,109 +115,100 @@
           Height="330"
           Background="#303030">
         <Border Grid.Column="0" Background="#222222">
-            <Grid RowDefinitions="Auto,*">
-                <TextBox Classes="LegacyGiftSearch"
-                         Text="{Binding GiftPokemonSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         PlaceholderText="Search"
-                         IsTabStop="False"/>
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible">
-                    <ItemsControl ItemsSource="{Binding GiftPokemonEntries}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:GiftPokemonEntryViewModel">
-                                <Border PointerPressed="GiftPokemonPointerPressed"
-                                        Cursor="Hand"
-                                        HorizontalAlignment="Stretch"
-                                        Height="50"
-                                        Background="{Binding BackgroundBrush}"
-                                        BorderBrush="{Binding SelectionBorderBrush}"
-                                        BorderThickness="{Binding SelectionBorderThickness}">
-                                    <Grid ColumnDefinitions="52,*" ClipToBounds="True">
-                                        <Image Source="{Binding FaceImage}"
-                                               Width="48"
-                                               Height="48"
-                                               Stretch="Uniform"
-                                               HorizontalAlignment="Left"
-                                               VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{Binding RowText}"
-                                                   HorizontalAlignment="Stretch"
-                                                   VerticalAlignment="Center"
-                                                   FontSize="12"
-                                                   Foreground="#000000"
-                                                   TextAlignment="Center"
-                                                   TextWrapping="Wrap"
-                                                   MaxLines="2"
-                                                   Margin="2,0,8,0"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Grid>
+            <ScrollViewer VerticalScrollBarVisibility="Visible">
+                <ItemsControl ItemsSource="{Binding GiftPokemonEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GiftPokemonEntryViewModel">
+                            <Border PointerPressed="GiftPokemonPointerPressed"
+                                    Cursor="Hand"
+                                    HorizontalAlignment="Stretch"
+                                    Height="50"
+                                    Background="{Binding BackgroundBrush}"
+                                    BorderBrush="{Binding SelectionBorderBrush}"
+                                    BorderThickness="{Binding SelectionBorderThickness}">
+                                <Grid ColumnDefinitions="52,*" ClipToBounds="True">
+                                    <Image Source="{Binding FaceImage}"
+                                           Width="48"
+                                           Height="48"
+                                           Stretch="Uniform"
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding RowText}"
+                                               HorizontalAlignment="Stretch"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="#000000"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               MaxLines="2"
+                                               Margin="2,0,8,0"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </Border>
 
         <Canvas Grid.Column="1"
                 Width="360"
                 Height="330"
                 Background="#303030">
-            <Border Classes="LegacyGiftPanel" Canvas.Left="10" Canvas.Top="10" Width="340" Height="270">
+            <Border Classes="LegacyGiftPanel" Canvas.Left="15" Canvas.Top="10" Width="330" Height="280">
                 <Canvas>
-                    <Image Source="{Binding SelectedGiftPokemonDetail.FaceImage}" Canvas.Left="12" Canvas.Top="12" Width="64" Height="64" Stretch="Uniform"/>
-                    <TextBlock Text="Gift" Classes="LegacyGiftLabel" Canvas.Left="88" Canvas.Top="12" Width="60" Height="24"/>
-                    <TextBox Text="{Binding SelectedGiftPokemonDetail.GiftType, Mode=OneWay}" Classes="LegacyGiftField" IsReadOnly="True" Canvas.Left="148" Canvas.Top="12" Width="180"/>
-                    <TextBlock Text="Pokemon" Classes="LegacyGiftLabel" Canvas.Left="88" Canvas.Top="46" Width="60" Height="24"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="148" Canvas.Top="46" Width="180"
+                    <Image Classes="GiftPokemonBodyImage"
+                           DataContext="{Binding SelectedGiftPokemonDetail}"
+                           Source="{Binding BodyImage}"
+                           Canvas.Left="5"
+                           Canvas.Top="30"
+                           Width="80"
+                           Height="80"
+                           Stretch="Uniform"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo"
+                                                    Canvas.Left="90"
+                                                    Canvas.Top="30"
+                                                    Width="112"
+                                                    ItemsSource="{Binding SelectedGiftPokemonDetail.LevelOptions}"
+                                                    SelectedItem="{Binding SelectedGiftPokemonDetail.Level, Mode=TwoWay}"
+                                                    MaxDropDownHeight="260"/>
+                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo"
+                                                    Canvas.Left="207"
+                                                    Canvas.Top="30"
+                                                    Width="113"
                                                     ItemsSource="{Binding SelectedGiftPokemonDetail.SpeciesOptions}"
                                                     SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedSpecies, Mode=TwoWay}"
                                                     MaxDropDownHeight="260"/>
 
-                    <TextBlock Text="Level" Classes="LegacyGiftLabel" Canvas.Left="12" Canvas.Top="90" Width="52" Height="24"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="70" Canvas.Top="90" Width="78"
-                                                    ItemsSource="{Binding SelectedGiftPokemonDetail.LevelOptions}"
-                                                    SelectedItem="{Binding SelectedGiftPokemonDetail.Level, Mode=TwoWay}"
-                                                    MaxDropDownHeight="260"/>
-                    <TextBlock Text="Shiny" Classes="LegacyGiftLabel" Canvas.Left="162" Canvas.Top="90" Width="48" Height="24"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="212" Canvas.Top="90" Width="116"
-                                                    ItemsSource="{Binding SelectedGiftPokemonDetail.ShinyOptions}"
-                                                    SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedShiny, Mode=TwoWay}"/>
-
-                    <TextBlock Text="Moves" Classes="LegacyGiftHeader" Canvas.Left="12" Canvas.Top="124" Width="316" Height="20"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="12" Canvas.Top="148" Width="152"
+                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="5" Canvas.Top="185" Width="76"
                                                     ItemsSource="{Binding SelectedGiftPokemonDetail.MoveOptions}"
                                                     SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedMove1, Mode=TwoWay}"
+                                                    IsEnabled="{Binding SelectedGiftPokemonDetail.IsDistroGift}"
                                                     MaxDropDownHeight="260"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="176" Canvas.Top="148" Width="152"
+                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="86" Canvas.Top="185" Width="76"
                                                     ItemsSource="{Binding SelectedGiftPokemonDetail.MoveOptions}"
                                                     SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedMove2, Mode=TwoWay}"
+                                                    IsEnabled="{Binding SelectedGiftPokemonDetail.IsDistroGift}"
                                                     MaxDropDownHeight="260"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="12" Canvas.Top="180" Width="152"
+                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="167" Canvas.Top="185" Width="76"
                                                     ItemsSource="{Binding SelectedGiftPokemonDetail.MoveOptions}"
                                                     SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedMove3, Mode=TwoWay}"
+                                                    IsEnabled="{Binding SelectedGiftPokemonDetail.IsDistroGift}"
                                                     MaxDropDownHeight="260"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="176" Canvas.Top="180" Width="152"
+                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="248" Canvas.Top="185" Width="77"
                                                     ItemsSource="{Binding SelectedGiftPokemonDetail.MoveOptions}"
                                                     SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedMove4, Mode=TwoWay}"
-                                                    MaxDropDownHeight="260"/>
-
-                    <TextBlock Text="Gender" Classes="LegacyGiftLabel" Canvas.Left="12" Canvas.Top="218" Width="58" Height="24"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="70" Canvas.Top="218" Width="104"
-                                                    ItemsSource="{Binding SelectedGiftPokemonDetail.GenderOptions}"
-                                                    SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedGender, Mode=TwoWay}"/>
-                    <TextBlock Text="Nature" Classes="LegacyGiftLabel" Canvas.Left="184" Canvas.Top="218" Width="48" Height="24"/>
-                    <controls:LegacyPokemonComboBox Classes="LegacyGiftCombo" Canvas.Left="234" Canvas.Top="218" Width="94"
-                                                    ItemsSource="{Binding SelectedGiftPokemonDetail.NatureOptions}"
-                                                    SelectedItem="{Binding SelectedGiftPokemonDetail.SelectedNature, Mode=TwoWay}"
+                                                    IsEnabled="{Binding SelectedGiftPokemonDetail.IsDistroGift}"
                                                     MaxDropDownHeight="260"/>
                 </Canvas>
             </Border>
 
             <Button Classes="LegacyGiftButton"
-                    Canvas.Left="120"
-                    Canvas.Top="290"
-                    Width="120"
-                    Height="30"
+                    Canvas.Left="134"
+                    Canvas.Top="296"
+                    Width="92"
+                    Height="32"
                     Content="Save"
                     Command="{Binding SaveGiftPokemonCommand}"/>
         </Canvas>

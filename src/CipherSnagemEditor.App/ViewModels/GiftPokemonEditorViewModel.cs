@@ -1,11 +1,13 @@
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CipherSnagemEditor.App.Services;
 using CipherSnagemEditor.Colosseum.Data;
 
 namespace CipherSnagemEditor.App.ViewModels;
 
 public sealed partial class GiftPokemonEditorViewModel : ObservableObject
 {
+    private static readonly Dictionary<int, IReadOnlyList<PokemonBodyFrame>> BodyFrameCache = [];
     private readonly Action? _changed;
     private bool _isInitializing = true;
 
@@ -19,6 +21,8 @@ public sealed partial class GiftPokemonEditorViewModel : ObservableObject
         Resources = resources;
         FaceImage = faceImage;
         _changed = changed;
+        _bodyFrames = LoadBodyFrames(gift.SpeciesId);
+        _bodyImage = _bodyFrames.FirstOrDefault()?.Image;
         _selectedSpecies = resources.SpeciesOption(gift.SpeciesId);
         _level = gift.Level;
         _selectedMove1 = resources.MoveOption(gift.MoveIds.Count > 0 ? gift.MoveIds[0] : 0);
@@ -36,6 +40,18 @@ public sealed partial class GiftPokemonEditorViewModel : ObservableObject
     public GiftPokemonEditorResources Resources { get; }
 
     public Bitmap? FaceImage { get; }
+
+    public IReadOnlyList<PokemonBodyFrame> BodyFrames
+    {
+        get => _bodyFrames;
+        private set => SetProperty(ref _bodyFrames, value);
+    }
+
+    public Bitmap? BodyImage
+    {
+        get => _bodyImage;
+        private set => SetProperty(ref _bodyImage, value);
+    }
 
     public IReadOnlyList<PickerOptionViewModel> SpeciesOptions => Resources.SpeciesOptions;
 
@@ -95,6 +111,10 @@ public sealed partial class GiftPokemonEditorViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasChanges;
 
+    private IReadOnlyList<PokemonBodyFrame> _bodyFrames = [];
+
+    private Bitmap? _bodyImage;
+
     public ColosseumGiftPokemonUpdate ToUpdate()
         => new(
             Gift.RowId,
@@ -115,7 +135,11 @@ public sealed partial class GiftPokemonEditorViewModel : ObservableObject
         HasChanges = false;
     }
 
-    partial void OnSelectedSpeciesChanged(PickerOptionViewModel? value) => MarkChanged();
+    partial void OnSelectedSpeciesChanged(PickerOptionViewModel? value)
+    {
+        UpdateBodyImage(value?.Value ?? Gift.SpeciesId);
+        MarkChanged();
+    }
 
     partial void OnLevelChanged(int value) => MarkChanged();
 
@@ -142,5 +166,68 @@ public sealed partial class GiftPokemonEditorViewModel : ObservableObject
 
         HasChanges = true;
         _changed?.Invoke();
+    }
+
+    private void UpdateBodyImage(int speciesId)
+    {
+        BodyFrames = LoadBodyFrames(speciesId);
+        BodyImage = BodyFrames.FirstOrDefault()?.Image;
+    }
+
+    private static IReadOnlyList<PokemonBodyFrame> LoadBodyFrames(int speciesId)
+    {
+        if (BodyFrameCache.TryGetValue(speciesId, out var cached))
+        {
+            return cached;
+        }
+
+        var path = ResolveBodyImagePath(speciesId);
+        if (path is null)
+        {
+            BodyFrameCache[speciesId] = [];
+            return [];
+        }
+
+        try
+        {
+            var frames = ApngImageLoader.Load(path);
+            BodyFrameCache[speciesId] = frames;
+            return frames;
+        }
+        catch (Exception) when (File.Exists(path))
+        {
+            var fallback = new[] { new PokemonBodyFrame(new Bitmap(path), TimeSpan.FromMilliseconds(100)) };
+            BodyFrameCache[speciesId] = fallback;
+            return fallback;
+        }
+    }
+
+    private static string? ResolveBodyImagePath(int speciesId)
+    {
+        var fileName = $"body_{speciesId:000}.png";
+        foreach (var root in CandidateAssetRoots())
+        {
+            var path = Path.Combine(root, "assets", "images", "PokeBody", fileName);
+            if (File.Exists(path))
+            {
+                return path;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> CandidateAssetRoots()
+    {
+        var roots = new[] { AppContext.BaseDirectory, Environment.CurrentDirectory };
+        foreach (var root in roots)
+        {
+            var current = new DirectoryInfo(root);
+            while (current is not null)
+            {
+                yield return current.FullName;
+                current = current.Parent;
+            }
+        }
     }
 }

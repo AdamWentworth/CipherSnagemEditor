@@ -396,7 +396,7 @@ public partial class MainWindow : Window
             "Move Editor" => new Size(874, 504),
             "Item Editor" => new Size(860, 504),
             "Gift Pokemon Editor" => new Size(560, 354),
-            "Type Editor" => new Size(640, 590),
+            "Type Editor" => new Size(640, 540),
             "Treasure Editor" => new Size(642, 410),
             "Patches" => new Size(400, 504),
             "Randomizer" => new Size(390, 529),

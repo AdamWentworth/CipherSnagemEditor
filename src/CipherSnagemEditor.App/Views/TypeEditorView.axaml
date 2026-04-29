@@ -131,49 +131,43 @@
 
     <Grid ColumnDefinitions="200,440"
           Width="640"
-          Height="566"
+          Height="516"
           Background="#303030">
         <Border Grid.Column="0" Background="#222222">
-            <Grid RowDefinitions="Auto,*">
-                <TextBox Classes="LegacyTypeSearch"
-                         Text="{Binding TypeSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         PlaceholderText="Search"
-                         IsTabStop="False"/>
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible">
-                    <ItemsControl ItemsSource="{Binding TypeEntries}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:TypeEntryViewModel">
-                                <Border PointerPressed="TypePointerPressed"
-                                        Cursor="Hand"
-                                        HorizontalAlignment="Stretch"
-                                        Height="40"
-                                        Background="{Binding BackgroundBrush}"
-                                        BorderBrush="{Binding SelectionBorderBrush}"
-                                        BorderThickness="{Binding SelectionBorderThickness}">
-                                    <Grid ClipToBounds="True">
-                                        <Image Source="{Binding TypeImage}" Stretch="Fill"/>
-                                        <TextBlock Text="{Binding RowText}"
-                                                   HorizontalAlignment="Stretch"
-                                                   VerticalAlignment="Center"
-                                                   FontSize="12"
-                                                   Foreground="#000000"
-                                                   TextAlignment="Center"
-                                                   Margin="8,0"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Grid>
+            <ScrollViewer VerticalScrollBarVisibility="Visible">
+                <ItemsControl ItemsSource="{Binding TypeEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TypeEntryViewModel">
+                            <Border PointerPressed="TypePointerPressed"
+                                    Cursor="Hand"
+                                    HorizontalAlignment="Stretch"
+                                    Height="40"
+                                    Background="{Binding BackgroundBrush}"
+                                    BorderBrush="{Binding SelectionBorderBrush}"
+                                    BorderThickness="{Binding SelectionBorderThickness}">
+                                <Grid ClipToBounds="True">
+                                    <Image Source="{Binding TypeImage}" Stretch="Fill"/>
+                                    <TextBlock Text="{Binding RowText}"
+                                               HorizontalAlignment="Stretch"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="#000000"
+                                               TextAlignment="Center"
+                                               Margin="8,0"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </Border>
 
         <Canvas Grid.Column="1"
                 Width="440"
-                Height="566"
+                Height="516"
                 Background="#303030">
-            <Border Classes="LegacyTypePanel" Canvas.Left="8" Canvas.Top="12" Width="424" Height="542">
+            <Border Classes="LegacyTypePanel" Canvas.Left="8" Canvas.Top="10" Width="420" Height="496">
                 <Canvas>
                     <TextBlock Text="Name ID:" Classes="LegacyTypeLabel" Canvas.Left="18" Canvas.Top="18" Width="70" Height="24"/>
                     <TextBox Text="{Binding SelectedTypeDetail.NameId, Mode=TwoWay}" Classes="LegacyTypeField" Canvas.Left="90" Canvas.Top="18" Width="112" Height="28"/>
@@ -197,7 +191,7 @@
 
                     <ItemsControl ItemsSource="{Binding SelectedTypeDetail.Effectiveness}"
                                   Canvas.Left="18"
-                                  Canvas.Top="100"
+                                  Canvas.Top="96"
                                   Width="390"
                                   Height="360">
                         <ItemsControl.ItemsPanel>
@@ -227,10 +221,10 @@
                     </ItemsControl>
 
                     <Button Classes="LegacyTypeButton"
-                            Canvas.Left="150"
-                            Canvas.Top="492"
-                            Width="120"
-                            Height="30"
+                            Canvas.Left="143"
+                            Canvas.Top="451"
+                            Width="134"
+                            Height="32"
                             Content="Save"
                             Command="{Binding SaveTypeCommand}"/>
                 </Canvas>

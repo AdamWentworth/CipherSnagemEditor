@@ -9,8 +9,9 @@ namespace CipherSnagemEditor.App.ViewModels;
 
 public sealed partial class GiftPokemonEntryViewModel : ObservableObject
 {
-    private static readonly IBrush SelectionBrush = SolidColorBrush.Parse("#FFB000");
+    private static readonly IBrush SelectionBrush = Brushes.Black;
     private static readonly IBrush TransparentBrush = SolidColorBrush.Parse("#00000000");
+    private static readonly IBrush SelectedBackgroundBrush = SolidColorBrush.Parse("#F7B409FF");
     private static readonly Dictionary<int, Bitmap?> FaceImageCache = [];
 
     public GiftPokemonEntryViewModel(ColosseumGiftPokemon gift, int rowIndex)
@@ -21,6 +22,7 @@ public sealed partial class GiftPokemonEntryViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackgroundBrush))]
     [NotifyPropertyChangedFor(nameof(SelectionBorderBrush))]
     [NotifyPropertyChangedFor(nameof(SelectionBorderThickness))]
     private bool _isSelected;
@@ -35,16 +37,18 @@ public sealed partial class GiftPokemonEntryViewModel : ObservableObject
 
     public string SearchText => $"{Gift.RowId} {Gift.SpeciesName} {Gift.GiftType}";
 
-    public IBrush BackgroundBrush => SolidColorBrush.Parse(RowIndex switch
-    {
-        0 or 1 => "#80ACFFFF",
-        2 or 3 => "#FC6848FF",
-        _ => "#A8E79CFF"
-    });
+    public IBrush BackgroundBrush => IsSelected
+        ? SelectedBackgroundBrush
+        : SolidColorBrush.Parse(RowIndex switch
+        {
+            0 or 1 => "#80ACFFFF",
+            2 or 3 => "#FC6848FF",
+            _ => "#A8E79CFF"
+        });
 
     public IBrush SelectionBorderBrush => IsSelected ? SelectionBrush : TransparentBrush;
 
-    public Thickness SelectionBorderThickness => IsSelected ? new Thickness(2) : new Thickness(0);
+    public Thickness SelectionBorderThickness => IsSelected ? new Thickness(1) : new Thickness(0);
 
     private static Bitmap? LoadFaceImage(int speciesId)
     {
