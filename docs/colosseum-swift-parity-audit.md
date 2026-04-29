@@ -58,6 +58,29 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 
 The latest local run on 2026-04-29 passed against `GC6E`, including 75 message tables, 75 collision files, and 75 WZX probes.
 
+## Dolphin Smoke Matrix
+
+The latest local patch-sweep run on 2026-04-29 passed with Dolphin muted
+(`AudioBackend = No audio output`, `AudioVolume = 0`) for:
+
+- clean boot
+- editor-style Move Editor common.fsys rebuild/import
+- randomizer species and shop rebuild/import paths
+- Disable Save Corruption
+- Physical/Special Split
+- Add Soft Reset
+- Load PC From Anywhere
+- Infinite TMs
+- Gen 6 Critical-Hit Multiplier
+- Gen 7 Critical-Hit Ratios
+- Enable Debug Logs
+- No Type Icon For Locked Moves
+- Remove colbtl.bin Region Lock
+
+This is enough automated evidence to treat the Colosseum path as ready for the
+XD mode to begin. It is still boot/crash proof, not full gameplay proof for
+every branch-heavy patch effect.
+
 ## Highest Confidence Remaining Gaps
 
 1. Deeper patch behavior tests: the smoke matrix and closeout probe confirm patched ISOs rebuild and boot/parse, but patches that inject branches still need gameplay/save-state or DTM input verification to prove their runtime effect.

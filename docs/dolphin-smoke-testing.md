@@ -69,6 +69,10 @@ Useful patch sweep run:
   -MinimumSeconds 5
 ```
 
+Latest local patch-sweep result: passed on 2026-04-29 with muted audio for
+clean boot, editor move, species/shop randomizer paths, and all patch-sweep
+cases currently listed by the matrix.
+
 The CLI smoke operation is also callable directly for ad hoc copied ISOs:
 
 ```powershell
