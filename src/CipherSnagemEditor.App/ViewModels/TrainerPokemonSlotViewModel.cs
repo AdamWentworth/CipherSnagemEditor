@@ -405,7 +405,7 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
         var fileName = $"body_{speciesId:000}.png";
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "images", "PokeBody", fileName);
+            var path = Path.Combine(root, "assets", "images", "PokeBody", fileName);
             if (File.Exists(path))
             {
                 return path;

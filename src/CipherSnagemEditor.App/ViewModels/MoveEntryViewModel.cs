@@ -48,7 +48,7 @@ public sealed partial class MoveEntryViewModel : ObservableObject
         var fileName = id == "shadow" ? "type_shadow.png" : $"type_{id}.png";
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "images", "Types", fileName);
+            var path = Path.Combine(root, "assets", "images", "Types", fileName);
             if (!File.Exists(path))
             {
                 continue;

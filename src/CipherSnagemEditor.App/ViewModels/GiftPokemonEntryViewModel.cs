@@ -55,7 +55,7 @@ public sealed partial class GiftPokemonEntryViewModel : ObservableObject
 
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "images", "PokeFace", $"face_{speciesId:000}.png");
+            var path = Path.Combine(root, "assets", "images", "PokeFace", $"face_{speciesId:000}.png");
             if (!File.Exists(path))
             {
                 continue;

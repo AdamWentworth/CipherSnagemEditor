@@ -69,7 +69,7 @@ public sealed partial class TrainerEntryViewModel : ObservableObject
         var fileName = $"colo_trainer_{modelId}.png";
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "images", "ColoTrainers", fileName);
+            var path = Path.Combine(root, "assets", "images", "ColoTrainers", fileName);
             if (File.Exists(path))
             {
                 return path;

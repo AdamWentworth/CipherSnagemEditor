@@ -127,7 +127,7 @@ public sealed class MoveEditorResources
     {
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "json", "Colosseum", fileName);
+            var path = Path.Combine(root, "assets", "json", "Colosseum", fileName);
             if (!File.Exists(path))
             {
                 continue;

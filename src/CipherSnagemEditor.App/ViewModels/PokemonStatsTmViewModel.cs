@@ -53,7 +53,7 @@ public sealed partial class PokemonStatsTmViewModel : ObservableObject
 
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "images", "Types", $"type_{typeId}.png");
+            var path = Path.Combine(root, "assets", "images", "Types", $"type_{typeId}.png");
             if (!File.Exists(path))
             {
                 continue;

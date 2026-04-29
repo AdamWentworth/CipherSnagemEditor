@@ -78,6 +78,15 @@ Local-only folders:
 - `artifacts/` is ignored and used for local publish builds, screenshots, and
   temporary outputs.
 
+Recommended local `assets/` layout:
+
+```text
+assets/
+  images/   extracted/reference Pokemon, trainer, and type images
+  json/     local decoded table exports used for parity checks
+  ui/       flattened UI reference assets from the original tool
+```
+
 Tracked app assets belong under `src/CipherSnagemEditor.App/Assets`.
 
 ## Development Setup

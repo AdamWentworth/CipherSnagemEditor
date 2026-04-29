@@ -47,7 +47,7 @@ public sealed partial class TypeEntryViewModel : ObservableObject
 
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "images", "Types", $"type_{id}.png");
+            var path = Path.Combine(root, "assets", "images", "Types", $"type_{id}.png");
             if (!File.Exists(path))
             {
                 continue;

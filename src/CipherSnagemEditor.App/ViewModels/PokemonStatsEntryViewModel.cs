@@ -87,7 +87,7 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
     {
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "legacy-assets", "images", folder, fileName);
+            var path = Path.Combine(root, "assets", "images", folder, fileName);
             if (File.Exists(path))
             {
                 return path;

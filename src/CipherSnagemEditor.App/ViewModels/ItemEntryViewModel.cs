@@ -49,8 +49,7 @@ public sealed partial class ItemEntryViewModel : ObservableObject
         {
             var candidates = new[]
             {
-                Path.Combine(root, "legacy-assets", "images", "Item Cell.png"),
-                Path.Combine(root, "legacy-assets", "GoDToolOSX", "Assets.xcassets", "cell.imageset", "Item Cell.png")
+                Path.Combine(root, "assets", "ui", "cells", "item-cell.png")
             };
 
             foreach (var path in candidates)
