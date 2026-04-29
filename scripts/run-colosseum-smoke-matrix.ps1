@@ -16,6 +16,7 @@ param(
     [string]$VideoBackend = "Null",
     [string]$AudioBackend = "No audio output",
     [int]$AudioVolume = 0,
+    [switch]$PatchSweep,
     [switch]$SkipDolphin,
     [switch]$NoBuild
 )
@@ -50,6 +51,27 @@ if (-not (Test-Path -LiteralPath $dolphinScript)) {
 }
 
 New-Item -ItemType Directory -Force -Path $WorkRoot, $DolphinOutputRoot | Out-Null
+
+if ($PatchSweep) {
+    $Cases = @(
+        $Cases
+        "patch:PhysicalSpecialSplitApply"
+        "patch:AddSoftReset"
+        "patch:LoadPcFromAnywhere"
+        "patch:InfiniteTms"
+        "patch:Gen6CritMultipliers"
+        "patch:Gen7CritRatios"
+        "patch:EnableDebugLogs"
+        "patch:NoTypeIconForLockedMoves"
+        "patch:RemoveColbtlRegionLock"
+    ) | Select-Object -Unique
+}
+
+$Cases = @(
+    foreach ($case in $Cases) {
+        $case -split "," | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    }
+) | Select-Object -Unique
 
 function Assert-UnderPath([string]$Path, [string]$Root) {
     $fullPath = [System.IO.Path]::GetFullPath($Path)

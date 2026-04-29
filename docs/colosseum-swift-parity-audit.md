@@ -38,21 +38,21 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 | Gift Pokemon Editor | Near parity | Starter Espeon/Umbreon and Agate/Colosseum gift naming were corrected from the Swift manager mapping. Saves Start.dol-backed gift data. |
 | Type Editor | Near parity | Swift-style category radio buttons and labeled matchup grid are present. Saves Start.dol-backed type/matchup data. |
 | Treasure Editor | Near parity | Swift-style room list and detail layout are present. Treasure room/name resolution was corrected for blank entries. Saves common.rel data. |
-| Patches | Catalog parity, backend parity with regression coverage | The Colosseum patch list matches `XGPatcher.swift`, the PowerPC helper encodings used by ASM patches have regression tests, and the copied-ISO Dolphin smoke matrix covers at least one patched `Start.dol` boot path. |
+| Patches | Catalog parity, backend parity with regression coverage | The Colosseum patch list matches `XGPatcher.swift`, the PowerPC helper encodings used by ASM patches have regression tests, the patch sweep applies/imports the branch-heavy patches against copied ISOs, and Dolphin boot smoke covers representative patched `Start.dol` paths. |
 | Randomizer | Backend parity pass complete for Colosseum-visible options | Colosseum-visible options match the Swift controller. The backend now follows the Swift option buckets more closely, including Type 9 exclusion while it is `???`, evolution-line duplicate avoidance, all-randomized-trainer happiness, and Colosseum shop item script IDs. |
-| Message Editor | Functional parity target | Message table loading/editing/saving exists. Swift-style special tokens preserve payload bytes such as `[Pause]{1e}` and `[Spec Colour]{01020304}`. Parsed tables now preserve their original byte length when replacements fit, refuse fixed-size overflows when growth is disabled, and JSON imports update listed strings without dropping omitted strings. |
-| Collision Viewer | Visual parity target | Window exists and mirrors the legacy purpose. The parser now has regression coverage for the Swift collision table layout, interactable regions, section indexes, normals, and coordinate scaling. Real exported maps still need visual spot checks. |
+| Message Editor | Functional parity target | Message table loading/editing/saving exists. Swift-style special tokens preserve payload bytes such as `[Pause]{1e}` and `[Spec Colour]{01020304}`. Parsed tables now preserve their original byte length when replacements fit, refuse fixed-size overflows when growth is disabled, and JSON imports update listed strings without dropping omitted strings. The local parity probe round-trips real extracted ISO message tables semantically. |
+| Collision Viewer | Visual parity target | Window exists and mirrors the legacy purpose. The parser now has regression coverage for the Swift collision table layout, interactable regions, section indexes, normals, and coordinate scaling. The local parity probe parses real collision files from the clean ISO. Real visual spot checks are still useful. |
 | Interaction Editor | Near parity | Swift-style list/detail pass is done and saves common.rel interaction data. Needs broad room/script spot checks. |
-| Vertex Filters | Functional parity target | Lists exported `wzx.dat`-style model files and applies vertex color filters. Swift filter formulas and no-op behavior are covered by tests, but full parity should still be judged from exported model fixtures. |
+| Vertex Filters | Functional parity target | Lists exported `wzx.dat`-style model files and applies vertex color filters. Swift filter formulas and no-op behavior are covered by tests, and the local parity probe parses real WZX/DAT model assets from the clean ISO. Full visual parity should still be judged from exported model fixtures. |
 | Table Editor | Parity for Swift capability | Swift has Decode, Encode, and Document; its Edit button is empty. Editable raw tables are therefore not required for Colosseum parity unless we intentionally exceed the Swift tool later. |
 | ISO Explorer | Strong backend parity | Export/decode, import/encode, delete, Add File for FSYS archives, FSYS repack, `.msg.json`, LZSS, texture/model helpers, THP-style split/combine, shifting, GID display, FSYS entry identifiers, and copied-ISO Dolphin smoke coverage for rebuilt imports are covered. |
 
 ## Highest Confidence Remaining Gaps
 
-1. Deeper patch behavior tests: the smoke matrix confirms patched ISOs boot, but patches that inject branches still need gameplay/save-state verification to prove their runtime effect.
+1. Deeper patch behavior tests: the smoke matrix confirms patched ISOs boot, but patches that inject branches still need gameplay/save-state or DTM input verification to prove their runtime effect.
 2. Randomizer fixture tests: behavior now tracks the Swift buckets, but deterministic fixture tests would catch regressions in specific table writes.
-3. Message Editor real-file spot checks: fixed-size and growth behavior has synthetic coverage, but should be confirmed on several extracted `.msg` files from a clean workspace.
-4. Collision and Vertex Filters: verify on real exported assets because their correctness is mostly visual/data-format dependent.
+3. Message Editor text-control polish: backend real-file rebuild probes pass, but the window itself still deserves manual spot checks for multiline/special-token editing.
+4. Collision and Vertex Filters: parser probes run on real assets, but final confidence still requires visual spot checks because correctness is partly visual.
 
 ## Intentional Non-Gaps
 

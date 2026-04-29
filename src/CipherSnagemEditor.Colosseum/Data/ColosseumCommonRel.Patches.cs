@@ -517,7 +517,9 @@ public sealed partial class ColosseumCommonRel
                 continue;
             }
 
-            var values = JsonSerializer.Deserialize<int[]>(File.ReadAllText(candidate));
+            var values = JsonSerializer.Deserialize<int[]>(
+                File.ReadAllText(candidate),
+                new JsonSerializerOptions { AllowTrailingCommas = true });
             if (values is { Length: > 0 })
             {
                 return values;

@@ -46,6 +46,11 @@ The matrix copies the clean ISO into `.local/smoke-work/`, applies selected CLI 
 - `randomizer-species`: combined gift/trainer species randomization, `Start.dol`, and `common.fsys` growth
 - `randomizer-shops`: `pocket_menu.fsys` rebuild/import plus `Start.dol` shop script updates
 
+To broaden Start.dol patch coverage, add `-PatchSweep`. This appends the
+branch/ASM-heavy Colosseum patches to the matrix, including physical/special
+split, soft reset, PC from anywhere, reusable TMs, critical-hit patches, debug
+logs, locked-shadow-move type icon removal, and colbtl region unlocking.
+
 Useful targeted run:
 
 ```powershell
@@ -55,9 +60,35 @@ Useful targeted run:
   -MinimumSeconds 5
 ```
 
+Useful patch sweep run:
+
+```powershell
+.\scripts\run-colosseum-smoke-matrix.ps1 `
+  -PatchSweep `
+  -Seconds 20 `
+  -MinimumSeconds 5
+```
+
 The CLI smoke operation is also callable directly for ad hoc copied ISOs:
 
 ```powershell
 dotnet run --project .\src\CipherSnagemEditor.Cli\CipherSnagemEditor.Cli.csproj -- `
   smoke-apply "D:\Temp\Pokemon Colosseum - test.iso" editor-move
+```
+
+Run local parity probes against real ISO assets:
+
+```powershell
+.\scripts\run-colosseum-parity-probes.ps1
+```
+
+The probe walks the ignored clean ISO fixture directly and validates semantic
+message-table rebuilds, collision parser coverage, and WZX/DAT vertex-color
+model parsing without committing any game data. Useful overrides:
+
+```powershell
+.\scripts\run-colosseum-parity-probes.ps1 `
+  -Messages 100 `
+  -Assets 100 `
+  -NoBuild
 ```

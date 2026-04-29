@@ -1,5 +1,9 @@
 using CipherSnagemEditor.Colosseum;
 using CipherSnagemEditor.Colosseum.Data;
+using CipherSnagemEditor.Core.Archives;
+using CipherSnagemEditor.Core.Files;
+using CipherSnagemEditor.Core.GameCube;
+using CipherSnagemEditor.Core.Text;
 
 if (args.Length == 0)
 {
@@ -8,6 +12,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem trainers <iso>");
     Console.WriteLine("       ciphersnagem extract-iso <iso> <file-name> [output-path]");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
+    Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
     return 1;
 }
 
@@ -58,6 +63,21 @@ try
         }
 
         ApplySmokeOperation(args[1], args[2]);
+        return 0;
+    }
+
+    if (args[0].Equals("parity-probe", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
+            return 1;
+        }
+
+        RunParityProbe(
+            args[1],
+            ReadIntOption(args, "--messages", 50),
+            ReadIntOption(args, "--assets", 50));
         return 0;
     }
 
@@ -143,6 +163,226 @@ static void ExtractIsoFile(string isoPath, string fileName, string? outputPath)
 
     var extractedPath = context.ExtractIsoFile(entry, outputPath);
     Console.WriteLine(extractedPath);
+}
+
+static void RunParityProbe(string isoPath, int messageLimit, int assetLimit)
+{
+    var context = ColosseumProjectContext.Open(isoPath);
+    var iso = context.Iso ?? throw new InvalidOperationException("Input path did not load as an ISO.");
+    var failures = new List<string>();
+
+    var messageResult = ProbeMessages(iso, messageLimit, failures);
+    var collisionResult = ProbeCollision(iso, assetLimit, failures);
+    var vertexResult = ProbeVertexModels(iso, assetLimit, failures);
+
+    Console.WriteLine($"ISO: {iso.Path}");
+    Console.WriteLine($"Game ID: {iso.GameId}");
+    Console.WriteLine($"Messages: {messageResult.Tables} tables, {messageResult.Strings} strings, {messageResult.Bytes} bytes round-tripped.");
+    Console.WriteLine($"Collision: {collisionResult.Files} files, {collisionResult.NonEmptyFiles} non-empty, {collisionResult.Triangles} triangles parsed.");
+    Console.WriteLine($"Vertex models: {vertexResult.WzxFiles} WZX files, {vertexResult.Models} embedded DAT models, {vertexResult.VertexColours} vertex colours parsed.");
+
+    if (failures.Count == 0)
+    {
+        Console.WriteLine("Parity probe passed.");
+        return;
+    }
+
+    foreach (var failure in failures)
+    {
+        Console.Error.WriteLine($"Probe failure: {failure}");
+    }
+
+    throw new InvalidDataException($"Parity probe failed with {failures.Count} failure(s).");
+}
+
+static ProbeMessageResult ProbeMessages(GameCubeIso iso, int limit, ICollection<string> failures)
+{
+    var tableCount = 0;
+    var stringCount = 0;
+    long bytesChecked = 0;
+
+    foreach (var (isoEntry, archive) in EnumerateFsysArchives(iso))
+    {
+        foreach (var entry in archive.Entries.Where(entry => entry.FileType == GameFileType.Message))
+        {
+            if (tableCount >= limit)
+            {
+                return new ProbeMessageResult(tableCount, stringCount, bytesChecked);
+            }
+
+            try
+            {
+                var bytes = archive.Extract(entry);
+                var table = GameStringTable.Parse(bytes);
+                var rebuilt = table.ToArray(allowGrowth: false);
+                var reparsed = GameStringTable.Parse(rebuilt);
+                if (rebuilt.Length != bytes.Length)
+                {
+                    failures.Add($"{isoEntry.Name}/{entry.Name} rebuilt to {rebuilt.Length} bytes instead of {bytes.Length}.");
+                }
+
+                if (!SameStrings(table.Strings, reparsed.Strings))
+                {
+                    failures.Add($"{isoEntry.Name}/{entry.Name} did not preserve message IDs/text through rebuild.");
+                }
+
+                tableCount++;
+                stringCount += table.Strings.Count;
+                bytesChecked += bytes.Length;
+            }
+            catch (Exception ex) when (ex is InvalidDataException or ArgumentOutOfRangeException or EndOfStreamException or OverflowException)
+            {
+                failures.Add($"{isoEntry.Name}/{entry.Name} message parse/rebuild failed: {ex.Message}");
+            }
+        }
+    }
+
+    if (tableCount == 0)
+    {
+        failures.Add("No message tables were found to probe.");
+    }
+
+    return new ProbeMessageResult(tableCount, stringCount, bytesChecked);
+}
+
+static ProbeCollisionResult ProbeCollision(GameCubeIso iso, int limit, ICollection<string> failures)
+{
+    var files = 0;
+    var nonEmpty = 0;
+    var triangles = 0;
+
+    foreach (var (isoEntry, archive) in EnumerateFsysArchives(iso))
+    {
+        foreach (var entry in archive.Entries.Where(entry => entry.FileType == GameFileType.Collision))
+        {
+            if (files >= limit)
+            {
+                return new ProbeCollisionResult(files, nonEmpty, triangles);
+            }
+
+            try
+            {
+                var collision = ColosseumCollisionData.Parse(archive.Extract(entry));
+                files++;
+                triangles += collision.Triangles.Count;
+                if (collision.Triangles.Count > 0)
+                {
+                    nonEmpty++;
+                }
+            }
+            catch (Exception ex) when (ex is InvalidDataException or ArgumentOutOfRangeException or EndOfStreamException or OverflowException)
+            {
+                failures.Add($"{isoEntry.Name}/{entry.Name} collision parse failed: {ex.Message}");
+            }
+        }
+    }
+
+    if (files == 0)
+    {
+        failures.Add("No collision files were found to probe.");
+    }
+    else if (nonEmpty == 0)
+    {
+        failures.Add("Collision files were found, but none parsed into renderable triangles.");
+    }
+
+    return new ProbeCollisionResult(files, nonEmpty, triangles);
+}
+
+static ProbeVertexResult ProbeVertexModels(GameCubeIso iso, int limit, ICollection<string> failures)
+{
+    var wzxFiles = 0;
+    var models = 0;
+    var vertexColours = 0;
+
+    foreach (var (isoEntry, archive) in EnumerateFsysArchives(iso))
+    {
+        foreach (var entry in archive.Entries.Where(entry => entry.FileType == GameFileType.Wzx))
+        {
+            if (wzxFiles >= limit)
+            {
+                return new ProbeVertexResult(wzxFiles, models, vertexColours);
+            }
+
+            try
+            {
+                wzxFiles++;
+                foreach (var model in ColosseumLegacyFileCodecs.ExtractWzxDatModels(archive.Extract(entry)))
+                {
+                    models++;
+                    var parsed = ColosseumDatVertexColorModel.Parse(model.Data);
+                    vertexColours += parsed.VertexColors.Count;
+                }
+            }
+            catch (Exception ex) when (ex is InvalidDataException or ArgumentOutOfRangeException or EndOfStreamException or OverflowException)
+            {
+                failures.Add($"{isoEntry.Name}/{entry.Name} WZX/DAT vertex probe failed: {ex.Message}");
+            }
+        }
+    }
+
+    if (wzxFiles == 0)
+    {
+        failures.Add("No WZX files were found to probe.");
+    }
+    else if (models == 0)
+    {
+        failures.Add("WZX files were found, but no embedded DAT models were detected.");
+    }
+
+    return new ProbeVertexResult(wzxFiles, models, vertexColours);
+}
+
+static IEnumerable<(GameCubeIsoFileEntry Entry, FsysArchive Archive)> EnumerateFsysArchives(GameCubeIso iso)
+{
+    foreach (var entry in iso.Files.Where(entry => Path.GetExtension(entry.Name).Equals(".fsys", StringComparison.OrdinalIgnoreCase)))
+    {
+        FsysArchive archive;
+        try
+        {
+            archive = FsysArchive.Parse(entry.Name, GameCubeIsoReader.ReadFile(iso, entry));
+        }
+        catch (Exception ex) when (ex is InvalidDataException or ArgumentOutOfRangeException or EndOfStreamException or OverflowException)
+        {
+            continue;
+        }
+
+        yield return (entry, archive);
+    }
+}
+
+static bool SameStrings(IReadOnlyList<GameString> left, IReadOnlyList<GameString> right)
+{
+    if (left.Count != right.Count)
+    {
+        return false;
+    }
+
+    for (var index = 0; index < left.Count; index++)
+    {
+        if (left[index].Id != right[index].Id
+            || !string.Equals(left[index].Text, right[index].Text, StringComparison.Ordinal))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static int ReadIntOption(string[] args, string name, int fallback)
+{
+    for (var index = 0; index < args.Length - 1; index++)
+    {
+        if (args[index].Equals(name, StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(args[index + 1], out var parsed)
+            && parsed > 0)
+        {
+            return parsed;
+        }
+    }
+
+    return fallback;
 }
 
 static void ApplySmokeOperation(string isoPath, string operation)
@@ -336,3 +576,9 @@ static bool IsNamedPath(string path, string fileName)
 static bool ContainsDirectory(string path, string directoryName)
     => path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
         .Any(part => part.Equals(directoryName, StringComparison.OrdinalIgnoreCase));
+
+internal sealed record ProbeMessageResult(int Tables, int Strings, long Bytes);
+
+internal sealed record ProbeCollisionResult(int Files, int NonEmptyFiles, int Triangles);
+
+internal sealed record ProbeVertexResult(int WzxFiles, int Models, int VertexColours);

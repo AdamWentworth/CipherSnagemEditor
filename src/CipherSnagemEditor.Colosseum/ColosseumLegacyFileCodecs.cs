@@ -77,19 +77,26 @@ public static class ColosseumLegacyFileCodecs
                 continue;
             }
 
-            var modelLength = checked((int)BigEndian.ReadUInt32(wzx, modelStart));
-            var modelEnd = modelStart + modelLength;
+            var rawModelLength = BigEndian.ReadUInt32(wzx, modelStart);
+            if (rawModelLength > int.MaxValue)
+            {
+                searchStart = markerOffset + WzxDatHeaderTail.Length;
+                continue;
+            }
+
+            var modelLength = (int)rawModelLength;
+            var modelEnd = (long)modelStart + modelLength;
             if (modelLength > 32
                 && modelEnd <= wzx.Length
                 && LooksLikeDatLength(wzx, modelStart, modelLength)
-                && HasDatTrailer(wzx[modelStart..modelEnd]))
+                && HasDatTrailer(wzx[modelStart..(int)modelEnd]))
             {
                 models.Add(new EmbeddedDatModel(
                     models.Count,
                     modelStart,
                     modelLength,
                     wzx.Slice(modelStart, modelLength).ToArray()));
-                searchStart = modelEnd;
+                searchStart = (int)modelEnd;
             }
             else
             {
