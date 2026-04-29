@@ -28,6 +28,7 @@ This note tracks the backend behaviors copied from the Swift Colosseum Tool so t
 - `FsysArchiveTests` for direct FSYS add-file pointer/name/details updates, including pointer-table expansion.
 - `ColosseumLegacyFileCodecsTests` for direct PKX, WZX, and THP codec behavior.
 - `ColosseumTextureCodecTests` for texture, DAT texture, and GSW texture behavior.
+- `scripts/run-colosseum-smoke-matrix.ps1` for copied-ISO Dolphin boot smoke checks after `Start.dol`, `common.fsys`, and `pocket_menu.fsys` rebuild/import paths.
 
 ## Intentional Gaps
 

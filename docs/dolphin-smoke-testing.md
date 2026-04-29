@@ -30,3 +30,33 @@ Useful overrides:
 ```
 
 This is a crash/boot smoke layer, not full gameplay verification. Deeper parity tests should add save states or DTM input recordings that exercise specific patched behavior.
+
+Run the Colosseum rebuild matrix:
+
+```powershell
+.\scripts\run-colosseum-smoke-matrix.ps1
+```
+
+The matrix copies the clean ISO into `.local/smoke-work/`, applies selected CLI mutations to each copy, imports the changed workspace files back into the ISO, then runs the Dolphin smoke check against the result. The default cases cover:
+
+- `clean-boot`: untouched fixture boot
+- `patch-disable-save-corruption`: `Start.dol` patch import
+- `editor-move`: editor-style `common.fsys` rebuild/import
+- `randomizer-species`: combined gift/trainer species randomization, `Start.dol`, and `common.fsys` growth
+- `randomizer-shops`: `pocket_menu.fsys` rebuild/import plus `Start.dol` shop script updates
+
+Useful targeted run:
+
+```powershell
+.\scripts\run-colosseum-smoke-matrix.ps1 `
+  -Cases clean-boot,editor-move `
+  -Seconds 20 `
+  -MinimumSeconds 5
+```
+
+The CLI smoke operation is also callable directly for ad hoc copied ISOs:
+
+```powershell
+dotnet run --project .\src\CipherSnagemEditor.Cli\CipherSnagemEditor.Cli.csproj -- `
+  smoke-apply "D:\Temp\Pokemon Colosseum - test.iso" editor-move
+```
