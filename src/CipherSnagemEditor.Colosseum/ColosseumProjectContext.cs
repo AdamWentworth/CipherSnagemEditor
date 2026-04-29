@@ -127,6 +127,7 @@ public sealed class ColosseumProjectContext
             if (decode)
             {
                 decodedFiles.AddRange(DecodeExtractedFsysFiles(archive, folder, overwrite));
+                decodedFiles.AddRange(DecodeWorkspaceBinaryFiles(folder, overwrite));
             }
         }
 
@@ -869,6 +870,7 @@ public sealed class ColosseumProjectContext
                 if (encodeDecodedFiles)
                 {
                     encodedFiles.AddRange(EncodeDecodedMessageFiles(folder));
+                    encodedFiles.AddRange(EncodeWorkspaceBinaryFiles(folder));
                 }
 
                 if (packArchive)
@@ -955,6 +957,141 @@ public sealed class ColosseumProjectContext
         File.WriteAllBytes(messagePath, bytes);
         LoadedStringTables[messagePath] = table;
         LoadedFiles[messagePath] = bytes;
+    }
+
+    private static IEnumerable<string> DecodeWorkspaceBinaryFiles(string folder, bool overwrite)
+    {
+        if (!Directory.Exists(folder))
+        {
+            yield break;
+        }
+
+        foreach (var filePath in Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var fileType = GameFileTypes.FromExtension(filePath);
+            if (fileType == GameFileType.Pkx)
+            {
+                var datPath = filePath + ".dat";
+                if (File.Exists(datPath) && !overwrite)
+                {
+                    continue;
+                }
+
+                if (ColosseumLegacyFileCodecs.TryExportColosseumPkxDat(File.ReadAllBytes(filePath), out var dat))
+                {
+                    File.WriteAllBytes(datPath, dat);
+                    yield return datPath;
+                }
+            }
+            else if (fileType == GameFileType.Wzx)
+            {
+                foreach (var model in ColosseumLegacyFileCodecs.ExtractWzxDatModels(File.ReadAllBytes(filePath)))
+                {
+                    var modelPath = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(filePath)}_{model.Index}.wzx.dat");
+                    if (File.Exists(modelPath) && !overwrite)
+                    {
+                        continue;
+                    }
+
+                    File.WriteAllBytes(modelPath, model.Data);
+                    yield return modelPath;
+                }
+            }
+            else if (fileType == GameFileType.Thh)
+            {
+                var basePath = Path.Combine(folder, Path.GetFileNameWithoutExtension(filePath));
+                var bodyPath = basePath + GameFileTypes.ExtensionFor(GameFileType.Thd);
+                if (!File.Exists(bodyPath))
+                {
+                    continue;
+                }
+
+                var thpPath = basePath + GameFileTypes.ExtensionFor(GameFileType.Thp);
+                if (File.Exists(thpPath) && !overwrite)
+                {
+                    continue;
+                }
+
+                File.WriteAllBytes(
+                    thpPath,
+                    ColosseumLegacyFileCodecs.CombineThp(
+                        File.ReadAllBytes(filePath),
+                        File.ReadAllBytes(bodyPath)));
+                yield return thpPath;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EncodeWorkspaceBinaryFiles(string folder)
+    {
+        if (!Directory.Exists(folder))
+        {
+            yield break;
+        }
+
+        foreach (var thpPath in Directory.EnumerateFiles(folder, "*.thp", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!ColosseumLegacyFileCodecs.TrySplitThp(File.ReadAllBytes(thpPath), out var header, out var body))
+            {
+                continue;
+            }
+
+            var basePath = Path.Combine(folder, Path.GetFileNameWithoutExtension(thpPath));
+            File.WriteAllBytes(basePath + GameFileTypes.ExtensionFor(GameFileType.Thh), header);
+            File.WriteAllBytes(basePath + GameFileTypes.ExtensionFor(GameFileType.Thd), body);
+            yield return thpPath;
+        }
+
+        foreach (var pkxPath in Directory.EnumerateFiles(folder, "*.pkx", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var datPath = pkxPath + ".dat";
+            if (!File.Exists(datPath))
+            {
+                continue;
+            }
+
+            if (ColosseumLegacyFileCodecs.TryImportColosseumPkxDat(
+                File.ReadAllBytes(pkxPath),
+                File.ReadAllBytes(datPath),
+                out var importedPkx))
+            {
+                File.WriteAllBytes(pkxPath, importedPkx);
+                yield return datPath;
+            }
+        }
+
+        foreach (var wzxPath in Directory.EnumerateFiles(folder, "*.wzx", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var wzxBytes = File.ReadAllBytes(wzxPath);
+            var models = ColosseumLegacyFileCodecs.ExtractWzxDatModels(wzxBytes);
+            var changed = false;
+            foreach (var model in models)
+            {
+                var modelPath = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(wzxPath)}_{model.Index}.wzx.dat");
+                if (!File.Exists(modelPath))
+                {
+                    continue;
+                }
+
+                if (!ColosseumLegacyFileCodecs.TryImportWzxDatModel(
+                    wzxBytes,
+                    model.Index,
+                    File.ReadAllBytes(modelPath),
+                    out var importedWzx))
+                {
+                    continue;
+                }
+
+                wzxBytes = importedWzx;
+                changed = true;
+                yield return modelPath;
+            }
+
+            if (changed)
+            {
+                File.WriteAllBytes(wzxPath, wzxBytes);
+            }
+        }
     }
 
     private IsoWriteResult WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
