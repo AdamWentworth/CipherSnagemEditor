@@ -1001,13 +1001,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
     private async Task EncodeTableEditorAsync()
     {
-        await RunTableEditorActionAsync("Encode as editable JSON", definition => CurrentProject!.EncodeRawTable(definition));
+        await RunTableEditorActionAsync("Encode for editing via text files", definition => CurrentProject!.EncodeRawTable(definition));
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
     private async Task DecodeTableEditorAsync()
     {
-        await RunTableEditorActionAsync("Decode edited JSON back into the game", definition => CurrentProject!.DecodeRawTable(definition));
+        await RunTableEditorActionAsync("Decode edited files back into the game", definition => CurrentProject!.DecodeRawTable(definition));
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
@@ -1282,7 +1282,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        Logs.Add($"{action}: {SelectedTableEditorEntry.Name} writes editable JSON with named fields where the legacy schema is known; unsupported tables preserve raw bytes.");
+        Logs.Add($"{action}: {SelectedTableEditorEntry.Name} writes editable text files with named fields where the legacy schema is known; unsupported tables preserve raw bytes.");
     }
 
     private async Task RunTableEditorActionAsync(
