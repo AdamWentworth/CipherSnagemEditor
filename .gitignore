@@ -11,6 +11,9 @@ TestResults/
 *.user
 *.suo
 
+# Local emulator/game fixtures for smoke testing
+/.local/
+
 # Local game files and generated workspaces
 *.iso
 *.gcm
