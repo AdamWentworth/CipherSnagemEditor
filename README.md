@@ -120,6 +120,13 @@ Test:
 dotnet test CipherSnagemEditor.slnx --no-build
 ```
 
+Run the local Colosseum closeout probes, if `.local\fixtures\Pokemon Colosseum.iso`
+exists:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-colosseum-closeout.ps1
+```
+
 Publish a Windows build:
 
 ```powershell

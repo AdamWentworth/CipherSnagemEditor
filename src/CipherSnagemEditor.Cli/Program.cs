@@ -12,6 +12,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem trainers <iso>");
     Console.WriteLine("       ciphersnagem extract-iso <iso> <file-name> [output-path]");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
+    Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
     return 1;
 }
@@ -78,6 +79,18 @@ try
             args[1],
             ReadIntOption(args, "--messages", 50),
             ReadIntOption(args, "--assets", 50));
+        return 0;
+    }
+
+    if (args[0].Equals("closeout-probe", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem closeout-probe <iso>");
+            return 1;
+        }
+
+        RunCloseoutProbe(args[1]);
         return 0;
     }
 
@@ -193,6 +206,185 @@ static void RunParityProbe(string isoPath, int messageLimit, int assetLimit)
     }
 
     throw new InvalidDataException($"Parity probe failed with {failures.Count} failure(s).");
+}
+
+static void RunCloseoutProbe(string isoPath)
+{
+    isoPath = Path.GetFullPath(isoPath);
+    var failures = new List<string>();
+
+    ProbePriorityEditorRoundTrips(isoPath, failures);
+    ProbeRepresentativePatchRoundTrip(isoPath, failures);
+    ProbeRandomizerRoundTrip(isoPath, failures);
+
+    Console.WriteLine($"Closeout ISO: {isoPath}");
+    if (failures.Count == 0)
+    {
+        Console.WriteLine("Closeout probe passed.");
+        return;
+    }
+
+    foreach (var failure in failures)
+    {
+        Console.Error.WriteLine($"Closeout failure: {failure}");
+    }
+
+    throw new InvalidDataException($"Closeout probe failed with {failures.Count} failure(s).");
+}
+
+static void ProbePriorityEditorRoundTrips(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        var context = ColosseumProjectContext.Open(isoPath);
+
+        var trainer = context.LoadStoryTrainers().First(candidate => candidate.Pokemon.Any(pokemon => pokemon.IsSet));
+        var trainerPokemon = trainer.Pokemon.First(pokemon => pokemon.IsSet);
+        var trainerLevel = trainerPokemon.Level >= 99 ? trainerPokemon.Level - 1 : trainerPokemon.Level + 1;
+        var trainerWrite = context.SaveTrainerPokemon(
+        [
+            TrainerPokemonUpdateFor(trainerPokemon, level: trainerLevel)
+        ]);
+        ImportWrittenFiles(context, [trainerWrite]);
+
+        context = ColosseumProjectContext.Open(isoPath);
+        var reopenedTrainerPokemon = context.LoadStoryTrainers()
+            .SelectMany(candidate => candidate.Pokemon)
+            .First(pokemon => pokemon.Index == trainerPokemon.Index);
+        Expect(reopenedTrainerPokemon.Level == trainerLevel, failures, $"Trainer Editor did not persist Pokemon level for row {trainerPokemon.Index}.");
+
+        var stats = context.LoadPokemonStats().First(candidate => candidate.Index > 0 && candidate.NameId > 0 && candidate.CatchRate > 0);
+        var hp = stats.Hp >= 255 ? stats.Hp - 1 : stats.Hp + 1;
+        var statsWrite = context.SavePokemonStats(PokemonStatsUpdateFor(stats, hp: hp));
+        ImportWrittenFiles(context, [statsWrite]);
+
+        context = ColosseumProjectContext.Open(isoPath);
+        var reopenedStats = context.LoadPokemonStats().First(candidate => candidate.Index == stats.Index);
+        Expect(reopenedStats.Hp == hp, failures, $"Pokemon Stats Editor did not persist HP for {stats.Name}.");
+
+        var move = context.LoadMoves()
+            .FirstOrDefault(candidate => candidate.Name.Equals("ICE PUNCH", StringComparison.OrdinalIgnoreCase))
+            ?? context.LoadMoves().First(candidate => candidate.Index > 0 && !candidate.IsShadow && candidate.Pp > 0);
+        var pp = move.Pp >= 64 ? move.Pp - 1 : move.Pp + 1;
+        var moveWrite = context.SaveMove(MoveUpdateFor(move, pp: pp));
+        ImportWrittenFiles(context, [moveWrite]);
+
+        context = ColosseumProjectContext.Open(isoPath);
+        var reopenedMove = context.LoadMoves().First(candidate => candidate.Index == move.Index);
+        Expect(reopenedMove.Pp == pp, failures, $"Move Editor did not persist PP for {move.Name}.");
+
+        var item = context.LoadItems().First(candidate => candidate.Index > 0 && candidate.NameId > 0 && candidate.Price > 0);
+        var price = item.Price >= 65000 ? item.Price - 100 : item.Price + 100;
+        var itemWrite = context.SaveItem(ItemUpdateFor(item, price: price));
+        ImportWrittenFiles(context, [itemWrite]);
+
+        context = ColosseumProjectContext.Open(isoPath);
+        var reopenedItem = context.LoadItems().First(candidate => candidate.Index == item.Index);
+        Expect(reopenedItem.Price == price, failures, $"Item Editor did not persist price for {item.Name}.");
+
+        var type = context.LoadTypes().First(candidate => candidate.Effectiveness.Count >= 18);
+        var effectiveness = type.Effectiveness.ToArray();
+        effectiveness[0] = effectiveness[0] == 0x41 ? 0x3f : 0x41;
+        var typeWrite = context.SaveType(new ColosseumTypeUpdate(type.Index, type.NameId, type.CategoryId, effectiveness));
+        ImportWrittenFiles(context, [typeWrite]);
+
+        context = ColosseumProjectContext.Open(isoPath);
+        var reopenedType = context.LoadTypes().First(candidate => candidate.Index == type.Index);
+        Expect(reopenedType.Effectiveness[0] == effectiveness[0], failures, $"Type Editor did not persist matchup value for {type.Name}.");
+
+        var treasure = context.LoadTreasures().First(candidate => candidate.Index > 0 && candidate.ItemId > 0);
+        var quantity = treasure.Quantity >= 99 ? treasure.Quantity - 1 : treasure.Quantity + 1;
+        var treasureWrite = context.SaveTreasure(TreasureUpdateFor(treasure, quantity: quantity));
+        ImportWrittenFiles(context, [treasureWrite]);
+
+        context = ColosseumProjectContext.Open(isoPath);
+        var reopenedTreasure = context.LoadTreasures().First(candidate => candidate.Index == treasure.Index);
+        Expect(reopenedTreasure.Quantity == quantity, failures, $"Treasure Editor did not persist quantity for treasure {treasure.Index}.");
+
+        var gifts = context.LoadGiftPokemon();
+        var gift = gifts.FirstOrDefault(candidate => candidate.RowId == 5 && candidate.StartOffset > 0)
+            ?? gifts.FirstOrDefault(candidate => candidate.StartOffset > 0);
+        if (gift is not null)
+        {
+            var giftLevel = gift.Level >= 99 ? gift.Level - 1 : gift.Level + 1;
+            var giftWrite = context.SaveGiftPokemon(new ColosseumGiftPokemonUpdate(
+                gift.RowId,
+                gift.SpeciesId,
+                giftLevel,
+                gift.MoveIds,
+                gift.ShinyValue,
+                gift.Gender,
+                gift.Nature));
+            ImportWrittenFiles(context, [giftWrite]);
+
+            context = ColosseumProjectContext.Open(isoPath);
+            var reopenedGift = context.LoadGiftPokemon().First(candidate => candidate.RowId == gift.RowId);
+            Expect(reopenedGift.Level == giftLevel, failures, $"Gift Pokemon Editor did not persist level for {gift.GiftType}.");
+        }
+
+        Console.WriteLine("Priority editor save/import/reopen probe passed.");
+    }
+    catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or IOException or ArgumentOutOfRangeException)
+    {
+        failures.Add($"Priority editor probe failed: {ex.Message}");
+    }
+}
+
+static void ProbeRepresentativePatchRoundTrip(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        var context = ColosseumProjectContext.Open(isoPath);
+        var result = context.ApplyPatch(ColosseumPatchKind.PhysicalSpecialSplitApply);
+        Expect(result.WrittenFiles.Count > 0, failures, "Physical/special split patch did not write any workspace files.");
+        ImportWrittenFiles(context, result.WrittenFiles);
+
+        var reopened = ColosseumProjectContext.Open(isoPath);
+        Expect(reopened.LoadCommonRel().IsPhysicalSpecialSplitImplemented, failures, "Physical/special split patch was not detected after import/reopen.");
+        Console.WriteLine("Representative patch apply/import/reopen probe passed.");
+    }
+    catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or IOException or ArgumentOutOfRangeException or NotSupportedException)
+    {
+        failures.Add($"Patch probe failed: {ex.Message}");
+    }
+}
+
+static void ProbeRandomizerRoundTrip(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        var context = ColosseumProjectContext.Open(isoPath);
+        var result = context.Randomize(new ColosseumRandomizerOptions(
+            StarterPokemon: false,
+            ShadowPokemon: false,
+            NpcPokemon: false,
+            PokemonMoves: false,
+            PokemonTypes: false,
+            PokemonAbilities: false,
+            PokemonStats: false,
+            PokemonEvolutions: false,
+            MoveTypes: true,
+            TypeMatchups: true,
+            TmMoves: true,
+            ItemBoxes: true,
+            ShopItems: true,
+            SimilarBaseStatTotal: false,
+            RemoveItemOrTradeEvolutions: false));
+        Expect(result.WrittenFiles.Count > 0, failures, "Randomizer did not write any workspace files.");
+        Expect(result.Messages.Count > 0, failures, "Randomizer did not report any changes.");
+        ImportWrittenFiles(context, result.WrittenFiles);
+
+        var reopened = ColosseumProjectContext.Open(isoPath);
+        Expect(reopened.LoadMoves().Any(move => move.Index > 0), failures, "Move table did not reload after randomizer import.");
+        Expect(reopened.LoadTypes().All(type => type.Effectiveness.Count == 18), failures, "Type matchup rows did not reload with 18 entries after randomizer import.");
+        Expect(reopened.LoadTreasures().Any(treasure => treasure.ItemId > 0), failures, "Treasure table did not reload after randomizer import.");
+        Expect(reopened.LoadItems().Any(item => item.Index > 0), failures, "Item table did not reload after randomizer import.");
+        Console.WriteLine("Randomizer write/import/reopen probe passed.");
+    }
+    catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or IOException or ArgumentOutOfRangeException)
+    {
+        failures.Add($"Randomizer probe failed: {ex.Message}");
+    }
 }
 
 static ProbeMessageResult ProbeMessages(GameCubeIso iso, int limit, ICollection<string> failures)
@@ -384,6 +576,126 @@ static int ReadIntOption(string[] args, string name, int fallback)
 
     return fallback;
 }
+
+static void Expect(bool condition, ICollection<string> failures, string message)
+{
+    if (!condition)
+    {
+        failures.Add(message);
+    }
+}
+
+static ColosseumTrainerPokemonUpdate TrainerPokemonUpdateFor(
+    ColosseumTrainerPokemon pokemon,
+    int? level = null,
+    int? happiness = null)
+    => new(
+        pokemon.Index,
+        pokemon.SpeciesId,
+        level ?? pokemon.Level,
+        pokemon.ShadowId,
+        pokemon.ItemId,
+        pokemon.PokeballId,
+        pokemon.Ability,
+        pokemon.Nature,
+        pokemon.Gender,
+        happiness ?? pokemon.Happiness,
+        pokemon.Iv,
+        pokemon.Evs,
+        pokemon.Moves.Select(move => move.Index).ToArray(),
+        pokemon.ShadowData?.HeartGauge ?? 0,
+        pokemon.ShadowData?.FirstTrainerId ?? 0,
+        pokemon.ShadowData?.AlternateFirstTrainerId ?? 0,
+        pokemon.ShadowData?.CatchRate ?? 0);
+
+static ColosseumPokemonStatsUpdate PokemonStatsUpdateFor(
+    ColosseumPokemonStats pokemon,
+    int? hp = null)
+    => new(
+        pokemon.Index,
+        pokemon.NameId,
+        pokemon.ExpRate,
+        pokemon.GenderRatio,
+        pokemon.BaseExp,
+        pokemon.BaseHappiness,
+        pokemon.Height,
+        pokemon.Weight,
+        pokemon.Type1,
+        pokemon.Type2,
+        pokemon.Ability1,
+        pokemon.Ability2,
+        pokemon.HeldItem1,
+        pokemon.HeldItem2,
+        pokemon.CatchRate,
+        hp ?? pokemon.Hp,
+        pokemon.Attack,
+        pokemon.Defense,
+        pokemon.SpecialAttack,
+        pokemon.SpecialDefense,
+        pokemon.Speed,
+        pokemon.HpYield,
+        pokemon.AttackYield,
+        pokemon.DefenseYield,
+        pokemon.SpecialAttackYield,
+        pokemon.SpecialDefenseYield,
+        pokemon.SpeedYield,
+        pokemon.LearnableTms,
+        pokemon.LevelUpMoves,
+        pokemon.Evolutions);
+
+static ColosseumMoveUpdate MoveUpdateFor(ColosseumMove move, int? pp = null)
+    => new(
+        move.Index,
+        move.NameId,
+        move.DescriptionId,
+        move.TypeId,
+        move.TargetId,
+        move.CategoryId,
+        move.AnimationId,
+        move.Animation2Id,
+        move.EffectId,
+        move.EffectTypeId,
+        move.Power,
+        move.Accuracy,
+        pp ?? move.Pp,
+        move.Priority,
+        move.EffectAccuracy,
+        move.HmFlag,
+        move.SoundBasedFlag,
+        move.ContactFlag,
+        move.KingsRockFlag,
+        move.ProtectFlag,
+        move.SnatchFlag,
+        move.MagicCoatFlag,
+        move.MirrorMoveFlag);
+
+static ColosseumItemUpdate ItemUpdateFor(ColosseumItem item, int? price = null)
+    => new(
+        item.Index,
+        item.NameId,
+        item.DescriptionId,
+        item.BagSlotId,
+        item.CanBeHeld,
+        price ?? item.Price,
+        item.CouponPrice,
+        item.Parameter,
+        item.HoldItemId,
+        item.InBattleUseId,
+        item.FriendshipEffects,
+        item.TmIndex,
+        item.TmMoveId);
+
+static ColosseumTreasureUpdate TreasureUpdateFor(ColosseumTreasure treasure, int? quantity = null)
+    => new(
+        treasure.Index,
+        treasure.ModelId,
+        quantity ?? treasure.Quantity,
+        treasure.Angle,
+        treasure.RoomId,
+        treasure.ItemId,
+        treasure.X,
+        treasure.Y,
+        treasure.Z);
 
 static void ApplySmokeOperation(string isoPath, string operation)
 {

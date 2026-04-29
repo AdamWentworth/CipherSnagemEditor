@@ -332,7 +332,7 @@ public sealed partial class ColosseumCommonRel
     {
         var typeIds = RandomTypeIds();
         var count = 0;
-        foreach (var move in Moves)
+        foreach (var move in Moves.Where(move => move.Index > 0))
         {
             WriteMove(MoveUpdateFor(move, typeId: RandomElement(typeIds)));
             count++;
@@ -361,7 +361,7 @@ public sealed partial class ColosseumCommonRel
     {
         var usedMoveIds = new HashSet<int>();
         var count = 0;
-        foreach (var tm in TmMoves)
+        foreach (var tm in TmMoves.ToArray())
         {
             WriteTmMove(tm.Index, RandomMoveId(usedMoveIds: usedMoveIds));
             RefreshItemForTm(tm.Index);
