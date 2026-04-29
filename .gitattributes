@@ -1,0 +1,5 @@
+* text=auto
+
+.gitattributes text eol=lf
+*.sh text eol=lf
+*.desktop text eol=lf

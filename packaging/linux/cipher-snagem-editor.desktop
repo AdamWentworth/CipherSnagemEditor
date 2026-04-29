@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Cipher Snagem Editor
+Comment=Pokemon Colosseum and Pokemon XD modding editor
+Exec=@INSTALL_DIR@/run-cipher-snagem-editor.sh %f
+Icon=cipher-snagem-editor
+Terminal=false
+Categories=Game;Utility;Development;
+StartupWMClass=CipherSnagemEditor.App

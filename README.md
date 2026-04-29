@@ -55,7 +55,6 @@ Implemented or in progress:
 Future scope:
 
 - Pokemon XD: Gale of Darkness support
-- deeper patcher/randomizer parity
 - cross-platform packaging for macOS and Linux
 
 ## Repository Layout
@@ -131,6 +130,13 @@ Publish a Windows build:
 
 ```powershell
 dotnet publish src\CipherSnagemEditor.App\CipherSnagemEditor.App.csproj -c Release -r win-x64 --self-contained false -o artifacts\publish-win-x64
+```
+
+Publish an experimental self-contained Linux build for Ubuntu-style x64
+machines:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1
 ```
 
 ## Legal And Data Hygiene
