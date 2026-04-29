@@ -88,7 +88,14 @@ assets/
   ui/       flattened UI reference assets from the original tool
 ```
 
-Tracked app assets belong under `src/CipherSnagemEditor.App/Assets`.
+Tracked app assets belong under `src/CipherSnagemEditor.App/Assets`:
+
+```text
+Assets/
+  AppIcon.ico
+  Images/   images bundled into the app
+  Ui/       UI chrome and control artwork bundled into the app
+```
 
 ## Development Setup
 

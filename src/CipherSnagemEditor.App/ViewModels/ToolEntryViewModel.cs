@@ -12,9 +12,9 @@ public sealed partial class ToolEntryViewModel : ObservableObject
     private static readonly IBrush ToolCellFallback = SolidColorBrush.Parse("#e7c995");
     private static readonly IBrush SelectedCellFallback = SolidColorBrush.Parse("#b8d9f0");
 
-    private static readonly IImage? ItemCellImage = LoadImage("avares://CipherSnagemEditor.App/Assets/LegacyCells/ItemCell.png");
-    private static readonly IImage? ToolCellImage = LoadImage("avares://CipherSnagemEditor.App/Assets/LegacyCells/ToolCell.png");
-    private static readonly IImage? SelectedCellImage = LoadImage("avares://CipherSnagemEditor.App/Assets/LegacyCells/SelectedCell.png");
+    private static readonly IImage? ItemCellImage = LoadImage("avares://CipherSnagemEditor.App/Assets/Ui/Cells/item-cell.png");
+    private static readonly IImage? ToolCellImage = LoadImage("avares://CipherSnagemEditor.App/Assets/Ui/Cells/tool-cell.png");
+    private static readonly IImage? SelectedCellImage = LoadImage("avares://CipherSnagemEditor.App/Assets/Ui/Cells/selected-cell.png");
 
     public ToolEntryViewModel(int index, ColosseumToolDefinition definition)
     {

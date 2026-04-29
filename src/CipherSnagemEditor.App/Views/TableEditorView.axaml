@@ -140,7 +140,7 @@
                     Width="340"
                     Height="546">
                 <Canvas Width="340" Height="546">
-                    <Image Source="/Assets/PokeBalls/BallRed.png"
+                    <Image Source="/Assets/Images/PokeBalls/ball-red.png"
                            Canvas.Left="120"
                            Canvas.Top="20"
                            Width="100"

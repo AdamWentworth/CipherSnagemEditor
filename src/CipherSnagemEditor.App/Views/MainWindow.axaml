@@ -9,7 +9,7 @@
         d:DesignHeight="504"
         x:Class="CipherSnagemEditor.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/AppIcon.ico"
         Title="{Binding WindowTitle}"
         Width="640"
         Height="504"

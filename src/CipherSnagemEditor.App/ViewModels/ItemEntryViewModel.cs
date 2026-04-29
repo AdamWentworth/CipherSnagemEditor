@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CipherSnagemEditor.Colosseum.Data;
 
@@ -45,6 +46,16 @@ public sealed partial class ItemEntryViewModel : ObservableObject
         }
 
         s_itemCellImageLoaded = true;
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri("avares://CipherSnagemEditor.App/Assets/Ui/Cells/item-cell.png"));
+            s_itemCellImage = new Bitmap(stream);
+            return s_itemCellImage;
+        }
+        catch
+        {
+        }
+
         foreach (var root in CandidateAssetRoots())
         {
             var candidates = new[]
