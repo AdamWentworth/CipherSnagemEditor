@@ -170,10 +170,12 @@
                          SelectionBrush="#80ACFF"
                          BorderBrush="#5C5C5C"
                          BorderThickness="1"/>
-                <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Visible">
-                    <ItemsControl ItemsSource="{Binding PokemonStatsEntries}">
-                        <ItemsControl.ItemTemplate>
+                <ListBox Grid.Row="1"
+                         Classes="LegacySidebarList"
+                         ItemsSource="{Binding PokemonStatsEntries}"
+                         SelectedItem="{Binding SelectedPokemonStats, Mode=TwoWay}"
+                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                    <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:PokemonStatsEntryViewModel">
                                 <Border PointerPressed="PokemonStatsPointerPressed"
                                         Cursor="Hand"
@@ -206,9 +208,8 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Grid>
         </Border>
 

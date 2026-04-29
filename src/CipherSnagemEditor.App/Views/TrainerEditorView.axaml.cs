@@ -13,6 +13,8 @@ public partial class TrainerEditorView : UserControl
 {
     private readonly DispatcherTimer _spriteTimer;
     private TimeSpan _spriteClock = TimeSpan.Zero;
+    private IReadOnlyList<Image> _bodyImages = [];
+    private int _bodyImageRefreshTicks;
 
     public TrainerEditorView()
     {
@@ -37,10 +39,18 @@ public partial class TrainerEditorView : UserControl
     private void AnimatePokemonBodies(object? sender, EventArgs e)
     {
         _spriteClock += _spriteTimer.Interval;
-
-        foreach (var image in this.GetVisualDescendants().OfType<Image>())
+        if (_bodyImages.Count == 0 || _bodyImageRefreshTicks-- <= 0)
         {
-            if (!image.Classes.Contains("PokemonBodyImage") || !image.IsVisible)
+            _bodyImages = this.GetVisualDescendants()
+                .OfType<Image>()
+                .Where(image => image.Classes.Contains("PokemonBodyImage"))
+                .ToArray();
+            _bodyImageRefreshTicks = 25;
+        }
+
+        foreach (var image in _bodyImages)
+        {
+            if (!image.IsVisible)
             {
                 continue;
             }

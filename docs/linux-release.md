@@ -20,6 +20,10 @@ From the repo root:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1
 ```
 
+The script's default Debian package version is kept in
+`scripts/publish-linux.ps1`; bump it when producing a new package you want
+Ubuntu to treat as an upgrade.
+
 That creates:
 
 ```text
@@ -33,6 +37,9 @@ artifacts/
 
 By default the package is self-contained, so the Ubuntu test machine should not
 need a separately installed .NET runtime.
+
+Self-contained Linux builds also use ReadyToRun by default to reduce cold-start
+JIT work on Ubuntu. Use `-NoReadyToRun` if you need a smaller diagnostic build.
 
 The `.deb` is the preferred Ubuntu artifact. It installs the app under
 `/opt/cipher-snagem-editor`, registers the GNOME desktop entry, and installs the
@@ -74,7 +81,7 @@ That installs the app under `~/.local/share/cipher-snagem-editor`, installs the
 PNG icon under `~/.local/share/icons`, and creates a desktop entry under
 `~/.local/share/applications`.
 
-The package must contain the lower-case runtime asset tree:
+The package must contain the runtime image asset tree:
 
 ```text
 assets/images/ColoTrainers/
@@ -83,9 +90,9 @@ assets/images/PokeFace/
 assets/images/Types/
 ```
 
-Those paths are intentionally lower-case at the root because the app's editor
-view models resolve them from `assets/images/...`, and Linux filesystems are
-case-sensitive.
+Windows-built packages may materialize that tree as `Assets/images/...` because
+the app also has Avalonia resources under `Assets/`. The runtime resolver accepts
+both spellings so the same package works on case-sensitive Linux filesystems.
 
 ## Validation Checklist
 

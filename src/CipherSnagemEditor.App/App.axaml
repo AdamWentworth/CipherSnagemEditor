@@ -17,5 +17,20 @@
             <Setter Property="SelectionBrush" Value="#80ACFF"/>
             <Setter Property="PlaceholderForeground" Value="#666666"/>
         </Style>
+        <Style Selector="ListBox.LegacySidebarList">
+            <Setter Property="Background" Value="#222222"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        </Style>
+        <Style Selector="ListBox.LegacySidebarList ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
     </Application.Styles>
 </Application>

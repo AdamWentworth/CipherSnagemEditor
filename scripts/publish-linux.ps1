@@ -6,7 +6,8 @@ param(
     [switch]$FrameworkDependent,
     [switch]$NoArchive,
     [switch]$NoDeb,
-    [string]$PackageVersion = "0.1.0"
+    [switch]$NoReadyToRun,
+    [string]$PackageVersion = "0.1.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -66,10 +67,12 @@ if (Test-Path -LiteralPath $debPath) {
 }
 
 $selfContained = if ($FrameworkDependent) { "false" } else { "true" }
+$readyToRun = if ($FrameworkDependent -or $NoReadyToRun) { "false" } else { "true" }
 dotnet publish $projectPath `
     -c $Configuration `
     -r $Runtime `
     --self-contained $selfContained `
+    -p:PublishReadyToRun=$readyToRun `
     -o $publishDir
 if ($LASTEXITCODE -ne 0) {
     throw "Linux publish failed for $Runtime."
@@ -115,6 +118,7 @@ if (-not $NoDeb) {
 Write-Host "Linux publish complete."
 Write-Host "Runtime: $Runtime"
 Write-Host "Self-contained: $selfContained"
+Write-Host "ReadyToRun: $readyToRun"
 Write-Host "Package directory: $packageDir"
 if (-not $NoArchive) {
     Write-Host "Archive: $archivePath"

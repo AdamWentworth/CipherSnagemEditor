@@ -11,22 +11,34 @@ public sealed partial class PokemonStatsTmViewModel : ObservableObject
 {
     private static readonly IBrush BorderBrush = SolidColorBrush.Parse("#FFFFFF");
     private static readonly IBrush TransparentBorderBrush = SolidColorBrush.Parse("#00FFFFFF");
-    private static readonly Dictionary<int, Bitmap?> TypeImageCache = [];
     private readonly Action? _changed;
+    private Bitmap? _typeImage;
+    private bool _typeImageLoaded;
 
     public PokemonStatsTmViewModel(ColosseumTmMove tm, bool isLearnable, Action? changed)
     {
         Tm = tm;
         _isLearnable = isLearnable;
         _changed = changed;
-        TypeImage = LoadTypeImage(tm.TypeId);
     }
 
     public ColosseumTmMove Tm { get; }
 
     public string MoveName => Tm.MoveName;
 
-    public Bitmap? TypeImage { get; }
+    public Bitmap? TypeImage
+    {
+        get
+        {
+            if (!_typeImageLoaded)
+            {
+                _typeImage = RuntimeImageAssets.LoadImage("Types", $"type_{Tm.TypeId}.png");
+                _typeImageLoaded = true;
+            }
+
+            return _typeImage;
+        }
+    }
 
     public IBrush TypeFallbackBrush => FallbackForType(Tm.TypeId);
 
@@ -42,37 +54,6 @@ public sealed partial class PokemonStatsTmViewModel : ObservableObject
     partial void OnIsLearnableChanged(bool value)
     {
         _changed?.Invoke();
-    }
-
-    private static Bitmap? LoadTypeImage(int typeId)
-    {
-        if (TypeImageCache.TryGetValue(typeId, out var cached))
-        {
-            return cached;
-        }
-
-        foreach (var root in CandidateAssetRoots())
-        {
-            var path = Path.Combine(root, "assets", "images", "Types", $"type_{typeId}.png");
-            if (!File.Exists(path))
-            {
-                continue;
-            }
-
-            try
-            {
-                var image = ApngImageLoader.Load(path).FirstOrDefault()?.Image;
-                TypeImageCache[typeId] = image;
-                return image;
-            }
-            catch
-            {
-                break;
-            }
-        }
-
-        TypeImageCache[typeId] = null;
-        return null;
     }
 
     private static IBrush FallbackForType(int typeId)
@@ -99,22 +80,4 @@ public sealed partial class PokemonStatsTmViewModel : ObservableObject
             _ => "#80ACFF"
         });
 
-    private static IEnumerable<string> CandidateAssetRoots()
-    {
-        var roots = new[]
-        {
-            AppContext.BaseDirectory,
-            Environment.CurrentDirectory
-        };
-
-        foreach (var root in roots)
-        {
-            var current = new DirectoryInfo(root);
-            while (current is not null)
-            {
-                yield return current.FullName;
-                current = current.Parent;
-            }
-        }
-    }
 }

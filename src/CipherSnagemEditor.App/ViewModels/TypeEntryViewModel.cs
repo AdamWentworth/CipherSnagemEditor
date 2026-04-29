@@ -11,12 +11,12 @@ public sealed partial class TypeEntryViewModel : ObservableObject
 {
     private static readonly IBrush SelectionBrush = Brushes.Black;
     private static readonly IBrush TransparentBrush = SolidColorBrush.Parse("#00000000");
-    private static readonly Dictionary<int, Bitmap?> TypeImageCache = [];
+    private Bitmap? _typeImage;
+    private bool _typeImageLoaded;
 
     public TypeEntryViewModel(ColosseumTypeData type)
     {
         Type = type;
-        TypeImage = LoadTypeImage(type.Index);
     }
 
     [ObservableProperty]
@@ -26,7 +26,19 @@ public sealed partial class TypeEntryViewModel : ObservableObject
 
     public ColosseumTypeData Type { get; }
 
-    public Bitmap? TypeImage { get; }
+    public Bitmap? TypeImage
+    {
+        get
+        {
+            if (!_typeImageLoaded)
+            {
+                _typeImage = RuntimeImageAssets.LoadImage("Types", $"type_{Type.Index}.png");
+                _typeImageLoaded = true;
+            }
+
+            return _typeImage;
+        }
+    }
 
     public string RowText => Type.Name;
 
@@ -38,48 +50,4 @@ public sealed partial class TypeEntryViewModel : ObservableObject
 
     public Thickness SelectionBorderThickness => IsSelected ? new Thickness(1) : new Thickness(0);
 
-    private static Bitmap? LoadTypeImage(int id)
-    {
-        if (TypeImageCache.TryGetValue(id, out var cached))
-        {
-            return cached;
-        }
-
-        foreach (var root in CandidateAssetRoots())
-        {
-            var path = Path.Combine(root, "assets", "images", "Types", $"type_{id}.png");
-            if (!File.Exists(path))
-            {
-                continue;
-            }
-
-            try
-            {
-                var image = ApngImageLoader.Load(path).FirstOrDefault()?.Image;
-                TypeImageCache[id] = image;
-                return image;
-            }
-            catch
-            {
-                break;
-            }
-        }
-
-        TypeImageCache[id] = null;
-        return null;
-    }
-
-    private static IEnumerable<string> CandidateAssetRoots()
-    {
-        var roots = new[] { AppContext.BaseDirectory, Environment.CurrentDirectory };
-        foreach (var root in roots)
-        {
-            var current = new DirectoryInfo(root);
-            while (current is not null)
-            {
-                yield return current.FullName;
-                current = current.Parent;
-            }
-        }
-    }
 }

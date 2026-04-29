@@ -134,9 +134,11 @@
           Height="516"
           Background="#303030">
         <Border Grid.Column="0" Background="#222222">
-            <ScrollViewer VerticalScrollBarVisibility="Visible">
-                <ItemsControl ItemsSource="{Binding TypeEntries}">
-                    <ItemsControl.ItemTemplate>
+            <ListBox Classes="LegacySidebarList"
+                     ItemsSource="{Binding TypeEntries}"
+                     SelectedItem="{Binding SelectedType, Mode=TwoWay}"
+                     ScrollViewer.VerticalScrollBarVisibility="Visible">
+                <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:TypeEntryViewModel">
                             <Border PointerPressed="TypePointerPressed"
                                     Cursor="Hand"
@@ -158,9 +160,8 @@
                                 </Grid>
                             </Border>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Border>
 
         <Canvas Grid.Column="1"

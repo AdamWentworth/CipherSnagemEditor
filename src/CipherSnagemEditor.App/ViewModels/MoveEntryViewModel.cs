@@ -11,12 +11,12 @@ public sealed partial class MoveEntryViewModel : ObservableObject
 {
     private static readonly IBrush SelectionBrush = SolidColorBrush.Parse("#000000");
     private static readonly IBrush TransparentSelectionBrush = SolidColorBrush.Parse("#00000000");
-    private static readonly Dictionary<string, Bitmap?> TypeImageCache = [];
+    private Bitmap? _typeImage;
+    private bool _typeImageLoaded;
 
     public MoveEntryViewModel(ColosseumMove move)
     {
         Move = move;
-        TypeImage = LoadTypeImage(move.IsShadow ? "shadow" : move.TypeId.ToString());
     }
 
     [ObservableProperty]
@@ -26,7 +26,20 @@ public sealed partial class MoveEntryViewModel : ObservableObject
 
     public ColosseumMove Move { get; }
 
-    public Bitmap? TypeImage { get; }
+    public Bitmap? TypeImage
+    {
+        get
+        {
+            if (!_typeImageLoaded)
+            {
+                var fileName = Move.IsShadow ? "type_shadow.png" : $"type_{Move.TypeId}.png";
+                _typeImage = RuntimeImageAssets.LoadImage("Types", fileName);
+                _typeImageLoaded = true;
+            }
+
+            return _typeImage;
+        }
+    }
 
     public string RowText => Move.Name;
 
@@ -37,38 +50,6 @@ public sealed partial class MoveEntryViewModel : ObservableObject
     public IBrush SelectionBorderBrush => IsSelected ? SelectionBrush : TransparentSelectionBrush;
 
     public Thickness SelectionBorderThickness => IsSelected ? new Thickness(1) : new Thickness(0);
-
-    private static Bitmap? LoadTypeImage(string id)
-    {
-        if (TypeImageCache.TryGetValue(id, out var cached))
-        {
-            return cached;
-        }
-
-        var fileName = id == "shadow" ? "type_shadow.png" : $"type_{id}.png";
-        foreach (var root in CandidateAssetRoots())
-        {
-            var path = Path.Combine(root, "assets", "images", "Types", fileName);
-            if (!File.Exists(path))
-            {
-                continue;
-            }
-
-            try
-            {
-                var image = ApngImageLoader.Load(path).FirstOrDefault()?.Image;
-                TypeImageCache[id] = image;
-                return image;
-            }
-            catch
-            {
-                break;
-            }
-        }
-
-        TypeImageCache[id] = null;
-        return null;
-    }
 
     private static IBrush TypeFallbackBrush(int typeId)
         => SolidColorBrush.Parse(typeId switch
@@ -95,22 +76,4 @@ public sealed partial class MoveEntryViewModel : ObservableObject
             _ => "#80ACFF"
         });
 
-    private static IEnumerable<string> CandidateAssetRoots()
-    {
-        var roots = new[]
-        {
-            AppContext.BaseDirectory,
-            Environment.CurrentDirectory
-        };
-
-        foreach (var root in roots)
-        {
-            var current = new DirectoryInfo(root);
-            while (current is not null)
-            {
-                yield return current.FullName;
-                current = current.Parent;
-            }
-        }
-    }
 }

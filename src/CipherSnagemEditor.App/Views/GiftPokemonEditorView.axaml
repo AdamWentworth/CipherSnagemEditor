@@ -115,9 +115,11 @@
           Height="330"
           Background="#303030">
         <Border Grid.Column="0" Background="#222222">
-            <ScrollViewer VerticalScrollBarVisibility="Visible">
-                <ItemsControl ItemsSource="{Binding GiftPokemonEntries}">
-                    <ItemsControl.ItemTemplate>
+            <ListBox Classes="LegacySidebarList"
+                     ItemsSource="{Binding GiftPokemonEntries}"
+                     SelectedItem="{Binding SelectedGiftPokemon, Mode=TwoWay}"
+                     ScrollViewer.VerticalScrollBarVisibility="Visible">
+                <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:GiftPokemonEntryViewModel">
                             <Border PointerPressed="GiftPokemonPointerPressed"
                                     Cursor="Hand"
@@ -147,9 +149,8 @@
                                 </Grid>
                             </Border>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Border>
 
         <Canvas Grid.Column="1"

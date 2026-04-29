@@ -22,7 +22,6 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     private static readonly IBrush EmptyImageBrush = SolidColorBrush.Parse("#777777");
     private static readonly IBrush LightTextBrush = SolidColorBrush.Parse("#FFFFFF");
     private static readonly IBrush MutedTextBrush = SolidColorBrush.Parse("#D0D0D0");
-    private static readonly Dictionary<int, IReadOnlyList<PokemonBodyFrame>> BodyFrameCache = [];
     private static readonly IReadOnlyList<int> LevelValues = Enumerable.Range(0, 101).ToArray();
     private readonly TrainerPokemonEditorResources _resources;
     private readonly Action? _changed;
@@ -373,65 +372,6 @@ public sealed partial class TrainerPokemonSlotViewModel : ObservableObject
     }
 
     private static IReadOnlyList<PokemonBodyFrame> LoadBodyFrames(int speciesId)
-    {
-        if (BodyFrameCache.TryGetValue(speciesId, out var cached))
-        {
-            return cached;
-        }
-
-        var path = ResolveBodyImagePath(speciesId);
-        if (path is null)
-        {
-            BodyFrameCache[speciesId] = [];
-            return [];
-        }
-
-        try
-        {
-            var frames = ApngImageLoader.Load(path);
-            BodyFrameCache[speciesId] = frames;
-            return frames;
-        }
-        catch (Exception) when (File.Exists(path))
-        {
-            var fallback = new[] { new PokemonBodyFrame(new Bitmap(path), TimeSpan.FromMilliseconds(100)) };
-            BodyFrameCache[speciesId] = fallback;
-            return fallback;
-        }
-    }
-
-    private static string? ResolveBodyImagePath(int speciesId)
-    {
-        var fileName = $"body_{speciesId:000}.png";
-        foreach (var root in CandidateAssetRoots())
-        {
-            var path = Path.Combine(root, "assets", "images", "PokeBody", fileName);
-            if (File.Exists(path))
-            {
-                return path;
-            }
-        }
-
-        return null;
-    }
-
-    private static IEnumerable<string> CandidateAssetRoots()
-    {
-        var roots = new[]
-        {
-            AppContext.BaseDirectory,
-            Environment.CurrentDirectory
-        };
-
-        foreach (var root in roots)
-        {
-            var current = new DirectoryInfo(root);
-            while (current is not null)
-            {
-                yield return current.FullName;
-                current = current.Parent;
-            }
-        }
-    }
+        => RuntimeImageAssets.LoadBodyFrames(speciesId);
 
 }

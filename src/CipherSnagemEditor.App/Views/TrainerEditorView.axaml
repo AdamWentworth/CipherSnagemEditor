@@ -171,10 +171,11 @@
                          SelectionBrush="#80ACFF"
                          BorderBrush="#5C5C5C"
                          BorderThickness="1"/>
-                <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Trainers}">
-                        <ItemsControl.ItemTemplate>
+                <ListBox Grid.Row="1"
+                         Classes="LegacySidebarList"
+                         ItemsSource="{Binding Trainers}"
+                         SelectedItem="{Binding SelectedTrainer, Mode=TwoWay}">
+                    <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:TrainerEntryViewModel">
                                 <Border PointerPressed="TrainerPointerPressed"
                                         Cursor="Hand"
@@ -202,9 +203,8 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Grid>
         </Border>
 

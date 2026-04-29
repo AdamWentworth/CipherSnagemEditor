@@ -194,10 +194,12 @@
                          Text="{Binding MoveSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          PlaceholderText="Search"
                          IsTabStop="False"/>
-                <ScrollViewer Grid.Row="1"
-                              VerticalScrollBarVisibility="Visible">
-                    <ItemsControl ItemsSource="{Binding MoveEntries}">
-                        <ItemsControl.ItemTemplate>
+                <ListBox Grid.Row="1"
+                         Classes="LegacySidebarList"
+                         ItemsSource="{Binding MoveEntries}"
+                         SelectedItem="{Binding SelectedMove, Mode=TwoWay}"
+                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                    <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:MoveEntryViewModel">
                                 <Border PointerPressed="MovePointerPressed"
                                         Cursor="Hand"
@@ -222,9 +224,8 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Grid>
         </Border>
 

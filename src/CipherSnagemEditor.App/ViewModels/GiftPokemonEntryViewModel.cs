@@ -12,13 +12,13 @@ public sealed partial class GiftPokemonEntryViewModel : ObservableObject
     private static readonly IBrush SelectionBrush = Brushes.Black;
     private static readonly IBrush TransparentBrush = SolidColorBrush.Parse("#00000000");
     private static readonly IBrush SelectedBackgroundBrush = SolidColorBrush.Parse("#F7B409FF");
-    private static readonly Dictionary<int, Bitmap?> FaceImageCache = [];
+    private Bitmap? _faceImage;
+    private bool _faceImageLoaded;
 
     public GiftPokemonEntryViewModel(ColosseumGiftPokemon gift, int rowIndex)
     {
         Gift = gift;
         RowIndex = rowIndex;
-        FaceImage = LoadFaceImage(gift.SpeciesId);
     }
 
     [ObservableProperty]
@@ -31,7 +31,19 @@ public sealed partial class GiftPokemonEntryViewModel : ObservableObject
 
     public int RowIndex { get; }
 
-    public Bitmap? FaceImage { get; }
+    public Bitmap? FaceImage
+    {
+        get
+        {
+            if (!_faceImageLoaded)
+            {
+                _faceImage = RuntimeImageAssets.LoadImage("PokeFace", $"face_{Gift.SpeciesId:000}.png");
+                _faceImageLoaded = true;
+            }
+
+            return _faceImage;
+        }
+    }
 
     public string RowText => $"{Gift.SpeciesName} Lv. {Gift.Level}\n{Gift.GiftType}";
 
@@ -50,48 +62,4 @@ public sealed partial class GiftPokemonEntryViewModel : ObservableObject
 
     public Thickness SelectionBorderThickness => IsSelected ? new Thickness(1) : new Thickness(0);
 
-    private static Bitmap? LoadFaceImage(int speciesId)
-    {
-        if (FaceImageCache.TryGetValue(speciesId, out var cached))
-        {
-            return cached;
-        }
-
-        foreach (var root in CandidateAssetRoots())
-        {
-            var path = Path.Combine(root, "assets", "images", "PokeFace", $"face_{speciesId:000}.png");
-            if (!File.Exists(path))
-            {
-                continue;
-            }
-
-            try
-            {
-                var image = ApngImageLoader.Load(path).FirstOrDefault()?.Image;
-                FaceImageCache[speciesId] = image;
-                return image;
-            }
-            catch
-            {
-                break;
-            }
-        }
-
-        FaceImageCache[speciesId] = null;
-        return null;
-    }
-
-    private static IEnumerable<string> CandidateAssetRoots()
-    {
-        var roots = new[] { AppContext.BaseDirectory, Environment.CurrentDirectory };
-        foreach (var root in roots)
-        {
-            var current = new DirectoryInfo(root);
-            while (current is not null)
-            {
-                yield return current.FullName;
-                current = current.Parent;
-            }
-        }
-    }
 }

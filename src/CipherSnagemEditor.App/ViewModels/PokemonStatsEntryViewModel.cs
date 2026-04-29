@@ -11,14 +11,14 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
 {
     private static readonly IBrush SelectionBrush = SolidColorBrush.Parse("#000000");
     private static readonly IBrush TransparentSelectionBrush = SolidColorBrush.Parse("#00000000");
-    private static readonly Dictionary<int, Bitmap?> FaceImageCache = [];
-    private static readonly Dictionary<int, Bitmap?> TypeImageCache = [];
+    private Bitmap? _faceImage;
+    private Bitmap? _typeImage;
+    private bool _faceImageLoaded;
+    private bool _typeImageLoaded;
 
     public PokemonStatsEntryViewModel(ColosseumPokemonStats stats)
     {
         Stats = stats;
-        FaceImage = LoadFaceImage(stats.Index);
-        TypeImage = LoadTypeImage(stats.Type1);
     }
 
     [ObservableProperty]
@@ -30,9 +30,33 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
 
     public ColosseumPokemonStats Stats { get; }
 
-    public Bitmap? FaceImage { get; }
+    public Bitmap? FaceImage
+    {
+        get
+        {
+            if (!_faceImageLoaded)
+            {
+                _faceImage = RuntimeImageAssets.LoadImage("PokeFace", $"face_{Stats.Index:000}.png");
+                _faceImageLoaded = true;
+            }
 
-    public Bitmap? TypeImage { get; }
+            return _faceImage;
+        }
+    }
+
+    public Bitmap? TypeImage
+    {
+        get
+        {
+            if (!_typeImageLoaded)
+            {
+                _typeImage = RuntimeImageAssets.LoadImage("Types", $"type_{Stats.Type1}.png");
+                _typeImageLoaded = true;
+            }
+
+            return _typeImage;
+        }
+    }
 
     public string RowText => Stats.Name;
 
@@ -45,76 +69,6 @@ public sealed partial class PokemonStatsEntryViewModel : ObservableObject
     public IBrush SelectionBorderBrush => IsSelected ? SelectionBrush : TransparentSelectionBrush;
 
     public Thickness SelectionBorderThickness => IsSelected ? new Thickness(1) : new Thickness(0);
-
-    private static Bitmap? LoadFaceImage(int speciesId)
-        => LoadCachedImage(FaceImageCache, speciesId, "PokeFace", $"face_{speciesId:000}.png");
-
-    private static Bitmap? LoadTypeImage(int typeId)
-        => LoadCachedImage(TypeImageCache, typeId, "Types", $"type_{typeId}.png");
-
-    private static Bitmap? LoadCachedImage(
-        IDictionary<int, Bitmap?> cache,
-        int id,
-        string folder,
-        string fileName)
-    {
-        if (cache.TryGetValue(id, out var cached))
-        {
-            return cached;
-        }
-
-        var path = ResolveImagePath(folder, fileName);
-        if (path is null)
-        {
-            cache[id] = null;
-            return null;
-        }
-
-        try
-        {
-            var image = ApngImageLoader.Load(path).FirstOrDefault()?.Image;
-            cache[id] = image;
-            return image;
-        }
-        catch
-        {
-            cache[id] = null;
-            return null;
-        }
-    }
-
-    private static string? ResolveImagePath(string folder, string fileName)
-    {
-        foreach (var root in CandidateAssetRoots())
-        {
-            var path = Path.Combine(root, "assets", "images", folder, fileName);
-            if (File.Exists(path))
-            {
-                return path;
-            }
-        }
-
-        return null;
-    }
-
-    private static IEnumerable<string> CandidateAssetRoots()
-    {
-        var roots = new[]
-        {
-            AppContext.BaseDirectory,
-            Environment.CurrentDirectory
-        };
-
-        foreach (var root in roots)
-        {
-            var current = new DirectoryInfo(root);
-            while (current is not null)
-            {
-                yield return current.FullName;
-                current = current.Parent;
-            }
-        }
-    }
 
     private static IBrush TypeFallbackBrush(int typeId)
         => SolidColorBrush.Parse(typeId switch
