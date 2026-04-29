@@ -56,32 +56,6 @@ public sealed partial class ItemEntryViewModel : ObservableObject
         {
         }
 
-        foreach (var root in CandidateAssetRoots())
-        {
-            var candidates = new[]
-            {
-                Path.Combine(root, "assets", "ui", "cells", "item-cell.png")
-            };
-
-            foreach (var path in candidates)
-            {
-                if (!File.Exists(path))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    s_itemCellImage = new Bitmap(path);
-                    return s_itemCellImage;
-                }
-                catch
-                {
-                    return null;
-                }
-            }
-        }
-
         return null;
     }
 
@@ -98,23 +72,4 @@ public sealed partial class ItemEntryViewModel : ObservableObject
             7 => "#C0C0C8FF",
             _ => "#FFFFFFFF"
         });
-
-    private static IEnumerable<string> CandidateAssetRoots()
-    {
-        var roots = new[]
-        {
-            AppContext.BaseDirectory,
-            Environment.CurrentDirectory
-        };
-
-        foreach (var root in roots)
-        {
-            var current = new DirectoryInfo(root);
-            while (current is not null)
-            {
-                yield return current.FullName;
-                current = current.Parent;
-            }
-        }
-    }
 }
