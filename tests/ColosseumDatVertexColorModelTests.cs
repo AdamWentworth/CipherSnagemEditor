@@ -5,6 +5,37 @@ namespace CipherSnagemEditor.Tests;
 
 public sealed class ColosseumDatVertexColorModelTests
 {
+    [Theory]
+    [InlineData(ColosseumVertexColorFilter.None, 10, 20, 30)]
+    [InlineData(ColosseumVertexColorFilter.MinorRedShift, 30, 10, 20)]
+    [InlineData(ColosseumVertexColorFilter.RedScale, 30, 15, 15)]
+    [InlineData(ColosseumVertexColorFilter.PrimaryShift, 20, 30, 10)]
+    [InlineData(ColosseumVertexColorFilter.ReversePrimaryShift, 30, 10, 20)]
+    public void AppliesSwiftVertexFilterFormulas(
+        ColosseumVertexColorFilter filter,
+        int expectedRed,
+        int expectedGreen,
+        int expectedBlue)
+    {
+        var original = new ColosseumDatVertexColor(
+            0x100,
+            0x120,
+            ColosseumDatVertexColorFormat.Rgba8,
+            4,
+            10,
+            20,
+            30,
+            0xff,
+            0);
+
+        var filtered = ColosseumDatVertexColorModel.ApplyFilter(original, filter);
+
+        Assert.Equal(expectedRed, filtered.Red);
+        Assert.Equal(expectedGreen, filtered.Green);
+        Assert.Equal(expectedBlue, filtered.Blue);
+        Assert.Equal(0xff, filtered.Alpha);
+    }
+
     [Fact]
     public void ParsesAndWritesRgba8VertexColours()
     {
@@ -31,6 +62,19 @@ public sealed class ColosseumDatVertexColorModelTests
         Assert.Equal(0, edited[0x126]);
         Assert.Equal(0xff, edited[0x127]);
         Assert.Equal((byte)'s', edited[0x1a8]);
+    }
+
+    [Fact]
+    public void NoneFilterLeavesDatBytesUnchanged()
+    {
+        var bytes = BuildTinyDatWithRgba8VertexColours();
+        var model = ColosseumDatVertexColorModel.Parse(bytes);
+
+        var editedCount = model.ApplyFilter(ColosseumVertexColorFilter.None);
+        var edited = model.ToArray();
+
+        Assert.Equal(2, editedCount);
+        Assert.Equal(bytes, edited);
     }
 
     private static byte[] BuildTinyDatWithRgba8VertexColours()

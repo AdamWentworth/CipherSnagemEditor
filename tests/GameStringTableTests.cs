@@ -74,6 +74,64 @@ public sealed class GameStringTableTests
         ], bytes[0x18..]);
     }
 
+    [Fact]
+    public void PreservesParsedTableLengthWhenReplacementFits()
+    {
+        var original = CreateOneStringTable(7,
+        [
+            0, (byte)'O',
+            0, (byte)'l',
+            0, (byte)'d',
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0
+        ]);
+
+        var rebuilt = GameStringTable.Parse(original)
+            .WithString(7, "Newer")
+            .ToArray(allowGrowth: false);
+
+        Assert.Equal(original.Length, rebuilt.Length);
+        Assert.Equal("Newer", GameStringTable.Parse(rebuilt).StringWithId(7));
+        Assert.Equal([0, 0, 0, 0], rebuilt[^4..]);
+    }
+
+    [Fact]
+    public void RefusesToGrowParsedTableWhenGrowthIsDisabled()
+    {
+        var original = CreateOneStringTable(7,
+        [
+            0, (byte)'O',
+            0, (byte)'l',
+            0, (byte)'d',
+            0, 0
+        ]);
+
+        var table = GameStringTable.Parse(original).WithString(7, "This is much longer");
+
+        Assert.Throws<InvalidDataException>(() => table.ToArray(allowGrowth: false));
+        Assert.True(table.ToArray().Length > original.Length);
+    }
+
+    [Fact]
+    public void AppliesJsonStylePartialUpdatesWithoutDroppingOtherStrings()
+    {
+        var original = GameStringTable.FromStrings(
+        [
+            new GameString(7, "Old", 0),
+            new GameString(9, "Keep", 0)
+        ]).ToArray();
+
+        var rebuilt = GameStringTable.Parse(original)
+            .WithStrings([new GameString(7, "New", 0)])
+            .ToArray();
+        var reparsed = GameStringTable.Parse(rebuilt);
+
+        Assert.Equal("New", reparsed.StringWithId(7));
+        Assert.Equal("Keep", reparsed.StringWithId(9));
+    }
+
     private static byte[] CreateOneStringTable(int id, byte[] textBytes)
     {
         var bytes = new byte[0x18 + textBytes.Length];

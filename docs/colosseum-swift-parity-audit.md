@@ -40,10 +40,10 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 | Treasure Editor | Near parity | Swift-style room list and detail layout are present. Treasure room/name resolution was corrected for blank entries. Saves common.rel data. |
 | Patches | Catalog parity, backend parity with regression coverage | The Colosseum patch list matches `XGPatcher.swift`, the PowerPC helper encodings used by ASM patches have regression tests, and the copied-ISO Dolphin smoke matrix covers at least one patched `Start.dol` boot path. |
 | Randomizer | Backend parity pass complete for Colosseum-visible options | Colosseum-visible options match the Swift controller. The backend now follows the Swift option buckets more closely, including Type 9 exclusion while it is `???`, evolution-line duplicate avoidance, all-randomized-trainer happiness, and Colosseum shop item script IDs. |
-| Message Editor | Functional parity target | Message table loading/editing/saving exists. Swift-style special tokens now preserve payload bytes such as `[Pause]{1e}` and `[Spec Colour]{01020304}`. Needs deeper comparison of text control behavior and fixed-size table edge cases. |
-| Collision Viewer | Visual parity target | Window exists and mirrors the legacy purpose, but collision rendering/import behavior needs source-by-source comparison before calling it complete. |
+| Message Editor | Functional parity target | Message table loading/editing/saving exists. Swift-style special tokens preserve payload bytes such as `[Pause]{1e}` and `[Spec Colour]{01020304}`. Parsed tables now preserve their original byte length when replacements fit, refuse fixed-size overflows when growth is disabled, and JSON imports update listed strings without dropping omitted strings. |
+| Collision Viewer | Visual parity target | Window exists and mirrors the legacy purpose. The parser now has regression coverage for the Swift collision table layout, interactable regions, section indexes, normals, and coordinate scaling. Real exported maps still need visual spot checks. |
 | Interaction Editor | Near parity | Swift-style list/detail pass is done and saves common.rel interaction data. Needs broad room/script spot checks. |
-| Vertex Filters | Functional parity target | Lists exported `wzx.dat`-style model files and applies vertex color filters. Swift source itself is limited and file-dependent, so parity should be judged from exported model fixtures. |
+| Vertex Filters | Functional parity target | Lists exported `wzx.dat`-style model files and applies vertex color filters. Swift filter formulas and no-op behavior are covered by tests, but full parity should still be judged from exported model fixtures. |
 | Table Editor | Parity for Swift capability | Swift has Decode, Encode, and Document; its Edit button is empty. Editable raw tables are therefore not required for Colosseum parity unless we intentionally exceed the Swift tool later. |
 | ISO Explorer | Strong backend parity | Export/decode, import/encode, delete, Add File for FSYS archives, FSYS repack, `.msg.json`, LZSS, texture/model helpers, THP-style split/combine, shifting, GID display, FSYS entry identifiers, and copied-ISO Dolphin smoke coverage for rebuilt imports are covered. |
 
@@ -51,7 +51,7 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 
 1. Deeper patch behavior tests: the smoke matrix confirms patched ISOs boot, but patches that inject branches still need gameplay/save-state verification to prove their runtime effect.
 2. Randomizer fixture tests: behavior now tracks the Swift buckets, but deterministic fixture tests would catch regressions in specific table writes.
-3. Message fixed-size table behavior: special token payloads now round-trip, but fixed-size table growth/overflow behavior needs more real-file spot checks.
+3. Message Editor real-file spot checks: fixed-size and growth behavior has synthetic coverage, but should be confirmed on several extracted `.msg` files from a clean workspace.
 4. Collision and Vertex Filters: verify on real exported assets because their correctness is mostly visual/data-format dependent.
 
 ## Intentional Non-Gaps

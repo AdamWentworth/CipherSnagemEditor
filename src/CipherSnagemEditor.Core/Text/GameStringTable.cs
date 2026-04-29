@@ -56,9 +56,12 @@ public sealed class GameStringTable
     };
     private static readonly IReadOnlyDictionary<string, byte> SpecialTokens = BuildSpecialTokens();
 
-    private GameStringTable(IReadOnlyList<GameString> strings)
+    private readonly int? _parsedLength;
+
+    private GameStringTable(IReadOnlyList<GameString> strings, int? parsedLength = null)
     {
         Strings = strings;
+        _parsedLength = parsedLength;
     }
 
     public IReadOnlyList<GameString> Strings { get; }
@@ -81,22 +84,41 @@ public sealed class GameStringTable
     }
 
     public GameStringTable WithString(int id, string text)
+        => WithStrings([new GameString(id, text, 0)]);
+
+    public GameStringTable WithStrings(IEnumerable<GameString> replacements)
     {
-        if (id <= 0 || id > 0x000fffff)
+        ArgumentNullException.ThrowIfNull(replacements);
+
+        var normalized = replacements
+            .Select(message =>
+            {
+                if (message.Id <= 0 || message.Id > 0x000fffff)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(replacements), "Message string IDs must be between 1 and 0xFFFFF.");
+                }
+
+                var replacementText = string.IsNullOrEmpty(message.Text) ? "-" : message.Text;
+                return new GameString(message.Id, replacementText, message.Offset);
+            })
+            .ToArray();
+        if (normalized.Length == 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(id), "Message string IDs must be between 1 and 0xFFFFF.");
+            return this;
         }
 
-        var replacementText = string.IsNullOrEmpty(text) ? "-" : text;
+        var replacementIds = normalized.Select(message => message.Id).ToHashSet();
         var strings = Strings
-            .Where(message => message.Id != id)
-            .Append(new GameString(id, replacementText, 0))
+            .Where(message => !replacementIds.Contains(message.Id))
+            .Concat(normalized)
+            .GroupBy(message => message.Id)
+            .Select(group => group.Last())
             .OrderBy(message => message.Id)
             .ToArray();
-        return new GameStringTable(strings);
+        return new GameStringTable(strings, _parsedLength);
     }
 
-    public byte[] ToArray()
+    public byte[] ToArray(bool allowGrowth = true)
     {
         if (Strings.Count > ushort.MaxValue)
         {
@@ -108,7 +130,16 @@ public sealed class GameStringTable
             .Select(message => (message.Id, Bytes: EncodeGameString(message.Text)))
             .ToArray();
         var textOffset = EndOfHeader + (encodedStrings.Length * 8);
-        var length = textOffset + encodedStrings.Sum(message => message.Bytes.Length);
+        var encodedLength = textOffset + encodedStrings.Sum(message => message.Bytes.Length);
+        if (!allowGrowth && _parsedLength is int parsedLength && encodedLength > parsedLength)
+        {
+            throw new InvalidDataException(
+                $"String table requires {encodedLength} bytes but the original table has {parsedLength} bytes.");
+        }
+
+        var length = _parsedLength is int originalLength && encodedLength <= originalLength
+            ? originalLength
+            : encodedLength;
         var bytes = new byte[length];
         BigEndian.WriteUInt16(bytes, NumberOfStringsOffset, checked((ushort)encodedStrings.Length));
 
@@ -150,7 +181,7 @@ public sealed class GameStringTable
             strings.Add(new GameString(checked((int)stringId), DecodeGameString(bytes, stringOffset), stringOffset));
         }
 
-        return new GameStringTable(strings);
+        return new GameStringTable(strings, bytes.Length);
     }
 
     private static string DecodeGameString(ReadOnlySpan<byte> bytes, int offset)

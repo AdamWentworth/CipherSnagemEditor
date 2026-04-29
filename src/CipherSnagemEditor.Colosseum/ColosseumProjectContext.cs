@@ -803,7 +803,7 @@ public sealed partial class ColosseumProjectContext
     {
         var sourceBytes = LoadMessageTableBytes(table, out var targetPath);
         var updatedTable = GameStringTable.Parse(sourceBytes).WithString(id, text);
-        var bytes = updatedTable.ToArray();
+        var bytes = updatedTable.ToArray(allowGrowth: Settings.IncreaseFileSizes);
         var parent = Path.GetDirectoryName(targetPath);
         if (!string.IsNullOrWhiteSpace(parent))
         {
@@ -1048,8 +1048,10 @@ public sealed partial class ColosseumProjectContext
             throw new InvalidDataException($"Could not read message JSON: {jsonPath}");
         }
 
-        var table = GameStringTable.FromStrings(strings);
-        var bytes = table.ToArray();
+        var table = File.Exists(messagePath)
+            ? GameStringTable.Parse(File.ReadAllBytes(messagePath)).WithStrings(strings)
+            : GameStringTable.FromStrings(strings);
+        var bytes = table.ToArray(allowGrowth: Settings.IncreaseFileSizes);
         File.WriteAllBytes(messagePath, bytes);
         LoadedStringTables[messagePath] = table;
         LoadedFiles[messagePath] = bytes;
