@@ -954,13 +954,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
     private async Task EncodeTableEditorAsync()
     {
-        await RunTableEditorActionAsync("Encode for editing via text files", definition => CurrentProject!.EncodeRawTable(definition));
+        await RunTableEditorActionAsync("Encode as editable JSON", definition => CurrentProject!.EncodeRawTable(definition));
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
     private async Task DecodeTableEditorAsync()
     {
-        await RunTableEditorActionAsync("Decode edited files back into the game", definition => CurrentProject!.DecodeRawTable(definition));
+        await RunTableEditorActionAsync("Decode edited JSON back into the game", definition => CurrentProject!.DecodeRawTable(definition));
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
@@ -1234,7 +1234,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        Logs.Add($"{action}: {SelectedTableEditorEntry.Name} needs a richer field editor; raw table encode/decode is available for supported tables.");
+        Logs.Add($"{action}: {SelectedTableEditorEntry.Name} writes editable JSON with named fields where the legacy schema is known; unsupported tables preserve raw bytes.");
     }
 
     private async Task RunTableEditorActionAsync(
@@ -2678,7 +2678,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Dol("Status Effects", project),
             Dol("Texture", project, count: 0x3da),
             Dol("Texture Rendering Info", project, count: 0x12d2),
-            Dol("TM Or HM", project, count: 58, entryLength: 0x05),
+            Dol("TM Or HM", project, count: 58, entryLength: 0x08),
             Dol("Type", project, startOffset: firstTypeOffset, count: commonRel.TypeData.Count, entryLength: 0x2c),
             Dol("Valid Item", project, count: 1220, entryLength: 0x02),
             Dol("Valid Item 2", project, count: 1220, entryLength: 0x02),

@@ -34,6 +34,7 @@ public sealed partial class ColosseumProjectContext
     public ColosseumRawTableActionResult EncodeRawTable(ColosseumRawTableDefinition definition)
     {
         var table = ResolveRawTable(definition);
+        var schema = ColosseumRawTableSchema.For(definition, table.EntryLength);
         var encoded = new RawTableJson(
             definition.Name,
             definition.Category,
@@ -42,24 +43,31 @@ public sealed partial class ColosseumProjectContext
             table.StartOffset,
             table.Count,
             table.EntryLength,
+            schema?.Fields.Select(field => new RawTableJsonField(field.Name, field.Offset, field.ByteLength, field.Kind.ToString())).ToArray(),
             Enumerable.Range(0, table.Count)
                 .Select(index =>
                 {
                     var offset = checked(table.StartOffset + (index * table.EntryLength));
                     var bytes = table.Bytes.AsSpan(offset, table.EntryLength).ToArray();
-                    return new RawTableJsonRow(index, offset, Convert.ToHexString(bytes));
+                    return new RawTableJsonRow(
+                        index,
+                        offset,
+                        schema?.ReadFields(bytes),
+                        Convert.ToHexString(bytes));
                 })
                 .ToArray());
 
         var path = RawTableJsonPath(definition);
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
         File.WriteAllText(path, JsonSerializer.Serialize(encoded, TableJsonOptions));
-        return new ColosseumRawTableActionResult(path, encoded.Rows.Count, $"Encoded {encoded.Rows.Count} rows for {definition.Name}.");
+        var format = schema is null ? "raw byte JSON" : $"{schema.Fields.Count} named fields plus raw bytes";
+        return new ColosseumRawTableActionResult(path, encoded.Rows.Count, $"Encoded {encoded.Rows.Count} rows for {definition.Name} as {format}.");
     }
 
     public ColosseumRawTableActionResult DocumentRawTable(ColosseumRawTableDefinition definition)
     {
         var table = ResolveRawTable(definition);
+        var schema = ColosseumRawTableSchema.For(definition, table.EntryLength);
         var path = RawTableDocumentPath(definition);
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
 
@@ -70,6 +78,7 @@ public sealed partial class ColosseumProjectContext
         builder.AppendLine($"Start Offset: 0x{table.StartOffset:X}");
         builder.AppendLine($"Rows: {table.Count}");
         builder.AppendLine($"Entry Length: 0x{table.EntryLength:X} ({table.EntryLength})");
+        builder.AppendLine(schema is null ? "Schema: raw bytes" : $"Schema: {schema.Fields.Count} named fields");
         builder.AppendLine();
 
         for (var index = 0; index < table.Count; index++)
@@ -77,6 +86,16 @@ public sealed partial class ColosseumProjectContext
             var offset = checked(table.StartOffset + (index * table.EntryLength));
             var bytes = table.Bytes.AsSpan(offset, table.EntryLength).ToArray();
             builder.AppendLine($"[{index:D4}] 0x{offset:X}");
+            if (schema is not null)
+            {
+                foreach (var (name, value) in schema.ReadFields(bytes))
+                {
+                    builder.AppendLine($"{name}: {value}");
+                }
+
+                builder.AppendLine("Bytes:");
+            }
+
             builder.AppendLine(FormatHex(bytes));
             builder.AppendLine();
         }
@@ -88,6 +107,7 @@ public sealed partial class ColosseumProjectContext
     public ColosseumRawTableActionResult DecodeRawTable(ColosseumRawTableDefinition definition)
     {
         var table = ResolveRawTable(definition);
+        var schema = ColosseumRawTableSchema.For(definition, table.EntryLength);
         var path = RawTableJsonPath(definition);
         if (!File.Exists(path))
         {
@@ -115,12 +135,15 @@ public sealed partial class ColosseumProjectContext
                 throw new InvalidDataException($"Row {row.Index} has {rowBytes.Length} bytes; expected {table.EntryLength}.");
             }
 
+            schema?.ApplyFields(rowBytes, row.Fields);
+
             var offset = checked(table.StartOffset + (row.Index * table.EntryLength));
             rowBytes.CopyTo(bytes.AsSpan(offset, table.EntryLength));
         }
 
         var writtenPath = WriteRawTableBytes(table.Source, bytes);
-        return new ColosseumRawTableActionResult(writtenPath, decoded.Rows.Count, $"Decoded {decoded.Rows.Count} rows for {definition.Name}.");
+        var format = schema is null ? "raw bytes" : "named fields";
+        return new ColosseumRawTableActionResult(writtenPath, decoded.Rows.Count, $"Decoded {decoded.Rows.Count} rows for {definition.Name} from {format}.");
     }
 
     private ResolvedRawTable ResolveRawTable(ColosseumRawTableDefinition definition)
@@ -293,7 +316,10 @@ public sealed partial class ColosseumProjectContext
         int StartOffset,
         int Count,
         int EntryLength,
+        IReadOnlyList<RawTableJsonField>? Fields,
         IReadOnlyList<RawTableJsonRow> Rows);
 
-    private sealed record RawTableJsonRow(int Index, int Offset, string Bytes);
+    private sealed record RawTableJsonField(string Name, int Offset, int Length, string Kind);
+
+    private sealed record RawTableJsonRow(int Index, int Offset, Dictionary<string, string>? Fields, string Bytes);
 }

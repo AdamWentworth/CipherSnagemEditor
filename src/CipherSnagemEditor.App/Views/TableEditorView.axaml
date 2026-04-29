@@ -162,7 +162,7 @@
                              AcceptsReturn="True"
                              TextWrapping="Wrap"/>
                     <Button Classes="LegacyTableButton"
-                            Content="Encode for editing via text files"
+                            Content="Encode as editable JSON"
                             Command="{Binding EncodeTableEditorCommand}"
                             IsEnabled="{Binding HasSelectedTableEditorEntry}"
                             Canvas.Left="50"
@@ -170,7 +170,7 @@
                             Width="240"
                             Height="21"/>
                     <Button Classes="LegacyTableButton"
-                            Content="Decode edited files back into the game"
+                            Content="Decode edited JSON"
                             Command="{Binding DecodeTableEditorCommand}"
                             IsEnabled="{Binding HasSelectedTableEditorEntry}"
                             Canvas.Left="50"
