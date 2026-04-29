@@ -6,6 +6,6 @@
     <Project Path="src/CipherSnagemEditor.Core/CipherSnagemEditor.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/CipherSnagemEditor.Tests/CipherSnagemEditor.Tests.csproj" />
+    <Project Path="tests/CipherSnagemEditor.Tests.csproj" />
   </Folder>
 </Solution>

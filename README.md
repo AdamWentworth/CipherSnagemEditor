@@ -68,7 +68,8 @@ src/
   CipherSnagemEditor.Colosseum/   Colosseum-specific tables and models
   CipherSnagemEditor.Cli/         command-line inspection/test harness
 tests/
-  CipherSnagemEditor.Tests/       unit and parity-focused tests
+  CipherSnagemEditor.Tests.csproj unit and parity-focused test project
+  *Tests.cs                       unit and parity-focused tests
 ```
 
 Local-only folders:
