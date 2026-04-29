@@ -7,37 +7,54 @@ public sealed class GameStringTable
 {
     private const int NumberOfStringsOffset = 0x04;
     private const int EndOfHeader = 0x10;
-    private static readonly IReadOnlyDictionary<string, byte> SpecialTokens = new Dictionary<string, byte>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<byte, string> SpecialNames = new Dictionary<byte, string>
     {
-        ["New Line"] = 0x00,
-        ["Dialogue End"] = 0x02,
-        ["Clear Window"] = 0x03,
-        ["Kanji"] = 0x04,
-        ["Furigana"] = 0x05,
-        ["Furigana End"] = 0x06,
-        ["Font"] = 0x07,
-        ["Spec Colour"] = 0x08,
-        ["Pause"] = 0x09,
-        ["Player Battle 19"] = 0x13,
-        ["Switch Pokemon 20"] = 0x14,
-        ["Switch Pokemon 21"] = 0x15,
-        ["Foe Tr Class 34"] = 0x22,
-        ["Foe Tr Name 35"] = 0x23,
-        ["Move 40"] = 0x28,
-        ["Item 41"] = 0x29,
-        ["Player Field 43"] = 0x2b,
-        ["Rui 44"] = 0x2c,
-        ["Item 45"] = 0x2d,
-        ["Item 46"] = 0x2e,
-        ["Quantity 47"] = 0x2f,
-        ["String 50"] = 0x32,
-        ["Predef Colour"] = 0x38,
-        ["MsgID 77"] = 0x4d,
-        ["Pokemon Cry 80"] = 0x50,
-        ["Speaker"] = 0x59,
-        ["Set Speaker 106"] = 0x6a,
-        ["Wait Input 109"] = 0x6d
+        [0x00] = "New Line",
+        [0x02] = "Dialogue End",
+        [0x03] = "Clear Window",
+        [0x04] = "Kanji",
+        [0x05] = "Furigana",
+        [0x06] = "Furigana End",
+        [0x07] = "Font",
+        [0x08] = "Spec Colour",
+        [0x09] = "Pause",
+        [0x0f] = "Pokemon 15",
+        [0x10] = "Pokemon 16",
+        [0x11] = "Pokemon 17",
+        [0x12] = "Pokemon 18",
+        [0x13] = "Player Battle 19",
+        [0x14] = "Switch Pokemon 20",
+        [0x15] = "Switch Pokemon 21",
+        [0x16] = "Pokemon 22",
+        [0x17] = "Pokemon 23",
+        [0x18] = "Pokemon 24",
+        [0x19] = "Pokemon 25",
+        [0x1a] = "Ability 26",
+        [0x1b] = "Ability 27",
+        [0x1c] = "Ability 28",
+        [0x1d] = "Ability 29",
+        [0x1e] = "Pokemon 30",
+        [0x20] = "Pokemon 32",
+        [0x21] = "Pokemon 33",
+        [0x22] = "Foe Tr Class 34",
+        [0x23] = "Foe Tr Name 35",
+        [0x28] = "Move 40",
+        [0x29] = "Item 41",
+        [0x2b] = "Player Field 43",
+        [0x2c] = "Rui 44",
+        [0x2d] = "Item 45",
+        [0x2e] = "Item 46",
+        [0x2f] = "Quantity 47",
+        [0x32] = "String 50",
+        [0x38] = "Predef Colour",
+        [0x4d] = "MsgID 77",
+        [0x4e] = "Pokemon 78",
+        [0x50] = "Pokemon Cry 80",
+        [0x59] = "Speaker",
+        [0x6a] = "Set Speaker 106",
+        [0x6d] = "Wait Input 109"
     };
+    private static readonly IReadOnlyDictionary<string, byte> SpecialTokens = BuildSpecialTokens();
 
     private GameStringTable(IReadOnlyList<GameString> strings)
     {
@@ -155,8 +172,12 @@ public sealed class GameStringTable
                 }
 
                 var special = bytes[current + 2];
-                builder.Append(SpecialCharacterText(special));
-                current += 3 + SpecialCharacterExtraBytes(special);
+                var extraLength = SpecialCharacterExtraBytes(special);
+                var extra = current + 3 + extraLength <= bytes.Length
+                    ? bytes.Slice(current + 3, extraLength)
+                    : ReadOnlySpan<byte>.Empty;
+                builder.Append(SpecialCharacterText(special, extra));
+                current += 3 + extraLength;
                 continue;
             }
 
@@ -198,10 +219,11 @@ public sealed class GameStringTable
                 if (end > index)
                 {
                     var token = text[(index + 1)..end];
-                    if (TryParseSpecialToken(token, out var special, out var extra))
+                    if (TryParseSpecialToken(token, out var special))
                     {
+                        var extra = ParseSpecialExtraBytes(text, end + 1, special, out var extraEnd);
                         WriteSpecial(stream, special, extra);
-                        index = end + 1;
+                        index = extraEnd;
                         continue;
                     }
                 }
@@ -215,30 +237,64 @@ public sealed class GameStringTable
         return stream.ToArray();
     }
 
-    private static bool TryParseSpecialToken(string token, out byte special, out byte[] extra)
+    private static bool TryParseSpecialToken(string token, out byte special)
     {
-        extra = [];
         if (SpecialTokens.TryGetValue(token.Trim(), out special))
         {
-            extra = new byte[SpecialCharacterExtraBytes(special)];
             return true;
         }
 
         if (byte.TryParse(token.Trim(), out special))
         {
-            extra = new byte[SpecialCharacterExtraBytes(special)];
             return true;
         }
 
         if (token.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
             && byte.TryParse(token[2..], System.Globalization.NumberStyles.HexNumber, null, out special))
         {
-            extra = new byte[SpecialCharacterExtraBytes(special)];
             return true;
         }
 
         special = 0;
         return false;
+    }
+
+    private static byte[] ParseSpecialExtraBytes(string text, int start, byte special, out int end)
+    {
+        var expectedLength = SpecialCharacterExtraBytes(special);
+        end = start;
+        if (expectedLength == 0)
+        {
+            return [];
+        }
+
+        var extra = new byte[expectedLength];
+        if (start >= text.Length || text[start] != '{')
+        {
+            return extra;
+        }
+
+        var close = text.IndexOf('}', start + 1);
+        if (close < 0)
+        {
+            return extra;
+        }
+
+        var hex = text[(start + 1)..close].Trim();
+        for (var index = 0; index < expectedLength && index * 2 + 1 < hex.Length; index++)
+        {
+            if (byte.TryParse(
+                hex.Substring(index * 2, 2),
+                System.Globalization.NumberStyles.HexNumber,
+                null,
+                out var value))
+            {
+                extra[index] = value;
+            }
+        }
+
+        end = close + 1;
+        return extra;
     }
 
     private static void WriteSpecial(Stream stream, byte special, ReadOnlySpan<byte> extra)
@@ -257,39 +313,26 @@ public sealed class GameStringTable
         stream.WriteByte((byte)value);
     }
 
-    private static string SpecialCharacterText(byte special)
-        => special switch
+    private static string SpecialCharacterText(byte special, ReadOnlySpan<byte> extra)
+    {
+        var text = SpecialNames.TryGetValue(special, out var name)
+            ? $"[{name}]"
+            : $"[{special}]";
+        if (extra.Length == 0)
         {
-            0x00 => "[New Line]",
-            0x02 => "[Dialogue End]",
-            0x03 => "[Clear Window]",
-            0x04 => "[Kanji]",
-            0x05 => "[Furigana]",
-            0x06 => "[Furigana End]",
-            0x07 => "[Font]",
-            0x08 => "[Spec Colour]",
-            0x09 => "[Pause]",
-            0x13 => "[Player Battle 19]",
-            0x14 => "[Switch Pokemon 20]",
-            0x15 => "[Switch Pokemon 21]",
-            0x22 => "[Foe Tr Class 34]",
-            0x23 => "[Foe Tr Name 35]",
-            0x28 => "[Move 40]",
-            0x29 => "[Item 41]",
-            0x2b => "[Player Field 43]",
-            0x2c => "[Rui 44]",
-            0x2d => "[Item 45]",
-            0x2e => "[Item 46]",
-            0x2f => "[Quantity 47]",
-            0x32 => "[String 50]",
-            0x38 => "[Predef Colour]",
-            0x4d => "[MsgID 77]",
-            0x50 => "[Pokemon Cry 80]",
-            0x59 => "[Speaker]",
-            0x6a => "[Set Speaker 106]",
-            0x6d => "[Wait Input 109]",
-            _ => $"[{special}]"
-        };
+            return text;
+        }
+
+        var builder = new StringBuilder(text);
+        builder.Append('{');
+        foreach (var value in extra)
+        {
+            builder.Append(value.ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        builder.Append('}');
+        return builder.ToString();
+    }
 
     private static int SpecialCharacterExtraBytes(byte special)
         => special switch
@@ -298,4 +341,11 @@ public sealed class GameStringTable
             0x08 => 4,
             _ => 0
         };
+
+    private static IReadOnlyDictionary<string, byte> BuildSpecialTokens()
+    {
+        var tokens = SpecialNames.ToDictionary(pair => pair.Value, pair => pair.Key, StringComparer.OrdinalIgnoreCase);
+        tokens["Bold"] = 0x07;
+        return tokens;
+    }
 }

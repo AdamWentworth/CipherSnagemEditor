@@ -40,7 +40,7 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 | Treasure Editor | Near parity | Swift-style room list and detail layout are present. Treasure room/name resolution was corrected for blank entries. Saves common.rel data. |
 | Patches | Catalog parity, backend parity with regression coverage | The Colosseum patch list matches `XGPatcher.swift`, the PowerPC helper encodings used by ASM patches have regression tests, and the copied-ISO Dolphin smoke matrix covers at least one patched `Start.dol` boot path. |
 | Randomizer | Backend parity pass complete for Colosseum-visible options | Colosseum-visible options match the Swift controller. The backend now follows the Swift option buckets more closely, including Type 9 exclusion while it is `???`, evolution-line duplicate avoidance, all-randomized-trainer happiness, and Colosseum shop item script IDs. |
-| Message Editor | Functional parity target | Message table loading/editing/saving exists. Needs deeper comparison of text control behavior, special characters, and fixed-size table edge cases. |
+| Message Editor | Functional parity target | Message table loading/editing/saving exists. Swift-style special tokens now preserve payload bytes such as `[Pause]{1e}` and `[Spec Colour]{01020304}`. Needs deeper comparison of text control behavior and fixed-size table edge cases. |
 | Collision Viewer | Visual parity target | Window exists and mirrors the legacy purpose, but collision rendering/import behavior needs source-by-source comparison before calling it complete. |
 | Interaction Editor | Near parity | Swift-style list/detail pass is done and saves common.rel interaction data. Needs broad room/script spot checks. |
 | Vertex Filters | Functional parity target | Lists exported `wzx.dat`-style model files and applies vertex color filters. Swift source itself is limited and file-dependent, so parity should be judged from exported model fixtures. |
@@ -51,7 +51,7 @@ The Swift Colosseum home menu is defined in `GoDHomeViewController.swift` as:
 
 1. Deeper patch behavior tests: the smoke matrix confirms patched ISOs boot, but patches that inject branches still need gameplay/save-state verification to prove their runtime effect.
 2. Randomizer fixture tests: behavior now tracks the Swift buckets, but deterministic fixture tests would catch regressions in specific table writes.
-3. Message special characters: verify newline/control-code round trips against Swift string table behavior.
+3. Message fixed-size table behavior: special token payloads now round-trip, but fixed-size table growth/overflow behavior needs more real-file spot checks.
 4. Collision and Vertex Filters: verify on real exported assets because their correctness is mostly visual/data-format dependent.
 
 ## Intentional Non-Gaps
