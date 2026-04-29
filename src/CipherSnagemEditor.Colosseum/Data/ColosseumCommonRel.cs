@@ -302,6 +302,30 @@ public sealed partial class ColosseumCommonRel
             .Select(index => new ColosseumNamedResource(index, TypeName(index)))
             .ToArray();
 
+    public bool IsPhysicalSpecialSplitImplemented
+    {
+        get
+        {
+            var dol = _dol;
+            if (dol is null)
+            {
+                return false;
+            }
+
+            var offset = _region switch
+            {
+                GameCubeRegion.UnitedStates => 0x10c4ac - DolTableToRamOffsetDifference,
+                GameCubeRegion.Europe => 0x10fac4 - DolTableToRamOffsetDifference,
+                GameCubeRegion.Japan => 0x109e54 - DolTableToRamOffsetDifference,
+                _ => -1
+            };
+
+            return offset >= 0
+                && offset + 4 <= dol.Length
+                && dol.ReadUInt32(offset) == 0x8863001f;
+        }
+    }
+
     public int ShadowPokemonCount => GetCount(ColosseumCommonIndex.NumberOfShadowPokemon);
 
     public byte[] ToArray() => _data.ToArray();

@@ -20,7 +20,9 @@ public sealed partial class MoveEditorViewModel : ObservableObject
         _nameId = move.NameId;
         _descriptionId = move.DescriptionId;
         _selectedType = resources.TypeOption(move.TypeId);
-        _selectedCategory = resources.CategoryOption(move.CategoryId);
+        _selectedCategory = resources.IsPhysicalSpecialSplitImplemented
+            ? resources.CategoryOption(move.CategoryId)
+            : resources.CategoryOption(resources.CategoryForType(move.TypeId));
         _selectedTarget = resources.TargetOption(move.TargetId);
         _selectedAnimation = resources.AnimationOption(move.AnimationId);
         _selectedEffect = resources.EffectOption(move.EffectId);
@@ -70,6 +72,8 @@ public sealed partial class MoveEditorViewModel : ObservableObject
     public string StartOffsetText => $"0x{Move.StartOffset:X}";
 
     public string Animation2Text => $"Anim 2: {Animation2Id}";
+
+    public bool IsCategoryEditable => Resources.IsPhysicalSpecialSplitImplemented;
 
     [ObservableProperty]
     private int _nameId;
@@ -149,7 +153,7 @@ public sealed partial class MoveEditorViewModel : ObservableObject
             DescriptionId,
             SelectedType?.Value ?? Move.TypeId,
             SelectedTarget?.Value ?? Move.TargetId,
-            SelectedCategory?.Value ?? Move.CategoryId,
+            IsCategoryEditable ? SelectedCategory?.Value ?? Move.CategoryId : Move.CategoryId,
             SelectedAnimation?.Value ?? Move.AnimationId,
             Animation2Id,
             SelectedEffect?.Value ?? Move.EffectId,
@@ -177,9 +181,23 @@ public sealed partial class MoveEditorViewModel : ObservableObject
 
     partial void OnDescriptionIdChanged(int value) => MarkChanged();
 
-    partial void OnSelectedTypeChanged(PickerOptionViewModel? value) => MarkChanged();
+    partial void OnSelectedTypeChanged(PickerOptionViewModel? value)
+    {
+        if (!IsCategoryEditable && value is not null)
+        {
+            SelectedCategory = Resources.CategoryOption(Resources.CategoryForType(value.Value));
+        }
 
-    partial void OnSelectedCategoryChanged(PickerOptionViewModel? value) => MarkChanged();
+        MarkChanged();
+    }
+
+    partial void OnSelectedCategoryChanged(PickerOptionViewModel? value)
+    {
+        if (IsCategoryEditable)
+        {
+            MarkChanged();
+        }
+    }
 
     partial void OnSelectedTargetChanged(PickerOptionViewModel? value) => MarkChanged();
 

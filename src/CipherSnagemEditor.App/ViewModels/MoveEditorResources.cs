@@ -12,6 +12,7 @@ public sealed class MoveEditorResources
     private readonly Dictionary<int, PickerOptionViewModel> _animationOptionsByValue;
     private readonly Dictionary<int, PickerOptionViewModel> _effectOptionsByValue;
     private readonly Dictionary<int, PickerOptionViewModel> _effectTypeOptionsByValue;
+    private readonly IReadOnlyDictionary<int, int> _typeCategoryByValue;
 
     private MoveEditorResources(
         IReadOnlyList<PickerOptionViewModel> typeOptions,
@@ -19,7 +20,9 @@ public sealed class MoveEditorResources
         IReadOnlyList<PickerOptionViewModel> targetOptions,
         IReadOnlyList<PickerOptionViewModel> animationOptions,
         IReadOnlyList<PickerOptionViewModel> effectOptions,
-        IReadOnlyList<PickerOptionViewModel> effectTypeOptions)
+        IReadOnlyList<PickerOptionViewModel> effectTypeOptions,
+        IReadOnlyDictionary<int, int> typeCategoryByValue,
+        bool isPhysicalSpecialSplitImplemented)
     {
         TypeOptions = typeOptions;
         CategoryOptions = categoryOptions;
@@ -27,6 +30,8 @@ public sealed class MoveEditorResources
         AnimationOptions = animationOptions;
         EffectOptions = effectOptions;
         EffectTypeOptions = effectTypeOptions;
+        IsPhysicalSpecialSplitImplemented = isPhysicalSpecialSplitImplemented;
+        _typeCategoryByValue = typeCategoryByValue;
         _typeOptionsByValue = typeOptions.ToDictionary(option => option.Value);
         _categoryOptionsByValue = categoryOptions.ToDictionary(option => option.Value);
         _targetOptionsByValue = targetOptions.ToDictionary(option => option.Value);
@@ -41,7 +46,9 @@ public sealed class MoveEditorResources
         BuildTargetOptions(),
         [new PickerOptionViewModel(0, "-")],
         [new PickerOptionViewModel(0, "-")],
-        BuildEffectTypeOptions());
+        BuildEffectTypeOptions(),
+        new Dictionary<int, int>(),
+        false);
 
     public IReadOnlyList<PickerOptionViewModel> TypeOptions { get; }
 
@@ -55,9 +62,12 @@ public sealed class MoveEditorResources
 
     public IReadOnlyList<PickerOptionViewModel> EffectTypeOptions { get; }
 
+    public bool IsPhysicalSpecialSplitImplemented { get; }
+
     public static MoveEditorResources FromCommonRel(ColosseumCommonRel commonRel)
     {
         var moves = commonRel.Moves;
+        var typeCategoryByValue = commonRel.TypeData.ToDictionary(type => type.Index, type => type.CategoryId);
         var typeOptions = commonRel.Types
             .Select(type => new PickerOptionViewModel(type.Index, $"{type.Name.ToUpperInvariant()} ({type.Index})"))
             .ToArray();
@@ -71,7 +81,9 @@ public sealed class MoveEditorResources
             BuildTargetOptions(),
             BuildJsonBackedOptions("Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}", appendIndex: true),
             BuildJsonBackedOptions("Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}", appendIndex: true),
-            BuildEffectTypeOptions());
+            BuildEffectTypeOptions(),
+            typeCategoryByValue,
+            commonRel.IsPhysicalSpecialSplitImplemented);
     }
 
     public PickerOptionViewModel TypeOption(int value)
@@ -91,6 +103,11 @@ public sealed class MoveEditorResources
 
     public PickerOptionViewModel EffectTypeOption(int value)
         => OptionFor(_effectTypeOptionsByValue, value, $"Effect Type {value}");
+
+    public int CategoryForType(int typeId)
+        => _typeCategoryByValue.TryGetValue(typeId, out var categoryId)
+            ? categoryId
+            : 0;
 
     private static PickerOptionViewModel OptionFor(
         IReadOnlyDictionary<int, PickerOptionViewModel> options,

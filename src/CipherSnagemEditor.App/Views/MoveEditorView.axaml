@@ -281,7 +281,8 @@
                     <TextBlock Text="Category" Classes="LegacyMoveHeader" Canvas.Left="8" Canvas.Top="62" Width="194" Height="20"/>
                     <controls:LegacyPokemonComboBox Classes="LegacyMoveCombo" Canvas.Left="8" Canvas.Top="83" Width="195"
                                                     ItemsSource="{Binding SelectedMoveDetail.CategoryOptions}"
-                                                    SelectedItem="{Binding SelectedMoveDetail.SelectedCategory, Mode=TwoWay}"/>
+                                                    SelectedItem="{Binding SelectedMoveDetail.SelectedCategory, Mode=TwoWay}"
+                                                    IsEnabled="{Binding SelectedMoveDetail.IsCategoryEditable}"/>
                     <TextBlock Text="Targets" Classes="LegacyMoveHeader" Canvas.Left="8" Canvas.Top="114" Width="194" Height="20"/>
                     <controls:LegacyPokemonComboBox Classes="LegacyMoveCombo" Canvas.Left="8" Canvas.Top="135" Width="195"
                                                     ItemsSource="{Binding SelectedMoveDetail.TargetOptions}"
