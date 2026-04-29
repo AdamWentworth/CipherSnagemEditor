@@ -4,7 +4,9 @@ param(
     [string]$Configuration = "Release",
     [string]$OutputRoot = "artifacts",
     [switch]$FrameworkDependent,
-    [switch]$NoArchive
+    [switch]$NoArchive,
+    [switch]$NoDeb,
+    [string]$PackageVersion = "0.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,9 +16,11 @@ $outputRootFull = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputRoot
 $publishDir = Join-Path $outputRootFull "publish-$Runtime"
 $packageDir = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime"
 $archivePath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime.tar.gz"
+$debPath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime.deb"
 $projectPath = Join-Path $repoRoot "src\CipherSnagemEditor.App\CipherSnagemEditor.App.csproj"
 $linuxTemplateDir = Join-Path $repoRoot "packaging\linux"
 $iconPath = Join-Path $repoRoot "assets\ui\app-icons\colosseum\icon-256.png"
+$debScriptPath = Join-Path $repoRoot "scripts\create-linux-deb.py"
 
 function Assert-UnderPath([string]$Path, [string]$Root) {
     $fullPath = [System.IO.Path]::GetFullPath($Path)
@@ -39,11 +43,15 @@ if (-not (Test-Path -LiteralPath $linuxTemplateDir)) {
 if (-not (Test-Path -LiteralPath $iconPath)) {
     throw "Linux icon source not found: $iconPath"
 }
+if (-not (Test-Path -LiteralPath $debScriptPath)) {
+    throw "Linux deb helper not found: $debScriptPath"
+}
 
 New-Item -ItemType Directory -Force -Path $outputRootFull | Out-Null
 Assert-UnderPath -Path $publishDir -Root $outputRootFull
 Assert-UnderPath -Path $packageDir -Root $outputRootFull
 Assert-UnderPath -Path $archivePath -Root $outputRootFull
+Assert-UnderPath -Path $debPath -Root $outputRootFull
 
 foreach ($path in @($publishDir, $packageDir)) {
     if (Test-Path -LiteralPath $path) {
@@ -52,6 +60,9 @@ foreach ($path in @($publishDir, $packageDir)) {
 }
 if (Test-Path -LiteralPath $archivePath) {
     Remove-Item -LiteralPath $archivePath -Force
+}
+if (Test-Path -LiteralPath $debPath) {
+    Remove-Item -LiteralPath $debPath -Force
 }
 
 $selfContained = if ($FrameworkDependent) { "false" } else { "true" }
@@ -85,10 +96,29 @@ if (-not $NoArchive) {
     }
 }
 
+if (-not $NoDeb) {
+    $python = Get-Command python -ErrorAction SilentlyContinue
+    if ($null -eq $python) {
+        throw "Python 3 is required to create the Ubuntu .deb package. Re-run with -NoDeb to build only the portable tarball."
+    }
+
+    & $python.Source $debScriptPath `
+        --package-dir $packageDir `
+        --output $debPath `
+        --runtime $Runtime `
+        --version $PackageVersion
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create Ubuntu package: $debPath"
+    }
+}
+
 Write-Host "Linux publish complete."
 Write-Host "Runtime: $Runtime"
 Write-Host "Self-contained: $selfContained"
 Write-Host "Package directory: $packageDir"
 if (-not $NoArchive) {
     Write-Host "Archive: $archivePath"
+}
+if (-not $NoDeb) {
+    Write-Host "Ubuntu package: $debPath"
 }

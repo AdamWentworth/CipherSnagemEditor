@@ -4,6 +4,8 @@ obj/
 TestResults/
 /artifacts/
 *.binlog
+__pycache__/
+*.pyc
 
 # Local IDE state
 .vs/

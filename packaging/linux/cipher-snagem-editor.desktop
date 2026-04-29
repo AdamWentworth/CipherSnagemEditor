@@ -6,4 +6,5 @@ Exec=@INSTALL_DIR@/run-cipher-snagem-editor.sh %f
 Icon=cipher-snagem-editor
 Terminal=false
 Categories=Game;Utility;Development;
+StartupNotify=true
 StartupWMClass=CipherSnagemEditor.App

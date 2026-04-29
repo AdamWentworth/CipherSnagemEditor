@@ -27,11 +27,16 @@ artifacts/
   publish-linux-x64/
   packages/
     cipher-snagem-editor-linux-x64/
+    cipher-snagem-editor-linux-x64.deb
     cipher-snagem-editor-linux-x64.tar.gz
 ```
 
 By default the package is self-contained, so the Ubuntu test machine should not
 need a separately installed .NET runtime.
+
+The `.deb` is the preferred Ubuntu artifact. It installs the app under
+`/opt/cipher-snagem-editor`, registers the GNOME desktop entry, and installs the
+PNG icon under `/usr/share/icons/hicolor`.
 
 For a framework-dependent build:
 
@@ -41,8 +46,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1 -F
 
 ## Ubuntu Test
 
-Copy `artifacts/packages/cipher-snagem-editor-linux-x64.tar.gz` to the Ubuntu
-machine, then:
+Copy `artifacts/packages/cipher-snagem-editor-linux-x64.deb` to the Ubuntu
+machine, then double-click it in GNOME Files or run:
+
+```bash
+sudo apt install ./cipher-snagem-editor-linux-x64.deb
+```
+
+Launch `Cipher Snagem Editor` from the app grid.
+
+Portable fallback:
 
 ```bash
 tar -xzf cipher-snagem-editor-linux-x64.tar.gz
@@ -60,6 +73,19 @@ Optional per-user install:
 That installs the app under `~/.local/share/cipher-snagem-editor`, installs the
 PNG icon under `~/.local/share/icons`, and creates a desktop entry under
 `~/.local/share/applications`.
+
+The package must contain the lower-case runtime asset tree:
+
+```text
+assets/images/ColoTrainers/
+assets/images/PokeBody/
+assets/images/PokeFace/
+assets/images/Types/
+```
+
+Those paths are intentionally lower-case at the root because the app's editor
+view models resolve them from `assets/images/...`, and Linux filesystems are
+case-sensitive.
 
 ## Validation Checklist
 

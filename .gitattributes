@@ -3,3 +3,4 @@
 .gitattributes text eol=lf
 *.sh text eol=lf
 *.desktop text eol=lf
+*.py text eol=lf

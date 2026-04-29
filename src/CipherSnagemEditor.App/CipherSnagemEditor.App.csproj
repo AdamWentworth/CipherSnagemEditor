@@ -16,6 +16,8 @@
     <AvaloniaResource Include="..\..\assets\ui\cells\selected-cell.png" Link="Assets\Ui\Cells\selected-cell.png" />
     <AvaloniaResource Include="..\..\assets\ui\cells\tool-cell.png" Link="Assets\Ui\Cells\tool-cell.png" />
     <Content Include="..\..\assets\json\Colosseum\Move Categories.json" Link="Assets\Json\Colosseum\Move Categories.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\images\**\*.*" Link="assets\images\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\assets\json\Colosseum\Move Categories.json" Link="assets\json\Colosseum\Move Categories.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

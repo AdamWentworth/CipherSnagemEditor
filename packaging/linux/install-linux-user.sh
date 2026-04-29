@@ -25,5 +25,12 @@ chmod +x "$INSTALL_DIR/CipherSnagemEditor.App"
 chmod +x "$INSTALL_DIR/run-cipher-snagem-editor.sh"
 chmod +x "$DESKTOP_DIR/cipher-snagem-editor.desktop"
 
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$DESKTOP_DIR" >/dev/null 2>&1 || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q "$DATA_HOME/icons/hicolor" >/dev/null 2>&1 || true
+fi
+
 echo "Installed Cipher Snagem Editor to $INSTALL_DIR"
 echo "Desktop entry: $DESKTOP_DIR/cipher-snagem-editor.desktop"
