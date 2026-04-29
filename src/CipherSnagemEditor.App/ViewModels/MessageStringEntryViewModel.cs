@@ -9,6 +9,8 @@ public sealed partial class MessageStringEntryViewModel : ObservableObject
 {
     private static readonly IBrush SelectionBrush = Brushes.Black;
     private static readonly IBrush TransparentBrush = SolidColorBrush.Parse("#00000000");
+    private static readonly IBrush SelectedBackgroundBrush = SolidColorBrush.Parse("#89B9FF");
+    private static readonly IBrush DefaultBackgroundBrush = SolidColorBrush.Parse("#FFFFFF");
 
     public MessageStringEntryViewModel(ColosseumMessageString message)
     {
@@ -18,6 +20,7 @@ public sealed partial class MessageStringEntryViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectionBorderBrush))]
     [NotifyPropertyChangedFor(nameof(SelectionBorderThickness))]
+    [NotifyPropertyChangedFor(nameof(BackgroundBrush))]
     private bool _isSelected;
 
     public ColosseumMessageString Message { get; }
@@ -28,11 +31,11 @@ public sealed partial class MessageStringEntryViewModel : ObservableObject
 
     public string Preview => string.IsNullOrWhiteSpace(Message.Text) ? "-" : Message.Text.Replace("\n", " ");
 
-    public string SearchText => $"{Message.Id} {Message.IdHex} {Message.Text}";
+    public string RowText => $"{IdHexText}: {Preview}";
 
-    public IBrush BackgroundBrush => Message.Id % 2 == 0
-        ? SolidColorBrush.Parse("#FFFFFF")
-        : SolidColorBrush.Parse("#DADADA");
+    public string SearchText => Message.Text;
+
+    public IBrush BackgroundBrush => IsSelected ? SelectedBackgroundBrush : DefaultBackgroundBrush;
 
     public IBrush SelectionBorderBrush => IsSelected ? SelectionBrush : TransparentBrush;
 

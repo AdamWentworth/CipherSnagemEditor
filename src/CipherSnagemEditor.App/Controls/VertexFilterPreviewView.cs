@@ -48,7 +48,7 @@ public sealed class VertexFilterPreviewView : Control
             return;
         }
 
-        var columns = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(colours.Count * (bounds.Width / Math.Max(bounds.Height, 1)))));
+        var columns = Math.Max(1, (int)Math.Sqrt(colours.Count));
         var rows = Math.Max(1, (int)Math.Ceiling(colours.Count / (double)columns));
         var cellWidth = bounds.Width / columns;
         var cellHeight = bounds.Height / rows;
@@ -93,6 +93,7 @@ public sealed class VertexFilterPreviewView : Control
             .OrderByDescending(Hue)
             .ThenByDescending(Saturation)
             .ThenByDescending(Value)
+            .ThenByDescending(colour => colour.Alpha)
             .ToArray();
         ProfileCache[path] = new CachedProfile(info.Length, info.LastWriteTimeUtc.Ticks, colours);
         return ApplyFilter(colours, filter);

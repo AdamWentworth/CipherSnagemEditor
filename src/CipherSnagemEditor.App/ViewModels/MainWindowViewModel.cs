@@ -43,6 +43,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _hasProject;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMessageEditorReadOnly))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -109,6 +110,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private MessageTableViewModel? _selectedMessageTable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMessageStringSelected))]
+    [NotifyPropertyChangedFor(nameof(IsMessageEditorReadOnly))]
     private MessageStringEntryViewModel? _selectedMessageString;
 
     [ObservableProperty]
@@ -383,6 +386,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public string? SelectedVertexFilterFilePath => SelectedVertexFilterFile?.File.Path;
 
     public string SelectedVertexFilterFileName => SelectedVertexFilterFile?.File.FileName ?? "File";
+
+    public bool IsMessageStringSelected => SelectedMessageString is not null;
+
+    public bool IsMessageEditorReadOnly => SelectedMessageString is null || IsBusy;
 
     public ObservableCollection<TrainerPokemonSlotViewModel> SelectedTrainerPokemon { get; } = [];
 
@@ -1252,6 +1259,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanSaveMessage()
         => CurrentProject is not null
             && SelectedMessageTable is not null
+            && SelectedMessageString is not null
             && TryParseMessageId(SelectedMessageIdText, out _)
             && !IsBusy;
 
@@ -2559,10 +2567,11 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var filter = SimplifySearchText(filterText);
+        var rawFilter = filterText?.Trim() ?? string.Empty;
+        var filter = SimplifySearchText(rawFilter);
         var filtered = string.IsNullOrEmpty(filter)
             ? _allMessageStrings
-            : _allMessageStrings.Where(message => Contains(message.SearchText, filter)).ToList();
+            : _allMessageStrings.Where(message => MessageMatchesFilter(message, rawFilter, filter)).ToList();
 
         MessageStrings.Clear();
         foreach (var message in filtered)
@@ -2570,17 +2579,36 @@ public partial class MainWindowViewModel : ViewModelBase
             MessageStrings.Add(message);
         }
 
-        if (SelectedMessageString is null || !MessageStrings.Contains(SelectedMessageString))
+        if (SelectedMessageString is not null && !MessageStrings.Contains(SelectedMessageString))
         {
-            SelectedMessageString = MessageStrings.FirstOrDefault();
+            SelectedMessageString = null;
         }
-        else
+
+        if (SelectedMessageString is not null)
         {
             foreach (var message in _allMessageStrings)
             {
                 message.IsSelected = ReferenceEquals(message, SelectedMessageString);
             }
         }
+    }
+
+    private static bool MessageMatchesFilter(MessageStringEntryViewModel message, string rawFilter, string simplifiedFilter)
+    {
+        if (int.TryParse(rawFilter, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id)
+            && message.Message.Id == id)
+        {
+            return true;
+        }
+
+        if (rawFilter.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(rawFilter[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hexId)
+            && message.Message.Id == hexId)
+        {
+            return true;
+        }
+
+        return Contains(message.SearchText, simplifiedFilter);
     }
 
     private void ApplyTableEditorFilter(string? filterText)
@@ -3306,7 +3334,6 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         ApplyMessageFilter(MessageSearchText);
-        SelectedMessageString = MessageStrings.FirstOrDefault();
     }
 
     private void RefreshSelectedIsoFileDetails(IsoFileEntryViewModel? value)

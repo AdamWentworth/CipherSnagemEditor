@@ -120,25 +120,19 @@
             <controls:LegacyPokemonComboBox Classes="LegacyCollisionCombo"
                                             ItemsSource="{Binding CollisionInteractionOptions}"
                                             SelectedItem="{Binding SelectedCollisionInteraction, Mode=TwoWay}"
-                                            Canvas.Left="8"
-                                            Canvas.Top="7"
+                                            Canvas.Left="0"
+                                            Canvas.Top="0"
                                             Width="120"
                                             Height="20"
                                             MaxDropDownHeight="260"/>
             <controls:LegacyPokemonComboBox Classes="LegacyCollisionCombo"
                                             ItemsSource="{Binding CollisionSectionOptions}"
                                             SelectedItem="{Binding SelectedCollisionSection, Mode=TwoWay}"
-                                            Canvas.Left="512"
-                                            Canvas.Top="7"
+                                            Canvas.Left="520"
+                                            Canvas.Top="0"
                                             Width="120"
                                             Height="20"
                                             MaxDropDownHeight="260"/>
-            <TextBlock Classes="LegacyCollisionStatus"
-                       Text="{Binding CollisionStatus}"
-                       Canvas.Left="8"
-                       Canvas.Top="448"
-                       Width="624"
-                       Height="24"/>
         </Canvas>
     </Grid>
 </UserControl>
