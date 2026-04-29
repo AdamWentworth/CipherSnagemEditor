@@ -86,6 +86,27 @@ public sealed class ColosseumTextureCodecTests
         Assert.Equal((ushort)0x07e0, BigEndian.ReadUInt16(importedDat, 0x20 + 0x1a0));
     }
 
+    [Fact]
+    public void ExtractsAndImportsGswTextureSection()
+    {
+        var gsw = CreateGswWithC8Texture();
+
+        var texture = Assert.Single(ColosseumGswTextureCodec.ExtractTextures(gsw));
+        Assert.Equal(1, texture.Id);
+        Assert.True(ColosseumTextureCodec.TryDecodePng(texture.TextureBytes, out _));
+
+        var replacement = texture.TextureBytes.ToArray();
+        replacement[0x80] = 1;
+        Assert.True(ColosseumGswTextureCodec.TryImportTextures(
+            gsw,
+            new Dictionary<int, byte[]> { [texture.Id] = replacement },
+            out var importedGsw,
+            out var importedCount));
+
+        Assert.Equal(1, importedCount);
+        Assert.Equal(1, importedGsw[0x60 + 0x80]);
+    }
+
     private static byte[] CreateTexture(
         int width,
         int height,
@@ -136,6 +157,25 @@ public sealed class ColosseumTextureCodecTests
         }
 
         return dat;
+    }
+
+    private static byte[] CreateGswWithC8Texture()
+    {
+        var texture = CreateTexture(8, 4, format: 0x01, bitsPerPixel: 8, textureLength: 32, paletteLength: 512, paletteFormat: 3);
+        for (var i = 0; i < 32; i++)
+        {
+            texture[0x80 + i] = (byte)(i % 2);
+        }
+
+        BigEndian.WriteUInt16(texture, 0x80 + 32, 0xfc00);
+        BigEndian.WriteUInt16(texture, 0x80 + 34, 0x83e0);
+
+        var gsw = new byte[0x60 + texture.Length];
+        BigEndian.WriteUInt16(gsw, 0x18, 1);
+        gsw[0x40] = 0x03;
+        gsw[0x43] = 0x01;
+        texture.CopyTo(gsw.AsSpan(0x60));
+        return gsw;
     }
 
     private static void WriteModelWord(byte[] dat, int modelOffset, uint value)

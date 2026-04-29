@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace CipherSnagemEditor.Colosseum;
 
-public sealed class ColosseumProjectContext
+public sealed partial class ColosseumProjectContext
 {
     private const int NumberOfTrainerModels = 0x4b;
     private const int ModelDictionaryModelOffset = 0x04;
@@ -140,6 +140,10 @@ public sealed class ColosseumProjectContext
                 File.WriteAllBytes(pngPath, pngBytes);
                 decodedFiles.Add(pngPath);
             }
+        }
+        else if (decode && entryFileType == GameFileType.Gsw)
+        {
+            decodedFiles.AddRange(DecodeGswTextures(targetPath, overwrite));
         }
 
         return new IsoExportResult(targetPath, extractedFiles, decodedFiles);
@@ -649,6 +653,15 @@ public sealed class ColosseumProjectContext
 
         var commonRel = LoadCommonRel();
         var changes = commonRel.Randomize(options);
+        ColosseumShopRandomizerResult? shopResult = null;
+        if (options.ShopItems)
+        {
+            shopResult = RandomizePocketMenuShops(commonRel);
+            changes = changes
+                .WithStartDol()
+                .WithMessage($"Randomized {shopResult.ChangedItems} shop item slots.");
+        }
+
         var writtenFiles = new List<string>();
         if (changes.CommonRelChanged)
         {
@@ -658,6 +671,11 @@ public sealed class ColosseumProjectContext
         if (changes.StartDolChanged)
         {
             writtenFiles.Add(SaveStartDol(commonRel));
+        }
+
+        if (shopResult is not null)
+        {
+            writtenFiles.Add(shopResult.PocketMenuRelPath);
         }
 
         return new ColosseumRandomizerApplyResult(writtenFiles, changes.Messages);
@@ -927,6 +945,16 @@ public sealed class ColosseumProjectContext
 
                 break;
             }
+
+            case GameFileType.Gsw:
+            {
+                if (encodeDecodedFiles)
+                {
+                    encodedFiles.AddRange(EncodeGswTextures(targetPath));
+                }
+
+                break;
+            }
         }
 
         return new IsoEncodeResult(targetPath, encodedFiles, packedFiles);
@@ -1061,6 +1089,13 @@ public sealed class ColosseumProjectContext
                     yield return pngPath;
                 }
             }
+            else if (fileType == GameFileType.Gsw)
+            {
+                foreach (var decodedFile in DecodeGswTextures(filePath, overwrite))
+                {
+                    yield return decodedFile;
+                }
+            }
         }
 
         foreach (var modelPath in Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
@@ -1124,6 +1159,14 @@ public sealed class ColosseumProjectContext
             {
                 File.WriteAllBytes(texturePath, importedTexture);
                 yield return pngPath;
+            }
+        }
+
+        foreach (var gswPath in Directory.EnumerateFiles(folder, "*.gsw", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var importedTexturePath in EncodeGswTextures(gswPath))
+            {
+                yield return importedTexturePath;
             }
         }
 
@@ -1413,7 +1456,7 @@ public sealed class ColosseumProjectContext
     public static bool IsSupportedPath(string path)
     {
         var type = GameFileTypes.FromExtension(path);
-        return type is GameFileType.Iso or GameFileType.Fsys or GameFileType.Message or GameFileType.Gtx or GameFileType.Atx;
+        return type is GameFileType.Iso or GameFileType.Fsys or GameFileType.Message or GameFileType.Gtx or GameFileType.Atx or GameFileType.Gsw;
     }
 
     public static ColosseumProjectContext Open(string path)
@@ -1428,9 +1471,9 @@ public sealed class ColosseumProjectContext
             GameFileType.Iso => OpenIso(path),
             GameFileType.Fsys => OpenFsys(path),
             GameFileType.Message => OpenMessage(path),
-            GameFileType.Gtx or GameFileType.Atx => OpenTexture(path),
+            GameFileType.Gtx or GameFileType.Atx or GameFileType.Gsw => OpenTexture(path),
             GameFileType.Nkit => throw new NotSupportedException("nkit ISO files are not supported. Convert to a regular ISO first."),
-            _ => throw new NotSupportedException("Supported file types are .iso, .fsys, .msg, .gtx, and .atx.")
+            _ => throw new NotSupportedException("Supported file types are .iso, .fsys, .msg, .gtx, .atx, and .gsw.")
         };
     }
 
@@ -1494,6 +1537,60 @@ public sealed class ColosseumProjectContext
         var stem = extensionIndex < 0 ? fileName : fileName[..extensionIndex];
         var extensions = extensionIndex < 0 ? string.Empty : fileName[extensionIndex..];
         return Path.Combine(directory, $"{stem}_{textureIndex}{extensions}.gtx");
+    }
+
+    private static string GswTexturePath(string gswPath, int textureId)
+    {
+        var directory = Path.GetDirectoryName(gswPath) ?? string.Empty;
+        var stem = RemoveFileExtensionsLikeLegacy(Path.GetFileName(gswPath));
+        return Path.Combine(directory, $"{stem}_gsw_{textureId}.gtx");
+    }
+
+    private static IEnumerable<string> DecodeGswTextures(string gswPath, bool overwrite)
+    {
+        foreach (var texture in ColosseumGswTextureCodec.ExtractTextures(File.ReadAllBytes(gswPath)))
+        {
+            var texturePath = GswTexturePath(gswPath, texture.Id);
+            if (!File.Exists(texturePath) || overwrite)
+            {
+                File.WriteAllBytes(texturePath, texture.TextureBytes);
+                yield return texturePath;
+            }
+
+            var pngPath = texturePath + ".png";
+            if ((!File.Exists(pngPath) || overwrite)
+                && ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(texturePath), out var pngBytes))
+            {
+                File.WriteAllBytes(pngPath, pngBytes);
+                yield return pngPath;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EncodeGswTextures(string gswPath)
+    {
+        var replacements = ColosseumGswTextureCodec.ExtractTextures(File.ReadAllBytes(gswPath))
+            .Select(texture => (texture.Id, Path: GswTexturePath(gswPath, texture.Id)))
+            .Where(texture => File.Exists(texture.Path))
+            .ToDictionary(texture => texture.Id, texture => File.ReadAllBytes(texture.Path));
+        if (replacements.Count == 0)
+        {
+            yield break;
+        }
+
+        if (ColosseumGswTextureCodec.TryImportTextures(
+            File.ReadAllBytes(gswPath),
+            replacements,
+            out var importedGsw,
+            out var importedCount)
+            && importedCount > 0)
+        {
+            File.WriteAllBytes(gswPath, importedGsw);
+            foreach (var texturePath in replacements.Keys.Select(id => GswTexturePath(gswPath, id)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                yield return texturePath;
+            }
+        }
     }
 
     private static string RemoveFileExtensionsLikeLegacy(string fileName)

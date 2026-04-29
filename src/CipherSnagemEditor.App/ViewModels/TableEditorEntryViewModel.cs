@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CipherSnagemEditor.Colosseum;
 
 namespace CipherSnagemEditor.App.ViewModels;
 
@@ -14,13 +15,15 @@ public sealed partial class TableEditorEntryViewModel : ObservableObject
         string category,
         string searchText,
         string details,
-        string backgroundColour)
+        string backgroundColour,
+        ColosseumRawTableDefinition? rawDefinition)
     {
         Name = name;
         Category = category;
         SearchText = searchText;
         Details = details;
         BackgroundBrush = SolidColorBrush.Parse(backgroundColour);
+        RawDefinition = rawDefinition;
     }
 
     [ObservableProperty]
@@ -37,6 +40,8 @@ public sealed partial class TableEditorEntryViewModel : ObservableObject
     public string Details { get; }
 
     public IBrush BackgroundBrush { get; }
+
+    public ColosseumRawTableDefinition? RawDefinition { get; }
 
     public IBrush SelectionBorderBrush => IsSelected ? SelectionBrush : TransparentBrush;
 

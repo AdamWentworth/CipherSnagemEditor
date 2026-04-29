@@ -952,21 +952,21 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
-    private void EncodeTableEditor()
+    private async Task EncodeTableEditorAsync()
     {
-        LogTableEditorAction("Encode for editing via text files");
+        await RunTableEditorActionAsync("Encode for editing via text files", definition => CurrentProject!.EncodeRawTable(definition));
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
-    private void DecodeTableEditor()
+    private async Task DecodeTableEditorAsync()
     {
-        LogTableEditorAction("Decode edited files back into the game");
+        await RunTableEditorActionAsync("Decode edited files back into the game", definition => CurrentProject!.DecodeRawTable(definition));
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
-    private void DocumentTableEditor()
+    private async Task DocumentTableEditorAsync()
     {
-        LogTableEditorAction("Document as text files for reference");
+        await RunTableEditorActionAsync("Document as text files for reference", definition => CurrentProject!.DocumentRawTable(definition));
     }
 
     [RelayCommand(CanExecute = nameof(CanRunTableEditorAction))]
@@ -1216,7 +1216,7 @@ public partial class MainWindowViewModel : ViewModelBase
             && !IsBusy;
 
     private bool CanRunTableEditorAction()
-        => SelectedTableEditorEntry is not null && !IsBusy;
+        => SelectedTableEditorEntry?.RawDefinition is not null && CurrentProject is not null && !IsBusy;
 
     private bool CanApplyPatch(PatchEntryViewModel? patch)
         => patch is not null && CurrentProject?.Iso is not null && !IsBusy;
@@ -1234,7 +1234,34 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        Logs.Add($"{action}: {SelectedTableEditorEntry.Name} is queued for the universal table backend.");
+        Logs.Add($"{action}: {SelectedTableEditorEntry.Name} needs a richer field editor; raw table encode/decode is available for supported tables.");
+    }
+
+    private async Task RunTableEditorActionAsync(
+        string action,
+        Func<ColosseumRawTableDefinition, ColosseumRawTableActionResult> operation)
+    {
+        if (SelectedTableEditorEntry?.RawDefinition is null || CurrentProject is null)
+        {
+            return;
+        }
+
+        var table = SelectedTableEditorEntry;
+        Logs.Add($"{action}: {table.Name}");
+        IsBusy = true;
+        try
+        {
+            var result = await Task.Run(() => operation(table.RawDefinition));
+            Logs.Add($"{result.Message} Wrote {result.FilePath}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"{action} failed for {table.Name}: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     private void ResetRandomizerDefaults()
@@ -2616,6 +2643,8 @@ public partial class MainWindowViewModel : ViewModelBase
         ColosseumCommonRel commonRel,
         ColosseumProjectContext project)
     {
+        var firstItemOffset = commonRel.ItemData.FirstOrDefault()?.StartOffset;
+        var firstTypeOffset = commonRel.TypeData.FirstOrDefault()?.StartOffset;
         var entries = new List<TableEditorDefinition>
         {
             Common("AI Weight Effect", 56),
@@ -2642,7 +2671,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Common("Trainer Pokemon", 48, category: TableEditorCategoryDeckPokemon),
             Common("Trainer", 44, category: TableEditorCategoryDeckTrainer),
             Dol("Ability", project, count: commonRel.Abilities.Count),
-            Dol("Item", project, count: commonRel.ItemData.Count, entryLength: 0x28),
+            Dol("Item", project, startOffset: firstItemOffset, count: commonRel.ItemData.Count, entryLength: 0x28),
             Dol("PKX Pokemon Model", project, count: 417, entryLength: 0x0c),
             Dol("PKX Trainer Model", project, count: 76, entryLength: 0x0c),
             Dol("Script Functions", project, count: 242, entryLength: 0x0c),
@@ -2650,7 +2679,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Dol("Texture", project, count: 0x3da),
             Dol("Texture Rendering Info", project, count: 0x12d2),
             Dol("TM Or HM", project, count: 58, entryLength: 0x05),
-            Dol("Type", project, count: commonRel.TypeData.Count, entryLength: 0x2c),
+            Dol("Type", project, startOffset: firstTypeOffset, count: commonRel.TypeData.Count, entryLength: 0x2c),
             Dol("Valid Item", project, count: 1220, entryLength: 0x02),
             Dol("Valid Item 2", project, count: 1220, entryLength: 0x02),
             Codable("Gift Pokemon", 4),
@@ -2664,17 +2693,18 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private static TableEditorDefinition Common(string name, int commonIndex, string category = TableEditorCategoryCommon)
-        => new(name, category, "common.rel", commonIndex, commonIndex + 1, null, null);
+        => new(name, category, "common.rel", ColosseumRawTableSource.CommonRel, commonIndex, commonIndex + 1, null, null, null);
 
     private static TableEditorDefinition Dol(
         string name,
         ColosseumProjectContext project,
+        int? startOffset = null,
         int? count = null,
         int? entryLength = null)
-        => new(name, TableEditorCategoryOther, "Start.dol", null, null, count, entryLength);
+        => new(name, TableEditorCategoryOther, "Start.dol", ColosseumRawTableSource.StartDol, null, null, startOffset, count, entryLength);
 
     private static TableEditorDefinition Codable(string name, int? count)
-        => new(name, TableEditorCategoryCodable, string.Empty, null, null, count, null);
+        => new(name, TableEditorCategoryCodable, string.Empty, null, null, null, null, count, null);
 
     private static TableEditorEntryViewModel BuildTableEditorEntry(
         TableEditorDefinition definition,
@@ -2690,7 +2720,33 @@ public partial class MainWindowViewModel : ViewModelBase
             definition.Category,
             searchText,
             details,
-            ColourForTableEditorCategory(definition.Category));
+            ColourForTableEditorCategory(definition.Category),
+            BuildRawTableDefinition(definition));
+    }
+
+    private static ColosseumRawTableDefinition? BuildRawTableDefinition(TableEditorDefinition definition)
+    {
+        if (definition.Source is null)
+        {
+            return null;
+        }
+
+        if (definition.Source == ColosseumRawTableSource.StartDol
+            && (definition.StartOffset is null || definition.Count is null || definition.EntryLength is null))
+        {
+            return null;
+        }
+
+        return new ColosseumRawTableDefinition(
+            definition.Name,
+            definition.Category,
+            definition.Source.Value,
+            definition.FileName,
+            definition.CommonIndex,
+            definition.CountIndex,
+            definition.StartOffset,
+            definition.Count,
+            definition.EntryLength);
     }
 
     private static string BuildCommonTableDetails(
@@ -2723,7 +2779,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 : $"Details:\nNumber of Entries: {HexAndDecimal(definition.Count.Value)}";
         }
 
-        return BuildDetails(definition.FileName, null, definition.Count, definition.EntryLength);
+        return BuildDetails(definition.FileName, definition.StartOffset, definition.Count, definition.EntryLength);
     }
 
     private static string BuildDetails(string file, int? startOffset, int? count, int? entryLength)
@@ -3371,8 +3427,10 @@ public partial class MainWindowViewModel : ViewModelBase
         string Name,
         string Category,
         string FileName,
+        ColosseumRawTableSource? Source,
         int? CommonIndex,
         int? CountIndex,
+        int? StartOffset,
         int? Count,
         int? EntryLength);
 }

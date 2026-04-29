@@ -88,11 +88,6 @@ public sealed partial class ColosseumCommonRel
             changes = changes.WithCommonRel().WithMessage($"Randomized {count} item boxes.");
         }
 
-        if (options.ShopItems)
-        {
-            changes = changes.WithMessage("Shop Items needs pocket_menu.rel write/repack support before it can be safely randomized.");
-        }
-
         if (options.RemoveItemOrTradeEvolutions)
         {
             var tradeChanges = RemoveTradeEvolutions();
@@ -103,7 +98,7 @@ public sealed partial class ColosseumCommonRel
                 .WithMessage(itemChanges.Messages.FirstOrDefault() ?? "Removed item evolutions.");
         }
 
-        return changes.Messages.Count == 0
+        return changes.Messages.Count == 0 && !options.ShopItems
             ? changes.WithMessage("No randomizer options were selected.")
             : changes;
     }
