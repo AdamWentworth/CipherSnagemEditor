@@ -1,6 +1,7 @@
 using CipherSnagemEditor.Colosseum;
 using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Binary;
+using CipherSnagemEditor.Core.Files;
 using CipherSnagemEditor.Core.Text;
 using System.Text.Json;
 
@@ -182,6 +183,119 @@ public sealed class ProjectContextTests
     }
 
     [Fact]
+    public void DecodesAndRepacksPkxDatThroughFsysIsoExplorerFlow()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var isoPath = Path.Combine(temp, "Sample.iso");
+        var originalDat = new byte[] { 1, 2, 3, 4, 5 };
+        var fsysBytes = CreateFsys(("sample.pkx", CreatePkx(originalDat, [0xaa, 0xbb, 0xcc]), GameFileType.Pkx));
+        var bytes = CreateSingleFileIso("models.fsys", fsysBytes, fileSlotSize: 0x500);
+        File.WriteAllBytes(isoPath, bytes);
+
+        var context = ColosseumProjectContext.Open(isoPath);
+        var entry = Assert.Single(context.Iso!.Files, file => file.Name == "models.fsys");
+
+        var export = context.ExportIsoFile(entry, extractFsysContents: true, decode: true);
+
+        var folder = Path.Combine(temp, "Sample CM Tool", "Game Files", "models");
+        var pkxPath = Path.Combine(folder, "sample.pkx");
+        var datPath = pkxPath + ".dat";
+        Assert.Contains(datPath, export.DecodedFiles);
+        Assert.Equal(originalDat, File.ReadAllBytes(datPath));
+
+        var replacementDat = new byte[] { 9, 8, 7, 6, 5, 4, 3 };
+        File.WriteAllBytes(datPath, replacementDat);
+
+        var result = context.EncodeIsoFile(entry);
+
+        Assert.Contains(datPath, result.EncodedFiles);
+        Assert.Contains(pkxPath, result.PackedFiles);
+        var archive = FsysArchive.Load(export.FilePath);
+        var archivedPkx = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "sample.pkx"));
+        Assert.True(ColosseumLegacyFileCodecs.TryExportColosseumPkxDat(archivedPkx, out var archivedDat));
+        Assert.Equal(replacementDat, archivedDat);
+        Assert.Equal([0xaa, 0xbb, 0xcc], archivedPkx[^3..]);
+    }
+
+    [Fact]
+    public void DecodesAndRepacksWzxEmbeddedModelsThroughFsysIsoExplorerFlow()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var isoPath = Path.Combine(temp, "Sample.iso");
+        var originalModel = CreateDatModel(0x40, fill: 0x20);
+        var fsysBytes = CreateFsys(("sample.wzx", CreateWzx(originalModel), GameFileType.Wzx));
+        var bytes = CreateSingleFileIso("models.fsys", fsysBytes, fileSlotSize: 0x500);
+        File.WriteAllBytes(isoPath, bytes);
+
+        var context = ColosseumProjectContext.Open(isoPath);
+        var entry = Assert.Single(context.Iso!.Files, file => file.Name == "models.fsys");
+
+        var export = context.ExportIsoFile(entry, extractFsysContents: true, decode: true);
+
+        var folder = Path.Combine(temp, "Sample CM Tool", "Game Files", "models");
+        var wzxPath = Path.Combine(folder, "sample.wzx");
+        var modelPath = Path.Combine(folder, "sample_0.wzx.dat");
+        Assert.Contains(modelPath, export.DecodedFiles);
+        Assert.Equal(originalModel, File.ReadAllBytes(modelPath));
+
+        var replacementModel = CreateDatModel(0x40, fill: 0x50);
+        File.WriteAllBytes(modelPath, replacementModel);
+
+        var result = context.EncodeIsoFile(entry);
+
+        Assert.Contains(modelPath, result.EncodedFiles);
+        Assert.Contains(wzxPath, result.PackedFiles);
+        var archive = FsysArchive.Load(export.FilePath);
+        var archivedWzx = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "sample.wzx"));
+        var archivedModel = Assert.Single(ColosseumLegacyFileCodecs.ExtractWzxDatModels(archivedWzx));
+        Assert.Equal(replacementModel, archivedModel.Data);
+    }
+
+    [Fact]
+    public void CombinesAndSplitsThpHeaderBodyThroughFsysIsoExplorerFlow()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var isoPath = Path.Combine(temp, "Sample.iso");
+        var thp = CreateThp();
+        Assert.True(ColosseumLegacyFileCodecs.TrySplitThp(thp, out var thh, out var thd));
+        var fsysBytes = CreateFsys(
+            ("movie.thh", thh, GameFileType.Thh),
+            ("movie.thd", thd, GameFileType.Thd));
+        var bytes = CreateSingleFileIso("media.fsys", fsysBytes, fileSlotSize: 0x500);
+        File.WriteAllBytes(isoPath, bytes);
+
+        var context = ColosseumProjectContext.Open(isoPath);
+        var entry = Assert.Single(context.Iso!.Files, file => file.Name == "media.fsys");
+
+        var export = context.ExportIsoFile(entry, extractFsysContents: true, decode: true);
+
+        var folder = Path.Combine(temp, "Sample CM Tool", "Game Files", "media");
+        var thhPath = Path.Combine(folder, "movie.thh");
+        var thdPath = Path.Combine(folder, "movie.thd");
+        var thpPath = Path.Combine(folder, "movie.thp");
+        Assert.Contains(thpPath, export.DecodedFiles);
+        Assert.Equal(thp, File.ReadAllBytes(thpPath));
+
+        var editedThp = thp.ToArray();
+        editedThp[0x60] = 0xbe;
+        editedThp[0x61] = 0xef;
+        File.WriteAllBytes(thpPath, editedThp);
+
+        var result = context.EncodeIsoFile(entry);
+
+        Assert.Contains(thpPath, result.EncodedFiles);
+        Assert.Contains(thhPath, result.PackedFiles);
+        Assert.Contains(thdPath, result.PackedFiles);
+        var archive = FsysArchive.Load(export.FilePath);
+        var archivedHeader = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "movie.thh"));
+        var archivedBody = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "movie.thd"));
+        Assert.Equal(editedThp, ColosseumLegacyFileCodecs.CombineThp(archivedHeader, archivedBody));
+    }
+
+    [Fact]
     public void ImportsLargerFileByShiftingLaterIsoFiles()
     {
         var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
@@ -275,20 +389,105 @@ public sealed class ProjectContextTests
     }
 
     private static byte[] CreateSingleEntryFsys(byte[]? fileBytes = null)
+        => CreateFsys(("sample.msg", fileBytes ?? [1, 2, 3], GameFileType.Message));
+
+    private static byte[] CreateFsys(params (string FileName, byte[] FileBytes, GameFileType FileType)[] entries)
     {
-        fileBytes ??= [1, 2, 3];
-        var bytes = new byte[0x200];
+        if (entries.Length == 0)
+        {
+            throw new ArgumentException("At least one FSYS entry is required.", nameof(entries));
+        }
+
+        const int pointerTableStart = 0x60;
+        const int detailsStart = 0x80;
+        const int detailsSize = 0x30;
+        var namesStart = Align16(detailsStart + (entries.Length * detailsSize));
+        var nameOffsets = new int[entries.Length];
+        var dataOffsets = new int[entries.Length];
+
+        var cursor = namesStart;
+        for (var index = 0; index < entries.Length; index++)
+        {
+            nameOffsets[index] = cursor;
+            cursor += System.Text.Encoding.ASCII.GetByteCount(entries[index].FileName) + 1;
+        }
+
+        cursor = Align16(cursor);
+        for (var index = 0; index < entries.Length; index++)
+        {
+            dataOffsets[index] = cursor;
+            cursor = Align16(cursor + entries[index].FileBytes.Length);
+        }
+
+        var bytes = new byte[Align16(cursor + 4)];
         BigEndian.WriteUInt32(bytes, 0x00, 0x46535953);
-        BigEndian.WriteUInt32(bytes, 0x0c, 1);
+        BigEndian.WriteUInt32(bytes, 0x0c, checked((uint)entries.Length));
         BigEndian.WriteUInt32(bytes, 0x20, (uint)bytes.Length);
-        BigEndian.WriteUInt32(bytes, 0x60, 0x80);
-        BigEndian.WriteUInt32(bytes, 0x80, 0x00000a00);
-        BigEndian.WriteUInt32(bytes, 0x84, 0x120);
-        BigEndian.WriteUInt32(bytes, 0x88, (uint)fileBytes.Length);
-        BigEndian.WriteUInt32(bytes, 0x94, (uint)fileBytes.Length);
-        BigEndian.WriteUInt32(bytes, 0xa4, 0x100);
-        "sample"u8.CopyTo(bytes.AsSpan(0x100));
-        fileBytes.CopyTo(bytes, 0x120);
+
+        for (var index = 0; index < entries.Length; index++)
+        {
+            var entry = entries[index];
+            var detailsOffset = detailsStart + (index * detailsSize);
+            BigEndian.WriteUInt32(bytes, pointerTableStart + (index * 4), checked((uint)detailsOffset));
+            BigEndian.WriteUInt32(bytes, detailsOffset + 0x00, checked((uint)entry.FileType << 8));
+            BigEndian.WriteUInt32(bytes, detailsOffset + 0x04, checked((uint)dataOffsets[index]));
+            BigEndian.WriteUInt32(bytes, detailsOffset + 0x08, checked((uint)entry.FileBytes.Length));
+            BigEndian.WriteUInt32(bytes, detailsOffset + 0x14, checked((uint)entry.FileBytes.Length));
+            BigEndian.WriteUInt32(bytes, detailsOffset + 0x24, checked((uint)nameOffsets[index]));
+
+            var fileNameBytes = System.Text.Encoding.ASCII.GetBytes(entry.FileName + "\0");
+            fileNameBytes.CopyTo(bytes.AsSpan(nameOffsets[index]));
+            entry.FileBytes.CopyTo(bytes.AsSpan(dataOffsets[index]));
+        }
+
         return bytes;
     }
+
+    private static byte[] CreatePkx(byte[] dat, byte[] trailer)
+    {
+        var paddedDatLength = Align16(dat.Length);
+        var pkx = new byte[0x40 + paddedDatLength + trailer.Length];
+        BigEndian.WriteUInt32(pkx, 0, checked((uint)dat.Length));
+        dat.CopyTo(pkx.AsSpan(0x40));
+        trailer.CopyTo(pkx.AsSpan(0x40 + paddedDatLength));
+        return pkx;
+    }
+
+    private static byte[] CreateWzx(byte[] model)
+    {
+        var wzx = new byte[0x10 + model.Length + 0x20];
+        BigEndian.WriteUInt32(wzx, 0x08, checked((uint)model.Length));
+        model.CopyTo(wzx.AsSpan(0x10));
+        return wzx;
+    }
+
+    private static byte[] CreateDatModel(int length, byte fill)
+    {
+        var model = Enumerable.Repeat(fill, length).ToArray();
+        BigEndian.WriteUInt32(model, 0, checked((uint)length));
+        model[12] = 0;
+        model[13] = 0;
+        model[14] = 0;
+        model[15] = 1;
+        Array.Clear(model, 16, 16);
+        "scene_data\0"u8.CopyTo(model.AsSpan(length - 16));
+        return model;
+    }
+
+    private static byte[] CreateThp()
+    {
+        var thp = new byte[0x70];
+        BigEndian.WriteUInt32(thp, 0x20, 0x30);
+        BigEndian.WriteUInt32(thp, 0x28, 0x64);
+        BigEndian.WriteUInt32(thp, 0x2c, 0x68);
+        thp.AsSpan(0x34, 16).Fill(0xff);
+        thp[0x34] = 0;
+        thp[0x35] = 1;
+        thp[0x60] = 0xde;
+        thp[0x61] = 0xad;
+        return thp;
+    }
+
+    private static int Align16(int value)
+        => (value + 0x0f) & ~0x0f;
 }

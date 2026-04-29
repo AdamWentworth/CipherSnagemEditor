@@ -100,7 +100,7 @@ public static class ColosseumDatTextureCodec
     }
 
     private static bool IsReadableRange(byte[] bytes, int offset, int length)
-        => offset >= 0 && length >= 0 && offset + length <= bytes.Length;
+        => offset >= 0 && length >= 0 && offset <= bytes.Length - length;
 
     private sealed record TextureReference(
         int Index,
@@ -150,18 +150,26 @@ public static class ColosseumDatTextureCodec
                 return null;
             }
 
-            var dataSize = checked((int)BigEndian.ReadUInt32(dat, 0x04));
-            var nodeCount = checked((int)BigEndian.ReadUInt32(dat, 0x08));
-            var publicRootNodes = checked((int)BigEndian.ReadUInt32(dat, 0x0c));
-            var externalRootNodes = checked((int)BigEndian.ReadUInt32(dat, 0x10));
-            var rootNodesOffset = checked(dataSize + nodeCount * 4);
-            var rootNodesCount = checked(publicRootNodes + externalRootNodes);
-            if (rootNodesCount <= 0 || rootNodesOffset <= 0 || rootNodesOffset + rootNodesCount * 8 > dat.Length - DatHeaderLength)
+            var dataSize = BigEndian.ReadUInt32(dat, 0x04);
+            var nodeCount = BigEndian.ReadUInt32(dat, 0x08);
+            var publicRootNodes = BigEndian.ReadUInt32(dat, 0x0c);
+            var externalRootNodes = BigEndian.ReadUInt32(dat, 0x10);
+            var rootNodesOffset = (long)dataSize + (nodeCount * 4L);
+            var rootNodesCount = (long)publicRootNodes + externalRootNodes;
+            if (rootNodesCount <= 0
+                || rootNodesCount > int.MaxValue
+                || rootNodesOffset <= 0
+                || rootNodesOffset > int.MaxValue
+                || rootNodesOffset + (rootNodesCount * 8L) > dat.Length - DatHeaderLength)
             {
                 return null;
             }
 
-            return new DatTextureScanner(dat, rootNodesOffset, rootNodesCount, rootNodesOffset + rootNodesCount * 8);
+            return new DatTextureScanner(
+                dat,
+                (int)rootNodesOffset,
+                (int)rootNodesCount,
+                checked((int)(rootNodesOffset + (rootNodesCount * 8L))));
         }
 
         public IReadOnlyList<TextureReference> FindTextureReferences()
@@ -343,7 +351,13 @@ public static class ColosseumDatTextureCodec
             }
 
             var dataOffset = ReadPointer(offset);
-            var format = checked((int)ReadUInt32(offset + 4));
+            var formatValue = ReadUInt32(offset + 4);
+            if (formatValue > int.MaxValue)
+            {
+                return null;
+            }
+
+            var format = (int)formatValue;
             var entries = ReadUInt16(offset + 12);
             if (entries <= 0 || !Validate(dataOffset, entries * 2))
             {
@@ -368,7 +382,13 @@ public static class ColosseumDatTextureCodec
 
             var width = ReadUInt16(offset + 4);
             var height = ReadUInt16(offset + 6);
-            var standardFormat = checked((int)ReadUInt32(offset + 8));
+            var standardFormatValue = ReadUInt32(offset + 8);
+            if (standardFormatValue > int.MaxValue)
+            {
+                return;
+            }
+
+            var standardFormat = (int)standardFormatValue;
             if (!TryExpectedTextureLength(width, height, standardFormat, out var dataLength)
                 || !Validate(dataPointer, dataLength))
             {
@@ -398,10 +418,18 @@ public static class ColosseumDatTextureCodec
         }
 
         private bool Validate(int offset, int length)
-            => offset > 0 && length >= 0 && offset + length <= _model.Length;
+            => offset > 0 && length >= 0 && offset <= _model.Length - length;
 
         private int ReadPointer(int offset)
-            => Validate(offset, 4) ? checked((int)ReadUInt32(offset)) : 0;
+        {
+            if (!Validate(offset, 4))
+            {
+                return 0;
+            }
+
+            var pointer = ReadUInt32(offset);
+            return pointer <= int.MaxValue ? (int)pointer : 0;
+        }
 
         private string ReadRootNodeName(int rootOffset)
         {
@@ -443,7 +471,13 @@ public static class ColosseumDatTextureCodec
 
         var paddedWidth = Align(width, blockWidth);
         var paddedHeight = Align(height, blockHeight);
-        length = checked(paddedWidth * paddedHeight * bitsPerPixel / 8);
+        var byteLength = (long)paddedWidth * paddedHeight * bitsPerPixel / 8;
+        if (byteLength > int.MaxValue)
+        {
+            return false;
+        }
+
+        length = (int)byteLength;
         return true;
     }
 
