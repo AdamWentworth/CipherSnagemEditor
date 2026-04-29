@@ -1,0 +1,176 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:CipherSnagemEditor.App.Controls"
+             xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             x:Class="CipherSnagemEditor.App.Views.VertexFiltersView"
+             x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
+             FontFamily="Arial"
+             Background="#303030">
+    <UserControl.Styles>
+        <Style Selector="TextBox.LegacyVertexSearch">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="4,4,4,3"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#5C5C5C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="PlaceholderForeground" Value="#A8A8A8"/>
+        </Style>
+        <Style Selector="TextBox.LegacyVertexSearch:pointerover">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+        <Style Selector="TextBox.LegacyVertexSearch:focus">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
+        <Style Selector="TextBox.LegacyVertexFilename">
+            <Setter Property="Height" Value="25"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+        </Style>
+        <Style Selector="TextBox.LegacyVertexFilename:pointerover">
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyVertexRowText">
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="7,0"/>
+            <Setter Property="MaxLines" Value="3"/>
+        </Style>
+        <Style Selector="Border.LegacyVertexRow:pointerover">
+            <Setter Property="Opacity" Value="0.88"/>
+        </Style>
+        <Style Selector="ComboBox.LegacyVertexCombo">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="25"/>
+            <Setter Property="Padding" Value="6,0,2,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.LegacyVertexButton">
+            <Setter Property="Background" Value="#6E6E6E"/>
+            <Setter Property="BorderBrush" Value="#7B7B7B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="200,380"
+          Width="580"
+          Height="666"
+          Background="#303030">
+        <Border Grid.Column="0" Background="#000000">
+            <Grid RowDefinitions="Auto,*">
+                <TextBox Classes="LegacyVertexSearch"
+                         Text="{Binding VertexFilterSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Search"
+                         IsTabStop="False"/>
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Visible"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Background="Transparent">
+                    <ItemsControl ItemsSource="{Binding VertexFilterFiles}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:VertexFilterFileEntryViewModel">
+                                <Border Classes="LegacyVertexRow"
+                                        PointerPressed="VertexFilterFilePointerPressed"
+                                        Cursor="Hand"
+                                        Height="50"
+                                        HorizontalAlignment="Stretch"
+                                        Background="{Binding BackgroundBrush}"
+                                        BorderBrush="{Binding SelectionBorderBrush}"
+                                        BorderThickness="{Binding SelectionBorderThickness}">
+                                    <TextBlock Classes="LegacyVertexRowText"
+                                               Text="{Binding RowText}"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Canvas Grid.Column="1"
+                Width="380"
+                Height="666"
+                Background="#303030">
+            <TextBox Classes="LegacyVertexFilename"
+                     Canvas.Left="8"
+                     Canvas.Top="20"
+                     Width="364"
+                     Height="25"
+                     IsReadOnly="True"
+                     Text="{Binding SelectedVertexFilterFileName}"/>
+
+            <controls:VertexFilterPreviewView Canvas.Left="10"
+                                              Canvas.Top="65"
+                                              Width="360"
+                                              Height="240"
+                                              FilePath="{Binding SelectedVertexFilterFilePath}"
+                                              FilterValue="0"/>
+
+            <controls:LegacyPokemonComboBox Classes="LegacyVertexCombo"
+                                            Canvas.Left="7"
+                                            Canvas.Top="324"
+                                            Width="367"
+                                            Height="25"
+                                            ItemsSource="{Binding VertexFilterOptions}"
+                                            SelectedItem="{Binding SelectedVertexFilter, Mode=TwoWay}"
+                                            MaxDropDownHeight="220"/>
+
+            <controls:VertexFilterPreviewView Canvas.Left="10"
+                                              Canvas.Top="365"
+                                              Width="360"
+                                              Height="240"
+                                              FilePath="{Binding SelectedVertexFilterFilePath}"
+                                              FilterValue="{Binding SelectedVertexFilterValue}"/>
+
+            <Button Classes="LegacyVertexButton"
+                    Canvas.Left="148"
+                    Canvas.Top="620"
+                    Width="83"
+                    Height="26"
+                    Content="Save"
+                    Command="{Binding SaveVertexFilterCommand}"/>
+        </Canvas>
+    </Grid>
+</UserControl>

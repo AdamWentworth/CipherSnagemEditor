@@ -5,7 +5,7 @@ using CipherSnagemEditor.Core.Text;
 
 namespace CipherSnagemEditor.Colosseum.Data;
 
-public sealed class ColosseumCommonRel
+public sealed partial class ColosseumCommonRel
 {
     private const int TrainerSize = 0x34;
     private const int TrainerPokemonCount = 6;

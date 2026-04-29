@@ -41,6 +41,12 @@ public sealed class BinaryData
 
     public void WriteUInt32(int offset, uint value) => BigEndian.WriteUInt32(_bytes, offset, value);
 
+    public void WriteBytes(int offset, ReadOnlySpan<byte> values)
+    {
+        EnsureRange(offset, values.Length);
+        values.CopyTo(_bytes.AsSpan(offset, values.Length));
+    }
+
     public BinaryData Slice(int offset, int length)
     {
         EnsureRange(offset, length);

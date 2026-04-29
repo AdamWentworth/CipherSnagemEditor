@@ -1,0 +1,188 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             x:Class="CipherSnagemEditor.App.Views.RandomizerView"
+             x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
+             FontFamily="Arial"
+             Background="#303030">
+    <UserControl.Styles>
+        <Style Selector="CheckBox.LegacyRandomizerCheck">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center">
+                        <Border Name="LegacyCheckGlyph"
+                                Width="15"
+                                Height="15"
+                                Background="#505050"
+                                BorderBrush="#3E3E3E"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                VerticalAlignment="Center">
+                            <Path Name="LegacyCheckMark"
+                                  Width="10"
+                                  Height="8"
+                                  Stretch="Uniform"
+                                  Stroke="#FFFFFF"
+                                  StrokeThickness="2"
+                                  StrokeLineCap="Round"
+                                  Data="M 1,4 L 4,7 L 9,1"
+                                  Opacity="0"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"/>
+                        </Border>
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          FontSize="{TemplateBinding FontSize}"
+                                          VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="CheckBox.LegacyRandomizerCheck:pointerover /template/ Border#LegacyCheckGlyph">
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
+        <Style Selector="CheckBox.LegacyRandomizerCheck:checked /template/ Border#LegacyCheckGlyph">
+            <Setter Property="Background" Value="#0878E7"/>
+            <Setter Property="BorderBrush" Value="#66B4FF"/>
+        </Style>
+        <Style Selector="CheckBox.LegacyRandomizerCheck:checked /template/ Path#LegacyCheckMark">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="Button.LegacyRandomizerButton">
+            <Setter Property="Width" Value="114"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="#707070"/>
+            <Setter Property="BorderBrush" Value="#7B7B7B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Canvas Width="390"
+            Height="505"
+            Background="#303030">
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Starter Pokemon"
+                  IsChecked="{Binding RandomizerStarterPokemon, Mode=TwoWay}"
+                  Canvas.Left="8"
+                  Canvas.Top="29"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Shadow Pokemon"
+                  IsChecked="{Binding RandomizerShadowPokemon, Mode=TwoWay}"
+                  Canvas.Left="198"
+                  Canvas.Top="29"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="NPC Pokemon"
+                  IsChecked="{Binding RandomizerNpcPokemon, Mode=TwoWay}"
+                  Canvas.Left="8"
+                  Canvas.Top="75"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Pokemon Moves"
+                  IsChecked="{Binding RandomizerPokemonMoves, Mode=TwoWay}"
+                  Canvas.Left="198"
+                  Canvas.Top="75"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Pokemon Types"
+                  IsChecked="{Binding RandomizerPokemonTypes, Mode=TwoWay}"
+                  Canvas.Left="8"
+                  Canvas.Top="121"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Pokemon Abilities"
+                  IsChecked="{Binding RandomizerPokemonAbilities, Mode=TwoWay}"
+                  Canvas.Left="198"
+                  Canvas.Top="121"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Pokemon Stats"
+                  IsChecked="{Binding RandomizerPokemonStats, Mode=TwoWay}"
+                  Canvas.Left="8"
+                  Canvas.Top="167"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Pokemon Evolutions"
+                  IsChecked="{Binding RandomizerPokemonEvolutions, Mode=TwoWay}"
+                  Canvas.Left="198"
+                  Canvas.Top="167"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Move Types"
+                  IsChecked="{Binding RandomizerMoveTypes, Mode=TwoWay}"
+                  Canvas.Left="8"
+                  Canvas.Top="213"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Type Matchups"
+                  IsChecked="{Binding RandomizerTypeMatchups, Mode=TwoWay}"
+                  Canvas.Left="198"
+                  Canvas.Top="213"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="TM Moves"
+                  IsChecked="{Binding RandomizerTmMoves, Mode=TwoWay}"
+                  Canvas.Left="8"
+                  Canvas.Top="259"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Item Boxes"
+                  IsChecked="{Binding RandomizerItemBoxes, Mode=TwoWay}"
+                  Canvas.Left="198"
+                  Canvas.Top="259"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Shop Items"
+                  IsChecked="{Binding RandomizerShopItems, Mode=TwoWay}"
+                  Canvas.Left="8"
+                  Canvas.Top="305"
+                  Width="182"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Randomise Pokemon Using Similar BST"
+                  IsChecked="{Binding RandomizerSimilarBaseStatTotal, Mode=TwoWay}"
+                  Canvas.Left="62"
+                  Canvas.Top="397"
+                  Width="264"
+                  Height="18"/>
+        <CheckBox Classes="LegacyRandomizerCheck"
+                  Content="Remove Item or Trade Evolutions"
+                  IsChecked="{Binding RandomizerRemoveItemOrTradeEvolutions, Mode=TwoWay}"
+                  Canvas.Left="82"
+                  Canvas.Top="423"
+                  Width="225"
+                  Height="18"/>
+        <Button Classes="LegacyRandomizerButton"
+                Content="Randomise"
+                Command="{Binding RunRandomizerCommand}"
+                Canvas.Left="138"
+                Canvas.Top="460"/>
+    </Canvas>
+</UserControl>

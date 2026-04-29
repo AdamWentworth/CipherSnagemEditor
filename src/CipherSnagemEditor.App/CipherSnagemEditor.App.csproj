@@ -14,6 +14,7 @@
     <AvaloniaResource Include="..\..\assets\ui\cells\item-cell.png" Link="Assets\Ui\Cells\item-cell.png" />
     <AvaloniaResource Include="..\..\assets\ui\cells\selected-cell.png" Link="Assets\Ui\Cells\selected-cell.png" />
     <AvaloniaResource Include="..\..\assets\ui\cells\tool-cell.png" Link="Assets\Ui\Cells\tool-cell.png" />
+    <Content Include="..\..\assets\json\Colosseum\Move Categories.json" Link="Assets\Json\Colosseum\Move Categories.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

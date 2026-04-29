@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             x:Class="CipherSnagemEditor.App.Views.PatchEditorView"
+             x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
+             FontFamily="Arial"
+             Background="#303030">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.LegacyPatchText">
+            <Setter Property="Foreground" Value="#000000"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="MaxLines" Value="3"/>
+        </Style>
+        <Style Selector="Border.LegacyPatchRow:pointerover">
+            <Setter Property="Opacity" Value="0.88"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Width="400"
+          Height="480"
+          Background="#303030">
+        <Border Background="#000000">
+            <ScrollViewer VerticalScrollBarVisibility="Visible"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding PatchEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PatchEntryViewModel">
+                            <Border Classes="LegacyPatchRow"
+                                    PointerPressed="PatchPointerPressed"
+                                    Cursor="Hand"
+                                    Height="40"
+                                    HorizontalAlignment="Stretch"
+                                    Background="{Binding BackgroundBrush}"
+                                    BorderBrush="{Binding SelectionBorderBrush}"
+                                    BorderThickness="{Binding SelectionBorderThickness}">
+                                <TextBlock Classes="LegacyPatchText"
+                                           Text="{Binding Name}"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

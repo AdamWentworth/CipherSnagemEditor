@@ -236,6 +236,75 @@ public sealed class ColosseumProjectContext
     public IReadOnlyList<ColosseumInteractionPoint> LoadInteractionPoints()
         => LoadCommonRel().InteractionPoints;
 
+    public IReadOnlyList<ColosseumCollisionFile> LoadCollisionFiles()
+    {
+        if (WorkspaceDirectory is null)
+        {
+            return [];
+        }
+
+        var gameFilesDirectory = Path.Combine(WorkspaceDirectory, "Game Files");
+        if (!Directory.Exists(gameFilesDirectory))
+        {
+            return [];
+        }
+
+        return Directory
+            .EnumerateFiles(gameFilesDirectory, "*.col", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                var fileName = Path.GetFileName(path);
+                var mapCode = fileName.Length >= 2 ? fileName[..2] : string.Empty;
+                return new ColosseumCollisionFile(path, fileName, mapCode, MapNameForCode(mapCode));
+            })
+            .OrderBy(file => file.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public ColosseumCollisionData LoadCollisionData(ColosseumCollisionFile file)
+        => ColosseumCollisionData.Parse(File.ReadAllBytes(file.Path));
+
+    public IReadOnlyList<ColosseumVertexFilterFile> LoadVertexFilterFiles()
+    {
+        if (WorkspaceDirectory is null)
+        {
+            return [];
+        }
+
+        var gameFilesDirectory = Path.Combine(WorkspaceDirectory, "Game Files");
+        if (!Directory.Exists(gameFilesDirectory))
+        {
+            return [];
+        }
+
+        return Directory
+            .EnumerateFiles(gameFilesDirectory, "*.wzx.dat", SearchOption.AllDirectories)
+            .Select(path => new ColosseumVertexFilterFile(
+                path,
+                Path.GetFileName(path),
+                Path.GetRelativePath(gameFilesDirectory, path)))
+            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public ColosseumVertexFilterApplyResult ApplyVertexFilter(
+        ColosseumVertexFilterFile file,
+        ColosseumVertexColorFilter filter)
+    {
+        if (!File.Exists(file.Path))
+        {
+            throw new FileNotFoundException($"Vertex filter file not found: {file.Path}", file.Path);
+        }
+
+        var model = ColosseumDatVertexColorModel.Load(file.Path);
+        var count = model.ApplyFilter(filter);
+        model.Save(file.Path);
+        return new ColosseumVertexFilterApplyResult(
+            file.FileName,
+            ColosseumDatVertexColorModel.FilterName(filter),
+            count);
+    }
+
     private IReadOnlyDictionary<int, string> BuildTrainerModelNames()
     {
         if (TrainerModelNames is not null)
@@ -308,6 +377,31 @@ public sealed class ColosseumProjectContext
             GameCubeRegion.UnitedStates => 0x36d840,
             GameCubeRegion.Europe => 0x3ba938,
             _ => 0
+        };
+
+    private static string MapNameForCode(string code)
+        => code switch
+        {
+            "B1" => "Demo Area",
+            "D1" => "Shadow Pokemon Lab",
+            "D2" => "Mt. Battle",
+            "D3" => "S.S. Libra",
+            "D4" => "Realgam Tower",
+            "D5" => "Cipher Key Lair",
+            "D6" => "Citadark Isle",
+            "D7" => "Orre Colosseum",
+            "M1" => "Phenac City",
+            "M2" => "Pyrite Town",
+            "M3" => "Agate Village",
+            "M4" => "The Under",
+            "M5" => "Pokemon HQ Lab",
+            "M6" => "Gateon Port",
+            "S1" => "Outskirt Stand",
+            "S2" => "Team Snagem's Hideout",
+            "S3" => "Kaminko's House",
+            "T1" => "Ancient Colosseum",
+            "es" => "Pokespot",
+            _ => string.Empty
         };
 
     public string SaveTrainerPokemon(IEnumerable<ColosseumTrainerPokemonUpdate> updates)
@@ -443,6 +537,53 @@ public sealed class ColosseumProjectContext
         File.WriteAllBytes(targetPath, bytes);
         LoadedFiles["common.rel"] = bytes;
         return targetPath;
+    }
+
+    public ColosseumPatchApplyResult ApplyPatch(ColosseumPatchKind patchKind)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var definition = ColosseumPatchDefinition.ForKind(patchKind);
+        var commonRel = LoadCommonRel();
+        var changes = commonRel.ApplyPatch(patchKind);
+        var writtenFiles = new List<string>();
+        if (changes.CommonRelChanged)
+        {
+            writtenFiles.Add(SaveCommonRel(commonRel));
+        }
+
+        if (changes.StartDolChanged)
+        {
+            writtenFiles.Add(SaveStartDol(commonRel));
+        }
+
+        return new ColosseumPatchApplyResult(definition, writtenFiles, changes.Messages);
+    }
+
+    public ColosseumRandomizerApplyResult Randomize(ColosseumRandomizerOptions options)
+    {
+        if (Iso is null)
+        {
+            throw new InvalidOperationException("No Colosseum ISO is loaded.");
+        }
+
+        var commonRel = LoadCommonRel();
+        var changes = commonRel.Randomize(options);
+        var writtenFiles = new List<string>();
+        if (changes.CommonRelChanged)
+        {
+            writtenFiles.Add(SaveCommonRel(commonRel));
+        }
+
+        if (changes.StartDolChanged)
+        {
+            writtenFiles.Add(SaveStartDol(commonRel));
+        }
+
+        return new ColosseumRandomizerApplyResult(writtenFiles, changes.Messages);
     }
 
     public IReadOnlyList<ColosseumMessageTable> LoadMessageTables()
@@ -592,6 +733,16 @@ public sealed class ColosseumProjectContext
         var bytes = commonRel.StartDolToArray();
         File.WriteAllBytes(targetPath, bytes);
         LoadedFiles["Start.dol"] = bytes;
+        return targetPath;
+    }
+
+    private string SaveCommonRel(ColosseumCommonRel commonRel)
+    {
+        var targetPath = Path.Combine(GetIsoExportDirectory("common.fsys"), "common.rel");
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath) ?? WorkspaceDirectory!);
+        var bytes = commonRel.ToArray();
+        File.WriteAllBytes(targetPath, bytes);
+        LoadedFiles["common.rel"] = bytes;
         return targetPath;
     }
 

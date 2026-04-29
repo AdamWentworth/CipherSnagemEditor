@@ -24,6 +24,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<InteractionEntryViewModel> _allInteractions = [];
     private readonly List<MessageStringEntryViewModel> _allMessageStrings = [];
     private readonly List<TableEditorEntryViewModel> _allTableEditorEntries = [];
+    private readonly List<PatchEntryViewModel> _allPatches = [];
+    private readonly List<CollisionFileEntryViewModel> _allCollisionFiles = [];
+    private readonly List<VertexFilterFileEntryViewModel> _allVertexFilterFiles = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
     private PokemonStatsEditorResources _pokemonStatsResources = PokemonStatsEditorResources.Empty;
     private MoveEditorResources _moveEditorResources = MoveEditorResources.Empty;
@@ -114,6 +117,32 @@ public partial class MainWindowViewModel : ViewModelBase
     private TableEditorEntryViewModel? _selectedTableEditorEntry;
 
     [ObservableProperty]
+    private PatchEntryViewModel? _selectedPatch;
+
+    [ObservableProperty]
+    private CollisionFileEntryViewModel? _selectedCollisionFile;
+
+    [ObservableProperty]
+    private ColosseumCollisionData? _selectedCollisionData;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedCollisionInteractionValue))]
+    private PickerOptionViewModel? _selectedCollisionInteraction;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedCollisionSectionValue))]
+    private PickerOptionViewModel? _selectedCollisionSection;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedVertexFilterFilePath))]
+    [NotifyPropertyChangedFor(nameof(SelectedVertexFilterFileName))]
+    private VertexFilterFileEntryViewModel? _selectedVertexFilterFile;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedVertexFilterValue))]
+    private PickerOptionViewModel? _selectedVertexFilter;
+
+    [ObservableProperty]
     private string _selectedMessageIdText = string.Empty;
 
     [ObservableProperty]
@@ -150,6 +179,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _tableEditorSearchText = string.Empty;
 
     [ObservableProperty]
+    private string _collisionSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _vertexFilterSearchText = string.Empty;
+
+    [ObservableProperty]
     private bool _showIsoExplorer;
 
     [ObservableProperty]
@@ -163,6 +198,63 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _isoExplorerStatus = "Open a Colosseum ISO to browse its files.";
+
+    [ObservableProperty]
+    private string _patchStatus = "Select a patch to apply it.";
+
+    [ObservableProperty]
+    private string _collisionStatus = "Extract ISO files, then select a collision file.";
+
+    [ObservableProperty]
+    private string _vertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
+
+    [ObservableProperty]
+    private string _randomizerStatus = "Select randomizer options.";
+
+    [ObservableProperty]
+    private bool _randomizerStarterPokemon = true;
+
+    [ObservableProperty]
+    private bool _randomizerShadowPokemon = true;
+
+    [ObservableProperty]
+    private bool _randomizerNpcPokemon = true;
+
+    [ObservableProperty]
+    private bool _randomizerPokemonMoves;
+
+    [ObservableProperty]
+    private bool _randomizerPokemonTypes;
+
+    [ObservableProperty]
+    private bool _randomizerPokemonAbilities;
+
+    [ObservableProperty]
+    private bool _randomizerPokemonStats;
+
+    [ObservableProperty]
+    private bool _randomizerPokemonEvolutions;
+
+    [ObservableProperty]
+    private bool _randomizerMoveTypes;
+
+    [ObservableProperty]
+    private bool _randomizerTypeMatchups;
+
+    [ObservableProperty]
+    private bool _randomizerTmMoves;
+
+    [ObservableProperty]
+    private bool _randomizerItemBoxes;
+
+    [ObservableProperty]
+    private bool _randomizerShopItems;
+
+    [ObservableProperty]
+    private bool _randomizerSimilarBaseStatTotal;
+
+    [ObservableProperty]
+    private bool _randomizerRemoveItemOrTradeEvolutions;
 
     [ObservableProperty]
     private string _leftPanelTitle = "Tools";
@@ -228,6 +320,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Tools = new ObservableCollection<ToolEntryViewModel>(
             ColosseumToolCatalog.HomeTools.Select((tool, index) => new ToolEntryViewModel(index + 1, tool)));
+        foreach (var option in BuildVertexFilterOptions())
+        {
+            VertexFilterOptions.Add(option);
+        }
+
+        SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
         SelectedTool = Tools.FirstOrDefault();
         Logs.Add("Cipher Snagem Editor ready.");
         Logs.Add("Legacy mode: Colosseum Tool.");
@@ -260,6 +358,28 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MessageStringEntryViewModel> MessageStrings { get; } = [];
 
     public ObservableCollection<TableEditorEntryViewModel> TableEditorEntries { get; } = [];
+
+    public ObservableCollection<PatchEntryViewModel> PatchEntries { get; } = [];
+
+    public ObservableCollection<CollisionFileEntryViewModel> CollisionFiles { get; } = [];
+
+    public ObservableCollection<PickerOptionViewModel> CollisionInteractionOptions { get; } = [];
+
+    public ObservableCollection<PickerOptionViewModel> CollisionSectionOptions { get; } = [];
+
+    public ObservableCollection<VertexFilterFileEntryViewModel> VertexFilterFiles { get; } = [];
+
+    public ObservableCollection<PickerOptionViewModel> VertexFilterOptions { get; } = [];
+
+    public int SelectedCollisionInteractionValue => SelectedCollisionInteraction?.Value ?? -1;
+
+    public int SelectedCollisionSectionValue => SelectedCollisionSection?.Value ?? -1;
+
+    public int SelectedVertexFilterValue => SelectedVertexFilter?.Value ?? 0;
+
+    public string? SelectedVertexFilterFilePath => SelectedVertexFilterFile?.File.Path;
+
+    public string SelectedVertexFilterFileName => SelectedVertexFilterFile?.File.FileName ?? "File";
 
     public ObservableCollection<TrainerPokemonSlotViewModel> SelectedTrainerPokemon { get; } = [];
 
@@ -306,6 +426,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _interactionEditorResources = InteractionEditorResources.Empty;
             _allMessageStrings.Clear();
             _allTableEditorEntries.Clear();
+            _allPatches.Clear();
+            _allCollisionFiles.Clear();
+            _allVertexFilterFiles.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -317,6 +440,11 @@ public partial class MainWindowViewModel : ViewModelBase
             MessageTables.Clear();
             MessageStrings.Clear();
             TableEditorEntries.Clear();
+            PatchEntries.Clear();
+            CollisionFiles.Clear();
+            VertexFilterFiles.Clear();
+            CollisionInteractionOptions.Clear();
+            CollisionSectionOptions.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
@@ -327,6 +455,8 @@ public partial class MainWindowViewModel : ViewModelBase
             MessageSearchText = string.Empty;
             IsoSearchText = string.Empty;
             TableEditorSearchText = string.Empty;
+            CollisionSearchText = string.Empty;
+            VertexFilterSearchText = string.Empty;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
             SelectedPokemonStatsDetail = null;
@@ -345,6 +475,17 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedMessageTable = null;
             SelectedMessageString = null;
             SelectedTableEditorEntry = null;
+            SelectedPatch = null;
+            SelectedCollisionFile = null;
+            SelectedCollisionData = null;
+            SelectedCollisionInteraction = null;
+            SelectedCollisionSection = null;
+            SelectedVertexFilterFile = null;
+            SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
+            PatchStatus = "Select a patch to apply it.";
+            CollisionStatus = "Extract ISO files, then select a collision file.";
+            VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
+            ResetRandomizerDefaults();
             SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
@@ -377,6 +518,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _interactionEditorResources = InteractionEditorResources.Empty;
             _allMessageStrings.Clear();
             _allTableEditorEntries.Clear();
+            _allPatches.Clear();
+            _allCollisionFiles.Clear();
+            _allVertexFilterFiles.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -388,6 +532,11 @@ public partial class MainWindowViewModel : ViewModelBase
             MessageTables.Clear();
             MessageStrings.Clear();
             TableEditorEntries.Clear();
+            PatchEntries.Clear();
+            CollisionFiles.Clear();
+            VertexFilterFiles.Clear();
+            CollisionInteractionOptions.Clear();
+            CollisionSectionOptions.Clear();
             TrainerSearchText = string.Empty;
             PokemonStatsSearchText = string.Empty;
             MoveSearchText = string.Empty;
@@ -398,6 +547,8 @@ public partial class MainWindowViewModel : ViewModelBase
             MessageSearchText = string.Empty;
             IsoSearchText = string.Empty;
             TableEditorSearchText = string.Empty;
+            CollisionSearchText = string.Empty;
+            VertexFilterSearchText = string.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
@@ -417,6 +568,17 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedMessageTable = null;
             SelectedMessageString = null;
             SelectedTableEditorEntry = null;
+            SelectedPatch = null;
+            SelectedCollisionFile = null;
+            SelectedCollisionData = null;
+            SelectedCollisionInteraction = null;
+            SelectedCollisionSection = null;
+            SelectedVertexFilterFile = null;
+            SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
+            PatchStatus = "Select a patch to apply it.";
+            CollisionStatus = "Extract ISO files, then select a collision file.";
+            VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
+            ResetRandomizerDefaults();
             SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
@@ -761,6 +923,133 @@ public partial class MainWindowViewModel : ViewModelBase
         LogTableEditorAction("Edit");
     }
 
+    [RelayCommand(CanExecute = nameof(CanApplyPatch))]
+    private async Task ApplyPatchAsync(PatchEntryViewModel? patch)
+    {
+        if (patch is null || CurrentProject is null)
+        {
+            return;
+        }
+
+        SelectedPatch = patch;
+        PatchStatus = $"Applying: {patch.Name}";
+        IsBusy = true;
+        try
+        {
+            var result = await Task.Run(() => CurrentProject.ApplyPatch(patch.Definition.Kind));
+            PatchStatus = "Patch completed. Rebuild the ISO after exporting/importing changed files.";
+            Logs.Add($"Patch applied: {result.Patch.Name}");
+            foreach (var message in result.Messages)
+            {
+                Logs.Add(message);
+            }
+
+            foreach (var file in result.WrittenFiles)
+            {
+                Logs.Add($"Wrote {file}");
+            }
+        }
+        catch (Exception ex)
+        {
+            PatchStatus = ex.Message;
+            Logs.Add($"Patch failed: {patch.Name} - {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunRandomizer))]
+    private async Task RunRandomizerAsync()
+    {
+        if (CurrentProject is null)
+        {
+            return;
+        }
+
+        var options = new ColosseumRandomizerOptions(
+            RandomizerStarterPokemon,
+            RandomizerShadowPokemon,
+            RandomizerNpcPokemon,
+            RandomizerPokemonMoves,
+            RandomizerPokemonTypes,
+            RandomizerPokemonAbilities,
+            RandomizerPokemonStats,
+            RandomizerPokemonEvolutions,
+            RandomizerMoveTypes,
+            RandomizerTypeMatchups,
+            RandomizerTmMoves,
+            RandomizerItemBoxes,
+            RandomizerShopItems,
+            RandomizerSimilarBaseStatTotal,
+            RandomizerRemoveItemOrTradeEvolutions);
+
+        IsBusy = true;
+        RandomizerStatus = "Randomisation starting.";
+        Logs.Add("Randomisation starting.");
+
+        try
+        {
+            var result = await Task.Run(() => CurrentProject.Randomize(options));
+            RandomizerStatus = "Randomisation complete.";
+            foreach (var message in result.Messages)
+            {
+                Logs.Add(message);
+            }
+
+            foreach (var file in result.WrittenFiles)
+            {
+                Logs.Add($"Wrote {file}");
+            }
+
+            RefreshLoadedEditorRowsAfterRandomizer();
+        }
+        catch (Exception ex)
+        {
+            RandomizerStatus = ex.Message;
+            Logs.Add($"Randomizer failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+            RunRandomizerCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUseVertexFilter))]
+    private async Task SaveVertexFilterAsync()
+    {
+        if (CurrentProject is null || SelectedVertexFilterFile is null)
+        {
+            return;
+        }
+
+        var selectedFile = SelectedVertexFilterFile;
+        var filter = (ColosseumVertexColorFilter)SelectedVertexFilterValue;
+        IsBusy = true;
+        VertexFilterStatus = $"Applying {ColosseumDatVertexColorModel.FilterName(filter)} to {selectedFile.File.FileName}.";
+
+        try
+        {
+            var result = await Task.Run(() => CurrentProject.ApplyVertexFilter(selectedFile.File, filter));
+            VertexFilterStatus = $"{result.FilterName} saved to {result.FileName}: {result.ColorCount} vertex colours updated.";
+            Logs.Add(VertexFilterStatus);
+            OnPropertyChanged(nameof(SelectedVertexFilterFilePath));
+            OnPropertyChanged(nameof(SelectedVertexFilterValue));
+        }
+        catch (Exception ex)
+        {
+            VertexFilterStatus = ex.Message;
+            Logs.Add($"Vertex filter save failed: {selectedFile.File.FileName} - {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+            SaveVertexFilterCommand.NotifyCanExecuteChanged();
+        }
+    }
+
     [RelayCommand]
     private void ReturnHome()
     {
@@ -847,6 +1136,15 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanRunTableEditorAction()
         => SelectedTableEditorEntry is not null && !IsBusy;
 
+    private bool CanApplyPatch(PatchEntryViewModel? patch)
+        => patch is not null && CurrentProject?.Iso is not null && !IsBusy;
+
+    private bool CanRunRandomizer()
+        => CurrentProject?.Iso is not null && !IsBusy;
+
+    private bool CanUseVertexFilter()
+        => CurrentProject is not null && SelectedVertexFilterFile is not null && !IsBusy;
+
     private void LogTableEditorAction(string action)
     {
         if (SelectedTableEditorEntry is null)
@@ -855,6 +1153,68 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         Logs.Add($"{action}: {SelectedTableEditorEntry.Name} is queued for the universal table backend.");
+    }
+
+    private void ResetRandomizerDefaults()
+    {
+        RandomizerStatus = "Select randomizer options.";
+        RandomizerStarterPokemon = true;
+        RandomizerShadowPokemon = true;
+        RandomizerNpcPokemon = true;
+        RandomizerPokemonMoves = false;
+        RandomizerPokemonTypes = false;
+        RandomizerPokemonAbilities = false;
+        RandomizerPokemonStats = false;
+        RandomizerPokemonEvolutions = false;
+        RandomizerMoveTypes = false;
+        RandomizerTypeMatchups = false;
+        RandomizerTmMoves = false;
+        RandomizerItemBoxes = false;
+        RandomizerShopItems = false;
+        RandomizerSimilarBaseStatTotal = false;
+        RandomizerRemoveItemOrTradeEvolutions = false;
+    }
+
+    private static IReadOnlyList<PickerOptionViewModel> BuildVertexFilterOptions()
+        =>
+        [
+            new PickerOptionViewModel(0, "None"),
+            new PickerOptionViewModel(1, "Minor Red Shift"),
+            new PickerOptionViewModel(2, "Red Scale"),
+            new PickerOptionViewModel(3, "Primary Shift"),
+            new PickerOptionViewModel(4, "Reverse Primary Shift")
+        ];
+
+    private void RefreshLoadedEditorRowsAfterRandomizer()
+    {
+        _allTrainers.Clear();
+        _allPokemonStats.Clear();
+        _allMoves.Clear();
+        _allItems.Clear();
+        _allGiftPokemon.Clear();
+        _allTypes.Clear();
+        _allTreasures.Clear();
+        Trainers.Clear();
+        PokemonStatsEntries.Clear();
+        MoveEntries.Clear();
+        ItemEntries.Clear();
+        GiftPokemonEntries.Clear();
+        TypeEntries.Clear();
+        TreasureEntries.Clear();
+        SelectedTrainer = null;
+        SelectedPokemonStats = null;
+        SelectedPokemonStatsDetail = null;
+        SelectedMove = null;
+        SelectedMoveDetail = null;
+        SelectedItem = null;
+        SelectedItemDetail = null;
+        SelectedGiftPokemon = null;
+        SelectedGiftPokemonDetail = null;
+        SelectedType = null;
+        SelectedTypeDetail = null;
+        SelectedTreasure = null;
+        SelectedTreasureDetail = null;
+        SelectedTrainerPokemon.Clear();
     }
 
     public bool PrepareToolWindow(ToolEntryViewModel tool)
@@ -889,11 +1249,24 @@ public partial class MainWindowViewModel : ViewModelBase
             case "Treasure Editor":
                 LoadTreasureRows();
                 return true;
+            case "Patches":
+                LoadPatchRows();
+                return true;
+            case "Randomizer":
+                RandomizerStatus = "Select randomizer options.";
+                RunRandomizerCommand.NotifyCanExecuteChanged();
+                return true;
             case "Interaction Editor":
                 LoadInteractionRows();
                 return true;
             case "Message Editor":
                 LoadMessageRows();
+                return true;
+            case "Collision Viewer":
+                LoadCollisionRows();
+                return true;
+            case "Vertex Filters":
+                LoadVertexFilterRows();
                 return true;
             case "Table Editor":
                 LoadTableEditorRows();
@@ -1055,6 +1428,39 @@ public partial class MainWindowViewModel : ViewModelBase
         EditTableEditorCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedPatchChanged(PatchEntryViewModel? value)
+    {
+        foreach (var patch in _allPatches)
+        {
+            patch.IsSelected = ReferenceEquals(patch, value);
+        }
+
+        ApplyPatchCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedCollisionFileChanged(CollisionFileEntryViewModel? value)
+    {
+        foreach (var file in _allCollisionFiles)
+        {
+            file.IsSelected = ReferenceEquals(file, value);
+        }
+
+        LoadSelectedCollisionData(value);
+    }
+
+    partial void OnSelectedVertexFilterFileChanged(VertexFilterFileEntryViewModel? value)
+    {
+        foreach (var file in _allVertexFilterFiles)
+        {
+            file.IsSelected = ReferenceEquals(file, value);
+        }
+
+        VertexFilterStatus = value is null
+            ? "No images to import. Export and decode some texture files from the ISO."
+            : value.File.FileName;
+        SaveVertexFilterCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSelectedMessageIdTextChanged(string value)
     {
         SaveMessageCommand.NotifyCanExecuteChanged();
@@ -1115,6 +1521,16 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyTableEditorFilter(value);
     }
 
+    partial void OnCollisionSearchTextChanged(string value)
+    {
+        ApplyCollisionFilter(value);
+    }
+
+    partial void OnVertexFilterSearchTextChanged(string value)
+    {
+        ApplyVertexFilter(value);
+    }
+
     partial void OnIsBusyChanged(bool value)
     {
         NotifyIsoExplorerCommands();
@@ -1131,6 +1547,9 @@ public partial class MainWindowViewModel : ViewModelBase
         DecodeTableEditorCommand.NotifyCanExecuteChanged();
         DocumentTableEditorCommand.NotifyCanExecuteChanged();
         EditTableEditorCommand.NotifyCanExecuteChanged();
+        ApplyPatchCommand.NotifyCanExecuteChanged();
+        RunRandomizerCommand.NotifyCanExecuteChanged();
+        SaveVertexFilterCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSelectedToolView(ToolEntryViewModel? value)
@@ -1468,6 +1887,118 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTreasureDetail = null;
             SelectedToolDetail = $"Treasure Editor\n{ex.Message}";
             Logs.Add($"Treasure load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadPatchRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allPatches.Clear();
+            PatchEntries.Clear();
+            SelectedPatch = null;
+            PatchStatus = "Open a Colosseum ISO before applying patches.";
+            return;
+        }
+
+        if (_allPatches.Count == 0)
+        {
+            foreach (var definition in ColosseumPatchDefinition.ColosseumPatches.Select((patch, index) => new PatchEntryViewModel(patch, index)))
+            {
+                _allPatches.Add(definition);
+            }
+        }
+
+        PatchEntries.Clear();
+        foreach (var patch in _allPatches)
+        {
+            PatchEntries.Add(patch);
+        }
+
+        SelectedPatch ??= PatchEntries.FirstOrDefault();
+        PatchStatus = "Click a patch row to apply it to the workspace files.";
+        Logs.Add($"Patches loaded: {_allPatches.Count} Colosseum patches.");
+        ApplyPatchCommand.NotifyCanExecuteChanged();
+    }
+
+    private void LoadCollisionRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allCollisionFiles.Clear();
+            CollisionFiles.Clear();
+            SelectedCollisionFile = null;
+            SelectedCollisionData = null;
+            CollisionInteractionOptions.Clear();
+            CollisionSectionOptions.Clear();
+            CollisionStatus = "Open a Colosseum ISO before launching the Collision Viewer.";
+            return;
+        }
+
+        try
+        {
+            _allCollisionFiles.Clear();
+            foreach (var file in CurrentProject.LoadCollisionFiles())
+            {
+                _allCollisionFiles.Add(new CollisionFileEntryViewModel(file));
+            }
+
+            ApplyCollisionFilter(CollisionSearchText);
+            SelectedCollisionFile = CollisionFiles.FirstOrDefault();
+            CollisionStatus = _allCollisionFiles.Count == 0
+                ? $"No .col files found in {Path.Combine(CurrentProject.WorkspaceDirectory ?? string.Empty, "Game Files")}. Extract ISO files and try again."
+                : $"Collision files loaded: {_allCollisionFiles.Count}.";
+            Logs.Add(CollisionStatus);
+        }
+        catch (Exception ex)
+        {
+            _allCollisionFiles.Clear();
+            CollisionFiles.Clear();
+            SelectedCollisionFile = null;
+            SelectedCollisionData = null;
+            CollisionInteractionOptions.Clear();
+            CollisionSectionOptions.Clear();
+            CollisionStatus = ex.Message;
+            Logs.Add($"Collision Viewer load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadVertexFilterRows()
+    {
+        if (CurrentProject?.Iso is null)
+        {
+            _allVertexFilterFiles.Clear();
+            VertexFilterFiles.Clear();
+            SelectedVertexFilterFile = null;
+            VertexFilterStatus = "Open a Colosseum ISO before launching Vertex Filters.";
+            return;
+        }
+
+        try
+        {
+            _allVertexFilterFiles.Clear();
+            foreach (var file in CurrentProject.LoadVertexFilterFiles())
+            {
+                _allVertexFilterFiles.Add(new VertexFilterFileEntryViewModel(file));
+            }
+
+            ApplyVertexFilter(VertexFilterSearchText);
+            SelectedVertexFilterFile = VertexFilterFiles.FirstOrDefault();
+            SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
+            VertexFilterStatus = _allVertexFilterFiles.Count == 0
+                ? "No images to import. Export and decode some texture files from the ISO."
+                : $"Vertex filter files loaded: {_allVertexFilterFiles.Count}.";
+            Logs.Add(VertexFilterStatus);
+            SaveVertexFilterCommand.NotifyCanExecuteChanged();
+        }
+        catch (Exception ex)
+        {
+            _allVertexFilterFiles.Clear();
+            VertexFilterFiles.Clear();
+            SelectedVertexFilterFile = null;
+            VertexFilterStatus = ex.Message;
+            Logs.Add($"Vertex Filters load failed: {ex.Message}");
+            SaveVertexFilterCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -1923,6 +2454,70 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void ApplyCollisionFilter(string? filterText)
+    {
+        if (_allCollisionFiles.Count == 0)
+        {
+            CollisionFiles.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allCollisionFiles
+            : _allCollisionFiles.Where(file => Contains(file.SearchText, filter)).ToList();
+
+        CollisionFiles.Clear();
+        foreach (var file in filtered)
+        {
+            CollisionFiles.Add(file);
+        }
+
+        if (SelectedCollisionFile is null || !CollisionFiles.Contains(SelectedCollisionFile))
+        {
+            SelectedCollisionFile = CollisionFiles.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var file in _allCollisionFiles)
+            {
+                file.IsSelected = ReferenceEquals(file, SelectedCollisionFile);
+            }
+        }
+    }
+
+    private void ApplyVertexFilter(string? filterText)
+    {
+        if (_allVertexFilterFiles.Count == 0)
+        {
+            VertexFilterFiles.Clear();
+            return;
+        }
+
+        var filter = SimplifySearchText(filterText);
+        var filtered = string.IsNullOrEmpty(filter)
+            ? _allVertexFilterFiles
+            : _allVertexFilterFiles.Where(file => Contains(file.SearchText, filter)).ToList();
+
+        VertexFilterFiles.Clear();
+        foreach (var file in filtered)
+        {
+            VertexFilterFiles.Add(file);
+        }
+
+        if (SelectedVertexFilterFile is null || !VertexFilterFiles.Contains(SelectedVertexFilterFile))
+        {
+            SelectedVertexFilterFile = VertexFilterFiles.FirstOrDefault();
+        }
+        else
+        {
+            foreach (var file in _allVertexFilterFiles)
+            {
+                file.IsSelected = ReferenceEquals(file, SelectedVertexFilterFile);
+            }
+        }
+    }
+
     private static IReadOnlyList<TableEditorEntryViewModel> BuildTableEditorEntries(
         ColosseumCommonRel commonRel,
         ColosseumProjectContext project)
@@ -2270,6 +2865,50 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         SaveTrainerCommand.NotifyCanExecuteChanged();
+    }
+
+    private void LoadSelectedCollisionData(CollisionFileEntryViewModel? value)
+    {
+        CollisionInteractionOptions.Clear();
+        CollisionSectionOptions.Clear();
+        SelectedCollisionInteraction = null;
+        SelectedCollisionSection = null;
+
+        if (value is null || CurrentProject is null)
+        {
+            SelectedCollisionData = null;
+            CollisionStatus = _allCollisionFiles.Count == 0
+                ? "No .col files found. Extract ISO files and try again."
+                : "Select a collision file.";
+            return;
+        }
+
+        try
+        {
+            var data = CurrentProject.LoadCollisionData(value.File);
+            SelectedCollisionData = data;
+            CollisionInteractionOptions.Add(new PickerOptionViewModel(-1, "-"));
+            foreach (var index in data.InteractableIndexes)
+            {
+                CollisionInteractionOptions.Add(new PickerOptionViewModel(index, $"interactable region {index}"));
+            }
+
+            CollisionSectionOptions.Add(new PickerOptionViewModel(-1, "-"));
+            foreach (var index in data.SectionIndexes)
+            {
+                CollisionSectionOptions.Add(new PickerOptionViewModel(index, $"section {index}"));
+            }
+
+            SelectedCollisionInteraction = CollisionInteractionOptions.FirstOrDefault();
+            SelectedCollisionSection = CollisionSectionOptions.FirstOrDefault();
+            CollisionStatus = $"{value.File.FileName}: {data.Triangles.Count} faces, {data.InteractableIndexes.Count} interactable regions, {data.SectionIndexes.Count} sections.";
+        }
+        catch (Exception ex)
+        {
+            SelectedCollisionData = ColosseumCollisionData.Empty;
+            CollisionStatus = $"{value.File.FileName}: {ex.Message}";
+            Logs.Add($"Collision parse failed: {value.File.FileName} - {ex.Message}");
+        }
     }
 
     private void OnTrainerPokemonChanged()
