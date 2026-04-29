@@ -1,12 +1,17 @@
+# Build output
 bin/
 obj/
+TestResults/
+/artifacts/
+*.binlog
+
+# Local IDE state
 .vs/
 .vscode/
 *.user
 *.suo
-*.binlog
-TestResults/
-artifacts/
+
+# Local game files and generated workspaces
 *.iso
 *.gcm
 *.nkit.iso
@@ -14,4 +19,7 @@ artifacts/
 *.gci
 *.raw
 * CM Tool/
-legacy-assets/
+
+# Local reference assets copied from the legacy tool or extracted files.
+# Tracked application assets live under src/CipherSnagemEditor.App/Assets.
+/assets/
