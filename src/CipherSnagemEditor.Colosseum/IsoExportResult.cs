@@ -14,6 +14,7 @@ public sealed record IsoImportResult(
     string FilePath,
     int WrittenBytes,
     uint MaximumBytes,
+    int InsertedBytes,
     IsoEncodeResult? EncodeResult);
 
 public sealed record IsoDeleteResult(

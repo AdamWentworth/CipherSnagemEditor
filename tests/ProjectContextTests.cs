@@ -181,6 +181,41 @@ public sealed class ProjectContextTests
         Assert.Equal("New", table.StringWithId(7));
     }
 
+    [Fact]
+    public void ImportsLargerFileByShiftingLaterIsoFiles()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var isoPath = Path.Combine(temp, "Sample.iso");
+        var bytes = CreateTwoFileIso(
+            "first.bin",
+            [1, 2, 3, 4],
+            "second.bin",
+            [0x55, 0x66, 0x77, 0x88]);
+        File.WriteAllBytes(isoPath, bytes);
+        var originalLength = bytes.Length;
+
+        var context = ColosseumProjectContext.Open(isoPath);
+        var first = Assert.Single(context.Iso!.Files, file => file.Name == "first.bin");
+        var workspacePath = context.ExtractIsoFile(first);
+        var replacement = Enumerable.Range(0xa0, 0x30).Select(value => (byte)value).ToArray();
+        File.WriteAllBytes(workspacePath, replacement);
+
+        var result = context.ImportIsoFile(first, encode: false);
+
+        Assert.Equal(0x20, result.InsertedBytes);
+        Assert.Equal(0x30, result.WrittenBytes);
+        var updatedIso = File.ReadAllBytes(isoPath);
+        Assert.Equal(originalLength + 0x20, updatedIso.Length);
+        Assert.Equal(replacement, updatedIso[0x500..0x530]);
+        Assert.Equal([0x55, 0x66, 0x77, 0x88], updatedIso[0x530..0x534]);
+        Assert.Equal((uint)(updatedIso.Length - 0x500), BigEndian.ReadUInt32(updatedIso, 0x438));
+
+        var reopened = ColosseumProjectContext.Open(isoPath);
+        Assert.Equal((uint)0x30, reopened.Iso!.Files.Single(file => file.Name == "first.bin").Size);
+        Assert.Equal((uint)0x530, reopened.Iso!.Files.Single(file => file.Name == "second.bin").Offset);
+    }
+
     private static byte[] CreateSingleFileIso(string fileName, byte[] fileBytes, int fileSlotSize)
     {
         var bytes = new byte[0x500 + fileSlotSize + 0x100];
@@ -193,6 +228,8 @@ public sealed class ProjectContextTests
         BigEndian.WriteUInt32(bytes, 0x420, 0x100);
         BigEndian.WriteUInt32(bytes, 0x424, 0x300);
         BigEndian.WriteUInt32(bytes, 0x428, (uint)(0x18 + fileNameBytes.Length));
+        BigEndian.WriteUInt32(bytes, 0x434, 0x500);
+        BigEndian.WriteUInt32(bytes, 0x438, (uint)(bytes.Length - 0x500));
         BigEndian.WriteUInt32(bytes, 0x300, 0x01000000);
         BigEndian.WriteUInt32(bytes, 0x304, 0);
         BigEndian.WriteUInt32(bytes, 0x308, 2);
@@ -201,6 +238,39 @@ public sealed class ProjectContextTests
         BigEndian.WriteUInt32(bytes, 0x314, (uint)fileBytes.Length);
         fileNameBytes.CopyTo(bytes, 0x318);
         fileBytes.CopyTo(bytes, 0x500);
+        return bytes;
+    }
+
+    private static byte[] CreateTwoFileIso(string firstName, byte[] firstBytes, string secondName, byte[] secondBytes)
+    {
+        var bytes = new byte[0x700];
+        bytes[0] = (byte)'G';
+        bytes[1] = (byte)'C';
+        bytes[2] = (byte)'6';
+        bytes[3] = (byte)'E';
+
+        var firstNameBytes = System.Text.Encoding.ASCII.GetBytes(firstName + "\0");
+        var secondNameBytes = System.Text.Encoding.ASCII.GetBytes(secondName + "\0");
+        var stringTableLength = firstNameBytes.Length + secondNameBytes.Length;
+        BigEndian.WriteUInt32(bytes, 0x420, 0x100);
+        BigEndian.WriteUInt32(bytes, 0x424, 0x300);
+        BigEndian.WriteUInt32(bytes, 0x428, (uint)(0x24 + stringTableLength));
+        BigEndian.WriteUInt32(bytes, 0x434, 0x500);
+        BigEndian.WriteUInt32(bytes, 0x438, (uint)(bytes.Length - 0x500));
+
+        BigEndian.WriteUInt32(bytes, 0x300, 0x01000000);
+        BigEndian.WriteUInt32(bytes, 0x304, 0);
+        BigEndian.WriteUInt32(bytes, 0x308, 3);
+        BigEndian.WriteUInt32(bytes, 0x30c, 0);
+        BigEndian.WriteUInt32(bytes, 0x310, 0x500);
+        BigEndian.WriteUInt32(bytes, 0x314, (uint)firstBytes.Length);
+        BigEndian.WriteUInt32(bytes, 0x318, (uint)firstNameBytes.Length);
+        BigEndian.WriteUInt32(bytes, 0x31c, 0x510);
+        BigEndian.WriteUInt32(bytes, 0x320, (uint)secondBytes.Length);
+        firstNameBytes.CopyTo(bytes, 0x324);
+        secondNameBytes.CopyTo(bytes, 0x324 + firstNameBytes.Length);
+        firstBytes.CopyTo(bytes, 0x500);
+        secondBytes.CopyTo(bytes, 0x510);
         return bytes;
     }
 

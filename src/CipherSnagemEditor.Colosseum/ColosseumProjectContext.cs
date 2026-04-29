@@ -153,8 +153,13 @@ public sealed class ColosseumProjectContext
             encodeDecodedFiles: encode,
             packArchive: GameFileTypes.FromExtension(entry.Name) == GameFileType.Fsys);
         var sourceBytes = File.ReadAllBytes(encodeResult.FilePath);
-        var maximumBytes = WriteIsoEntry(entry, sourceBytes);
-        return new IsoImportResult(encodeResult.FilePath, sourceBytes.Length, maximumBytes, encodeResult);
+        var writeResult = WriteIsoEntry(entry, sourceBytes);
+        return new IsoImportResult(
+            encodeResult.FilePath,
+            sourceBytes.Length,
+            writeResult.MaximumBytes,
+            writeResult.InsertedBytes,
+            encodeResult);
     }
 
     public IsoDeleteResult DeleteIsoFile(GameCubeIsoFileEntry entry)
@@ -952,7 +957,7 @@ public sealed class ColosseumProjectContext
         LoadedFiles[messagePath] = bytes;
     }
 
-    private uint WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
+    private IsoWriteResult WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
     {
         if (Iso is null)
         {
@@ -960,23 +965,16 @@ public sealed class ColosseumProjectContext
         }
 
         var maximumBytes = MaximumReplacementSize(entry);
-        if (sourceBytes.Length > maximumBytes)
-        {
-            throw new InvalidDataException(
-                $"{entry.Name} is {sourceBytes.Length:N0} bytes, but only {maximumBytes:N0} bytes are available before the next ISO file. File size shifting is not implemented yet.");
-        }
-
         if (entry.TocEntryOffset is null && sourceBytes.Length > entry.Size)
         {
             throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
         }
 
+        var insertedBytes = 0;
         using (var stream = File.Open(Iso.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
         {
-            if ((long)entry.Offset + sourceBytes.Length > stream.Length)
-            {
-                throw new EndOfStreamException($"{entry.Name} would extend past the end of the ISO.");
-            }
+            insertedBytes = EnsureIsoCapacity(stream, entry, sourceBytes.Length, maximumBytes);
+            maximumBytes = checked(maximumBytes + (uint)insertedBytes);
 
             stream.Position = entry.Offset;
             stream.Write(sourceBytes);
@@ -997,7 +995,7 @@ public sealed class ColosseumProjectContext
 
         LoadedFiles[entry.Name] = sourceBytes;
         Iso = GameCubeIsoReader.Open(Iso.Path);
-        return maximumBytes;
+        return new IsoWriteResult(maximumBytes, insertedBytes);
     }
 
     private uint MaximumReplacementSize(GameCubeIsoFileEntry entry)
@@ -1019,6 +1017,104 @@ public sealed class ColosseumProjectContext
         var maxEnd = nextFile?.Offset ?? checked((uint)new FileInfo(Iso.Path).Length);
         return maxEnd <= entry.Offset ? entry.Size : maxEnd - entry.Offset;
     }
+
+    private int EnsureIsoCapacity(FileStream stream, GameCubeIsoFileEntry entry, int sourceLength, uint currentMaximumBytes)
+    {
+        if (Iso is null || sourceLength <= currentMaximumBytes)
+        {
+            return 0;
+        }
+
+        if (entry.TocEntryOffset is null)
+        {
+            throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
+        }
+
+        var insertedBytes = Align16(checked(sourceLength - (int)currentMaximumBytes));
+        var insertOffset = checked((long)entry.Offset + entry.Size);
+        InsertZeros(stream, insertOffset, insertedBytes);
+
+        Span<byte> offsetBytes = stackalloc byte[4];
+        foreach (var shiftedEntry in Iso.Files
+            .Where(file => file.TocEntryOffset is not null && file.Offset > entry.Offset)
+            .OrderBy(file => file.Offset))
+        {
+            BigEndian.WriteUInt32(offsetBytes, 0, checked(shiftedEntry.Offset + (uint)insertedBytes));
+            stream.Position = shiftedEntry.TocEntryOffset!.Value + 4;
+            stream.Write(offsetBytes);
+        }
+
+        UpdateUserDataSize(stream);
+        return insertedBytes;
+    }
+
+    private static void InsertZeros(FileStream stream, long offset, int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        var oldLength = stream.Length;
+        if (offset < 0 || offset > oldLength)
+        {
+            throw new ArgumentOutOfRangeException(nameof(offset), $"Offset 0x{offset:x} is outside the ISO.");
+        }
+
+        var buffer = new byte[1024 * 1024];
+        stream.SetLength(oldLength + count);
+        var readEnd = oldLength;
+        while (readEnd > offset)
+        {
+            var readStart = Math.Max(offset, readEnd - buffer.Length);
+            var length = checked((int)(readEnd - readStart));
+            stream.Position = readStart;
+            ReadExactly(stream, buffer.AsSpan(0, length));
+            stream.Position = readStart + count;
+            stream.Write(buffer, 0, length);
+            readEnd = readStart;
+        }
+
+        stream.Position = offset;
+        WriteZeros(stream, count);
+    }
+
+    private static void UpdateUserDataSize(FileStream stream)
+    {
+        const int userDataStartOffsetLocation = 0x434;
+        const int userDataSizeLocation = 0x438;
+
+        Span<byte> headerBytes = stackalloc byte[4];
+        stream.Position = userDataStartOffsetLocation;
+        ReadExactly(stream, headerBytes);
+        var userDataStart = BigEndian.ReadUInt32(headerBytes, 0);
+        if (userDataStart == 0 || userDataStart > stream.Length)
+        {
+            return;
+        }
+
+        BigEndian.WriteUInt32(headerBytes, 0, checked((uint)(stream.Length - userDataStart)));
+        stream.Position = userDataSizeLocation;
+        stream.Write(headerBytes);
+    }
+
+    private static void ReadExactly(Stream stream, Span<byte> buffer)
+    {
+        var read = 0;
+        while (read < buffer.Length)
+        {
+            var count = stream.Read(buffer[read..]);
+            if (count == 0)
+            {
+                throw new EndOfStreamException("Unexpected end of ISO while shifting file data.");
+            }
+
+            read += count;
+        }
+    }
+
+    private static int Align16(int value)
+        => (value + 0x0f) & ~0x0f;
 
     private static void WriteZeros(Stream stream, int count)
     {
@@ -1047,6 +1143,8 @@ public sealed class ColosseumProjectContext
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x4E, 0x55, 0x4C, 0x4C, 0x46, 0x53, 0x59, 0x53
         ];
+
+    private sealed record IsoWriteResult(uint MaximumBytes, int InsertedBytes);
 
     public string GetIsoExportDirectory(string fileName)
     {

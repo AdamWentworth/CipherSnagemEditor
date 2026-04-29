@@ -3305,6 +3305,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private static string BuildIsoImportStatus(string fileName, IsoImportResult result)
     {
         var status = $"Imported {fileName} to ISO from {result.FilePath} ({result.WrittenBytes:N0}/{result.MaximumBytes:N0} bytes)";
+        if (result.InsertedBytes > 0)
+        {
+            status += $" | shifted later ISO data by {result.InsertedBytes:N0} bytes";
+        }
+
         if (result.EncodeResult is not null)
         {
             if (result.EncodeResult.EncodedFiles.Count > 0)
