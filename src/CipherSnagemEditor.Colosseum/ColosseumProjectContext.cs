@@ -113,7 +113,8 @@ public sealed class ColosseumProjectContext
 
         var extractedFiles = new List<string>();
         var decodedFiles = new List<string>();
-        if (GameFileTypes.FromExtension(entry.Name) == GameFileType.Fsys)
+        var entryFileType = GameFileTypes.FromExtension(entry.Name);
+        if (entryFileType == GameFileType.Fsys)
         {
             var folder = GetIsoExportDirectory(entry.Name);
             var archive = FsysArchive.Parse(targetPath, data);
@@ -128,6 +129,16 @@ public sealed class ColosseumProjectContext
             {
                 decodedFiles.AddRange(DecodeExtractedFsysFiles(archive, folder, overwrite));
                 decodedFiles.AddRange(DecodeWorkspaceBinaryFiles(folder, overwrite));
+            }
+        }
+        else if (decode && entryFileType is GameFileType.Gtx or GameFileType.Atx)
+        {
+            var pngPath = targetPath + ".png";
+            if ((!File.Exists(pngPath) || overwrite)
+                && ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(targetPath), out var pngBytes))
+            {
+                File.WriteAllBytes(pngPath, pngBytes);
+                decodedFiles.Add(pngPath);
             }
         }
 
@@ -899,6 +910,23 @@ public sealed class ColosseumProjectContext
 
                 break;
             }
+
+            case GameFileType.Gtx:
+            case GameFileType.Atx:
+            {
+                if (encodeDecodedFiles)
+                {
+                    var pngPath = targetPath + ".png";
+                    if (File.Exists(pngPath)
+                        && ColosseumTextureCodec.TryImportPng(File.ReadAllBytes(targetPath), File.ReadAllBytes(pngPath), out var importedTexture))
+                    {
+                        File.WriteAllBytes(targetPath, importedTexture);
+                        encodedFiles.Add(pngPath);
+                    }
+                }
+
+                break;
+            }
         }
 
         return new IsoEncodeResult(targetPath, encodedFiles, packedFiles);
@@ -1019,6 +1047,43 @@ public sealed class ColosseumProjectContext
                         File.ReadAllBytes(bodyPath)));
                 yield return thpPath;
             }
+            else if (fileType is GameFileType.Gtx or GameFileType.Atx)
+            {
+                var pngPath = filePath + ".png";
+                if (File.Exists(pngPath) && !overwrite)
+                {
+                    continue;
+                }
+
+                if (ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(filePath), out var pngBytes))
+                {
+                    File.WriteAllBytes(pngPath, pngBytes);
+                    yield return pngPath;
+                }
+            }
+        }
+
+        foreach (var modelPath in Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
+            .Where(path => GameFileTypes.FromExtension(path) is GameFileType.Dat or GameFileType.RoomData)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var texture in ColosseumDatTextureCodec.ExtractTextures(File.ReadAllBytes(modelPath)))
+            {
+                var texturePath = ModelTexturePath(modelPath, texture.Index);
+                if (!File.Exists(texturePath) || overwrite)
+                {
+                    File.WriteAllBytes(texturePath, texture.TextureBytes);
+                    yield return texturePath;
+                }
+
+                var pngPath = texturePath + ".png";
+                if ((!File.Exists(pngPath) || overwrite)
+                    && ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(texturePath), out var pngBytes))
+                {
+                    File.WriteAllBytes(pngPath, pngBytes);
+                    yield return pngPath;
+                }
+            }
         }
     }
 
@@ -1040,6 +1105,51 @@ public sealed class ColosseumProjectContext
             File.WriteAllBytes(basePath + GameFileTypes.ExtensionFor(GameFileType.Thh), header);
             File.WriteAllBytes(basePath + GameFileTypes.ExtensionFor(GameFileType.Thd), body);
             yield return thpPath;
+        }
+
+        foreach (var texturePath in Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
+            .Where(path => GameFileTypes.FromExtension(path) is GameFileType.Gtx or GameFileType.Atx)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var pngPath = texturePath + ".png";
+            if (!File.Exists(pngPath))
+            {
+                continue;
+            }
+
+            if (ColosseumTextureCodec.TryImportPng(
+                File.ReadAllBytes(texturePath),
+                File.ReadAllBytes(pngPath),
+                out var importedTexture))
+            {
+                File.WriteAllBytes(texturePath, importedTexture);
+                yield return pngPath;
+            }
+        }
+
+        foreach (var modelPath in Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
+            .Where(path => GameFileTypes.FromExtension(path) is GameFileType.Dat or GameFileType.RoomData)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var replacements = ColosseumDatTextureCodec.ExtractTextures(File.ReadAllBytes(modelPath))
+                .Select(texture => (texture.Index, Path: ModelTexturePath(modelPath, texture.Index)))
+                .Where(texture => File.Exists(texture.Path))
+                .ToDictionary(texture => texture.Index, texture => File.ReadAllBytes(texture.Path));
+            if (replacements.Count == 0)
+            {
+                continue;
+            }
+
+            if (ColosseumDatTextureCodec.TryImportTextures(
+                File.ReadAllBytes(modelPath),
+                replacements,
+                out var importedModel,
+                out var importedCount)
+                && importedCount > 0)
+            {
+                File.WriteAllBytes(modelPath, importedModel);
+                yield return modelPath;
+            }
         }
 
         foreach (var pkxPath in Directory.EnumerateFiles(folder, "*.pkx", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
@@ -1374,6 +1484,16 @@ public sealed class ColosseumProjectContext
     {
         var safeFileName = Path.GetFileName(fileName);
         return string.IsNullOrWhiteSpace(safeFileName) ? fileName : safeFileName;
+    }
+
+    private static string ModelTexturePath(string modelPath, int textureIndex)
+    {
+        var directory = Path.GetDirectoryName(modelPath) ?? string.Empty;
+        var fileName = Path.GetFileName(modelPath);
+        var extensionIndex = fileName.IndexOf('.');
+        var stem = extensionIndex < 0 ? fileName : fileName[..extensionIndex];
+        var extensions = extensionIndex < 0 ? string.Empty : fileName[extensionIndex..];
+        return Path.Combine(directory, $"{stem}_{textureIndex}{extensions}.gtx");
     }
 
     private static string RemoveFileExtensionsLikeLegacy(string fileName)
