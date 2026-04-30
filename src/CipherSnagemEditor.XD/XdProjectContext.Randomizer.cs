@@ -11,6 +11,15 @@ public sealed partial class XdProjectContext
     private const int WonderGuardAbilityId = 25;
     private const int XdPocketMartItemsIndex = 4;
     private const int XdPocketNumberOfMartItemsIndex = 5;
+    private const int XdBattleBingoIndex = 0;
+    private const int XdNumberOfBattleBingoCardsIndex = 1;
+    private const int XdBattleBingoCardSize = 0xb8;
+    private const int XdBattleBingoPokemonSize = 0x0a;
+    private const int XdBattleBingoPokemonLevelOffset = 0x03;
+    private const int XdBattleBingoFirstPokemonOffset = 0x24;
+    private const int XdBattleBingoPokemonPanelCount = 14;
+    private const int XdBattleBingoPokemonSpeciesOffset = 0x04;
+    private const int XdBattleBingoPokemonMoveOffset = 0x06;
 
     public XdRandomizerApplyResult Randomize(XdRandomizerOptions options)
     {
@@ -96,11 +105,6 @@ public sealed partial class XdProjectContext
             messages.Add($"Converted {tradeChanges:N0} trade evolution(s) and {itemChanges:N0} evolution-stone evolution(s) to level {EvolutionPatchLevel}.");
         }
 
-        if (commonChanged)
-        {
-            writtenFiles.Add(WriteCommonRel(data));
-        }
-
         if (options.TmMoves)
         {
             writtenFiles.Add(RandomizeTmMoves(data, table, messages));
@@ -116,12 +120,19 @@ public sealed partial class XdProjectContext
 
         if (options.BattleBingo)
         {
-            messages.Add("XD Battle Bingo randomization is pending Battle Bingo card table parity.");
+            var count = RandomizeBattleBingo(data, table);
+            commonChanged = true;
+            messages.Add($"Randomized XD Battle Bingo species and moves for {count:N0} card Pokemon.");
         }
 
         if (options.ShinyHues)
         {
             messages.Add("XD shiny hue randomization is pending Start.dol assembly parity.");
+        }
+
+        if (commonChanged)
+        {
+            writtenFiles.Add(WriteCommonRel(data));
         }
 
         if (messages.Count == 0)
@@ -598,6 +609,54 @@ public sealed partial class XdProjectContext
         return changed;
     }
 
+    private int RandomizeBattleBingo(BinaryData data, RelocationTable table)
+    {
+        var speciesPool = EligibleSpecies(data, table);
+        var movePool = EligibleMoveIds(data, table, includeShadow: false);
+        var damagingMovePool = EligibleMoveIds(data, table, includeShadow: false, damagingOnly: true);
+        if (speciesPool.Count == 0 || movePool.Count == 0)
+        {
+            return 0;
+        }
+
+        var start = table.GetPointer(XdBattleBingoIndex);
+        var count = table.GetValueAtPointer(XdNumberOfBattleBingoCardsIndex);
+        if (!IsSafeTableRange(data, start, count, XdBattleBingoCardSize, maxCount: 100))
+        {
+            throw new InvalidDataException("Battle Bingo card table is outside common.rel.");
+        }
+
+        var changed = 0;
+        for (var card = 0; card < count; card++)
+        {
+            var cardOffset = start + (card * XdBattleBingoCardSize);
+            var level = data.ReadByte(cardOffset + XdBattleBingoPokemonLevelOffset);
+            for (var slot = 0; slot < XdBattleBingoPokemonPanelCount; slot++)
+            {
+                var pokemonOffset = cardOffset + XdBattleBingoFirstPokemonOffset + (slot * XdBattleBingoPokemonSize);
+                if (pokemonOffset + XdBattleBingoPokemonSize > data.Length)
+                {
+                    break;
+                }
+
+                var oldSpecies = data.ReadUInt16(pokemonOffset + XdBattleBingoPokemonSpeciesOffset);
+                if (slot > 0 && oldSpecies == 0)
+                {
+                    continue;
+                }
+
+                var newSpecies = RandomElement(speciesPool);
+                data.WriteUInt16(pokemonOffset + XdBattleBingoPokemonSpeciesOffset, ClampUInt16ToU16(newSpecies.Index));
+                data.WriteUInt16(
+                    pokemonOffset + XdBattleBingoPokemonMoveOffset,
+                    ClampUInt16ToU16(BattleBingoMoveFor(data, table, newSpecies.Index, level, movePool, damagingMovePool)));
+                changed++;
+            }
+        }
+
+        return changed;
+    }
+
     private XdShopRandomizerResult RandomizePocketMenuShops(BinaryData commonData, RelocationTable commonTable)
     {
         var itemPool = EligibleShopItemIds(commonData, commonTable);
@@ -794,7 +853,7 @@ public sealed partial class XdProjectContext
         return species;
     }
 
-    private IReadOnlyList<int> EligibleMoveIds(BinaryData data, RelocationTable table, bool includeShadow)
+    private IReadOnlyList<int> EligibleMoveIds(BinaryData data, RelocationTable table, bool includeShadow, bool damagingOnly = false)
     {
         var start = MovesTableStart(data, table, out var count);
         var moves = new List<int>();
@@ -803,6 +862,11 @@ public sealed partial class XdProjectContext
             var rowOffset = start + (move * XdMoveSize);
             if (data.ReadUInt32(rowOffset + XdMoveNameIdOffset) == 0
                 || data.ReadUInt32(rowOffset + XdMoveDescriptionIdOffset) == 0)
+            {
+                continue;
+            }
+
+            if (damagingOnly && data.ReadByte(rowOffset + XdMoveBasePowerOffset) == 0)
             {
                 continue;
             }
@@ -993,6 +1057,38 @@ public sealed partial class XdProjectContext
         }
 
         return moves;
+    }
+
+    private static int BattleBingoMoveFor(
+        BinaryData data,
+        RelocationTable table,
+        int species,
+        int level,
+        IReadOnlyList<int> movePool,
+        IReadOnlyList<int> damagingMovePool)
+    {
+        var movesStart = table.GetPointer(XdMovesIndex);
+        var moveCount = table.GetValueAtPointer(XdNumberOfMovesIndex);
+        var levelMoves = DefaultMovesForLevel(data, table, species, level)
+            .Where(move => move > 0)
+            .ToArray();
+        var damagingLevelMove = levelMoves.FirstOrDefault(move =>
+            move < moveCount
+            && IsSafeTableRange(data, movesStart, moveCount, XdMoveSize, maxCount: 1000)
+            && data.ReadByte(movesStart + (move * XdMoveSize) + XdMoveBasePowerOffset) > 0);
+        if (damagingLevelMove > 0)
+        {
+            return damagingLevelMove;
+        }
+
+        if (levelMoves.Length > 0)
+        {
+            return levelMoves[0];
+        }
+
+        return damagingMovePool.Count > 0
+            ? RandomElement(damagingMovePool)
+            : RandomElement(movePool);
     }
 
     private static RandomizedStats RandomBaseStatsFor(int hp, int attack, int defense, int specialAttack, int specialDefense, int speed)
