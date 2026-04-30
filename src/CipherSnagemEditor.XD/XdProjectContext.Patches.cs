@@ -6,6 +6,7 @@ namespace CipherSnagemEditor.XD;
 public sealed partial class XdProjectContext
 {
     private const int XdDolToRamOffsetDifference = 0x30a0;
+    private const uint XdPatchMarker = 0x0de1e7ed;
     private const uint XdNopInstruction = 0x60000000;
     private const int ShinyNever = 0x0000;
     private const int ShinyAlways = 0x0001;
@@ -71,6 +72,10 @@ public sealed partial class XdProjectContext
 
             case XdPatchKind.AlwaysShinyShadowPokemon:
                 PatchStartDol(writtenFiles, messages, dol => PatchShadowPokemonShininess(dol, ShinyAlways), "Shadow Pokemon shininess set to always.");
+                break;
+
+            case XdPatchKind.Gen6CritMultipliers:
+                PatchStartDol(writtenFiles, messages, PatchGen6CritMultipliers, "Applied Gen 6+ critical-hit multiplier.");
                 break;
 
             case XdPatchKind.Gen7CritRatios:
@@ -376,6 +381,36 @@ public sealed partial class XdProjectContext
         dol.WriteBytes(0x41dd20, [24, 8, 2, 1, 1]);
     }
 
+    private void PatchGen6CritMultipliers(BinaryData dol)
+    {
+        RequireUsXdPatch("Gen 6 critical-hit multipliers");
+        ApplyGen6CritMultiplier(dol, 0x8020dafc, source: 31, destination: 27, next: 26);
+    }
+
+    private void ApplyGen6CritMultiplier(BinaryData dol, long entryPoint, int source, int destination, int next)
+    {
+        var freeSpace = AllocateDolFreeSpace(dol, 36);
+        var entry = NormalizeRamOffset(entryPoint);
+        var free = NormalizeRamOffset(freeSpace);
+        WriteRamAsm(
+            dol,
+            entryPoint,
+            Branch(entry, freeSpace),
+            XdNopInstruction,
+            Mr(3, next));
+
+        WriteRamAsm(
+            dol,
+            freeSpace,
+            Cmpwi(3, 2),
+            Bne(free + 4, free + 20),
+            Mulli(destination, source, 3),
+            Srawi(destination, destination, 1),
+            Branch(free + 16, free + 24),
+            Mr(destination, source),
+            Branch(free + 24, entry + 4));
+    }
+
     private void PatchType9Independent(BinaryData dol)
     {
         RequireUsXdPatch("??? type independence");
@@ -466,6 +501,98 @@ public sealed partial class XdProjectContext
     private NotSupportedException UnsupportedXdPatchRegion()
         => new($"Patch is not implemented for this Pokemon XD region: {Iso.Region}.");
 
+    private int AllocateDolFreeSpace(BinaryData dol, int numberOfBytes)
+    {
+        var start = XdDolFreeSpaceStart();
+        var end = XdDolFreeSpaceEnd();
+        if (dol.ReadUInt32(start) != XdPatchMarker)
+        {
+            for (var clearOffset = start; clearOffset < end; clearOffset += 4)
+            {
+                dol.WriteUInt32(clearOffset, XdNopInstruction);
+            }
+
+            dol.WriteUInt32(start, XdPatchMarker);
+            dol.WriteUInt32(start + 4, 0xffffffff);
+            dol.WriteUInt32(start + 8, 0xffffffff);
+            dol.WriteUInt32(start + 12, 0xffffffff);
+        }
+
+        var offsetCandidate = dol.ReadUInt32(start + 4);
+        int offset;
+        if (offsetCandidate == 0xffffffff)
+        {
+            offset = start + 16;
+        }
+        else
+        {
+            var normalized = offsetCandidate - XdDolToRamOffsetDifference;
+            if (normalized >= 0x80000000u)
+            {
+                normalized -= 0x80000000u;
+            }
+
+            offset = checked((int)normalized);
+        }
+
+        if (offset < start + 16 || offset > end)
+        {
+            offset = start + 16;
+        }
+
+        while (offset % 4 != 0)
+        {
+            offset++;
+        }
+
+        var wordsToCheck = Math.Max(1, (numberOfBytes + 3) / 4);
+        while (offset + (wordsToCheck * 4) < end && !DolRangeIsFree(dol, offset, wordsToCheck))
+        {
+            offset += 4;
+        }
+
+        if (offset + (wordsToCheck * 4) >= end)
+        {
+            throw new InvalidOperationException("Could not find enough free DOL space for the patch.");
+        }
+
+        var ramOffset = offset + XdDolToRamOffsetDifference;
+        dol.WriteUInt32(start + 4, unchecked((uint)ramOffset + 0x80000000u));
+        return ramOffset;
+    }
+
+    private int XdDolFreeSpaceStart()
+        => Iso.Region switch
+        {
+            GameCubeRegion.UnitedStates => 0x0d39d0 - XdDolToRamOffsetDifference,
+            GameCubeRegion.Europe => 0x0d4fec - XdDolToRamOffsetDifference,
+            GameCubeRegion.Japan => 0x0cfef4 - XdDolToRamOffsetDifference,
+            _ => throw UnsupportedXdPatchRegion()
+        };
+
+    private int XdDolFreeSpaceEnd()
+        => Iso.Region switch
+        {
+            GameCubeRegion.UnitedStates => 0x0d9c2c - XdDolToRamOffsetDifference,
+            GameCubeRegion.Europe => 0x0db23c - XdDolToRamOffsetDifference,
+            GameCubeRegion.Japan => 0x0d614c - XdDolToRamOffsetDifference,
+            _ => throw UnsupportedXdPatchRegion()
+        };
+
+    private static bool DolRangeIsFree(BinaryData dol, int offset, int wordsToCheck)
+    {
+        for (var index = 0; index < wordsToCheck; index++)
+        {
+            var value = dol.ReadUInt32(offset + (index * 4));
+            if (value is not (0 or XdNopInstruction))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static void WriteU16Checked(BinaryData data, int offset, int value)
     {
         if (offset < 0 || offset + 2 > data.Length)
@@ -518,14 +645,26 @@ public sealed partial class XdProjectContext
     private static uint Blr()
         => 0x4e800020;
 
+    private static uint Bne(long currentRamOffset, long targetRamOffset)
+        => 0x40820000 | (unchecked((uint)(NormalizeRamOffset(targetRamOffset) - NormalizeRamOffset(currentRamOffset))) & 0xffff);
+
+    private static uint Cmpwi(int ra, int simm)
+        => (11u << 26) | ((uint)ra << 16) | (unchecked((uint)simm) & 0xffff);
+
     private static uint Li(int rd, int simm)
         => Addi(rd, 0, simm);
 
     private static uint Mr(int rd, int rs)
         => (31u << 26) | ((uint)rs << 21) | ((uint)rd << 16) | ((uint)rs << 11) | (444u << 1);
 
+    private static uint Mulli(int rd, int ra, int simm)
+        => (7u << 26) | ((uint)rd << 21) | ((uint)ra << 16) | (unchecked((uint)simm) & 0xffff);
+
     private static uint Rlwinm(int rd, int ra, uint sh, uint mb, uint me)
         => (21u << 26) | ((uint)ra << 21) | ((uint)rd << 16) | (sh << 11) | (mb << 6) | (me << 1);
+
+    private static uint Srawi(int rd, int ra, uint sh)
+        => (31u << 26) | ((uint)ra << 21) | ((uint)rd << 16) | (sh << 11) | (824u << 1);
 
     private static uint Stw(int rs, int ra, int d)
         => (36u << 26) | ((uint)rs << 21) | ((uint)ra << 16) | (unchecked((uint)d) & 0xffff);
