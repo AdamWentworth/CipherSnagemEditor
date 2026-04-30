@@ -364,8 +364,28 @@ static void RunXdEditorsProbe(string isoPath)
     Console.WriteLine($"First trainer: {trainers.FirstOrDefault()?.Index}: {trainers.FirstOrDefault()?.ClassName} {trainers.FirstOrDefault()?.Name}");
     Console.WriteLine($"First shadow: {shadows.FirstOrDefault()?.Index}: {shadows.FirstOrDefault()?.SpeciesName}");
     Console.WriteLine($"First pokespot: {pokespots.FirstOrDefault()?.SpotName} {pokespots.FirstOrDefault()?.SpeciesName}");
+    Console.WriteLine("XD gift roster: " + string.Join(", ", gifts.Select(gift => $"{gift.RowId}:{gift.SpeciesName}/{gift.GiftType}")));
 
     var failures = new List<string>();
+    var expectedGiftTypes = new[]
+    {
+        "Starter Pokemon",
+        "Demo Starter Pokemon",
+        "Demo Starter Pokemon",
+        "Duking's Plusle",
+        "Mt.Battle Ho-oh",
+        "Agate Pikachu",
+        "Agate Celebi",
+        "Shadow Pokemon Gift",
+        "Hordel Trade",
+        "Duking Trade",
+        "Duking Trade",
+        "Duking Trade",
+        "Mt. Battle Prize",
+        "Mt. Battle Prize",
+        "Mt. Battle Prize"
+    };
+
     Expect(trainers.Count > 100, failures, $"Trainer parser is unexpectedly sparse: {trainers.Count}.");
     Expect(trainersWithResolvedClasses > 100, failures, $"Trainer class lookup is unexpectedly sparse: {trainersWithResolvedClasses}.");
     Expect(trainersWithBattleData > 0, failures, "Trainer battle lookup returned no battle-linked trainers.");
@@ -378,6 +398,8 @@ static void RunXdEditorsProbe(string isoPath)
     Expect(items.Count > 300, failures, $"Item parser is unexpectedly sparse: {items.Count}.");
     Expect(pokespots.Count > 0, failures, "Pokespot parser returned no encounters.");
     Expect(gifts.Count == 15, failures, $"Gift Pokemon parser should match the Swift GoD Tool's 15 gift rows, but returned {gifts.Count}.");
+    Expect(gifts.Select(gift => gift.GiftType).SequenceEqual(expectedGiftTypes), failures, "XD Gift Pokemon roster drifted from the Swift GoD Tool order.");
+    Expect(gifts.Where(gift => gift.RowId is >= 3 and <= 6).All(gift => gift.UsesLevelUpMoves), failures, "XD CMGiftPokemon rows should use level-up moves like the Swift GoD Tool.");
     Expect(types.Count >= 18, failures, $"Type parser is unexpectedly sparse: {types.Count}.");
     Expect(treasures.Count > 0, failures, "Treasure parser returned no rows.");
 

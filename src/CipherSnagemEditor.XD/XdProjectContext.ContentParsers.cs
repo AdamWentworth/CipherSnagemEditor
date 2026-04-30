@@ -1220,6 +1220,8 @@ public sealed partial class XdProjectContext
             new(0, 0, GiftOffset(region, 0x1CBC50, 0x1CD724, 0x1C6AF4), "Starter Pokemon", XdStarterSpeciesOffset, XdStarterLevelOffset, [XdStarterMove1Offset, XdStarterMove2Offset, XdStarterMove3Offset, XdStarterMove4Offset], false, -1),
             new(1, 0, GiftOffset(region, 0x14F73C, 0x151000, 0x14AA64), "Demo Starter Pokemon", XdDemoGiftSpeciesOffset, XdDemoGiftLevelOffset, [XdDemoGiftMove1Offset, XdDemoGiftMove2Offset, XdDemoGiftMove3Offset, XdDemoGiftMove4Offset], false, -1),
             new(2, 1, GiftOffset(region, 0x14F614, 0x150ED8, 0x14A93C), "Demo Starter Pokemon", XdDemoGiftSpeciesOffset, XdDemoGiftLevelOffset, [XdDemoGiftMove1Offset, XdDemoGiftMove2Offset, XdDemoGiftMove3Offset, XdDemoGiftMove4Offset], false, -1),
+            // Swift GoD Tool rows 3-6 intentionally use CMGiftPokemon, but these
+            // offsets are XD Start.dol gift rows, not Colosseum common.rel data.
             new(3, 0, GiftOffset(region, 0x14F514, 0x150DD8, 0x14A83C), "Duking's Plusle", XdColosseumGiftSpeciesOffset, XdColosseumGiftLevelOffset, [], true, -1),
             new(4, 1, GiftOffset(region, 0x14F430, 0x150CF4, 0x14A758), "Mt.Battle Ho-oh", XdColosseumGiftSpeciesOffset, XdColosseumGiftLevelOffset, [], true, -1),
             new(5, 3, GiftOffset(region, 0x14F310, 0x150BD4, 0x14A638), "Agate Pikachu", XdColosseumGiftSpeciesOffset, XdColosseumGiftLevelOffset, [], true, -1),

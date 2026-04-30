@@ -4919,7 +4919,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RefreshSavedGiftPokemonEntry(int rowId)
     {
-        var updated = CurrentProject?.LoadCommonRel().GiftPokemonByRow(rowId);
+        var updated = CurrentProject?.LoadCommonRel().GiftPokemonByRow(rowId)
+            ?? CurrentXdProject?.LoadGiftPokemonRecords()
+                .Where(gift => gift.RowId == rowId)
+                .Select(MapXdGiftPokemon)
+                .FirstOrDefault();
         if (updated is null)
         {
             SelectedGiftPokemonDetail?.MarkSaved();
