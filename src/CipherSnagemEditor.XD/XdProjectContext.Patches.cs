@@ -1,6 +1,7 @@
 using CipherSnagemEditor.Core.Binary;
 using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Relocation;
+using CipherSnagemEditor.Core.Text;
 using System.Text.Json;
 
 namespace CipherSnagemEditor.XD;
@@ -32,6 +33,10 @@ public sealed partial class XdProjectContext
 
         switch (kind)
         {
+            case XdPatchKind.PurgeUnusedText:
+                PatchPurgeUnusedText(writtenFiles, messages);
+                break;
+
             case XdPatchKind.PhysicalSpecialSplitApply:
                 PatchPhysicalSpecialSplitApply(writtenFiles, messages);
                 break;
@@ -162,6 +167,33 @@ public sealed partial class XdProjectContext
         }
 
         return new XdPatchApplyResult(definition, writtenFiles, messages);
+    }
+
+    private void PatchPurgeUnusedText(ICollection<string> writtenFiles, ICollection<string> messages)
+    {
+        RequireUsXdPatch("Purge unused text");
+        var (data, _, _) = ReadCommonRelOrThrow();
+        var original = data.ToArray();
+        var purgedStrings = 0;
+        foreach (var (offset, size) in new[] { (0x7aafc, 0xd484), (0x87f80, 0xd3bc), (0x9533c, 0xd334), (0x6d874, 0xd288) })
+        {
+            if (offset < 0 || size <= 0 || offset + size > data.Length)
+            {
+                throw new InvalidDataException($"String table at 0x{offset:x} is outside common.rel.");
+            }
+
+            var table = GameStringTable.Parse(data.ReadBytes(offset, size));
+            var purged = table.WithStrings(table.Strings.Select(message => new GameString(message.Id, "-", message.Offset)));
+            data.WriteBytes(offset, purged.ToArray(allowGrowth: false));
+            purgedStrings += table.Strings.Count;
+        }
+
+        if (!original.SequenceEqual(data.ToArray()))
+        {
+            writtenFiles.Add(WriteCommonRel(data));
+        }
+
+        messages.Add($"Purged {purgedStrings:N0} strings from the unused US language tables.");
     }
 
     private void PatchPhysicalSpecialSplitApply(ICollection<string> writtenFiles, ICollection<string> messages)
