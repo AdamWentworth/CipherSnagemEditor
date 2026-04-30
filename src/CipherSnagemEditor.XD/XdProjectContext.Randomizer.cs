@@ -24,7 +24,10 @@ public sealed partial class XdProjectContext
 
         if (options.StarterPokemon || options.ObtainablePokemon || options.UnobtainablePokemon)
         {
-            messages.Add("XD species randomization still needs full gift/deck/pokespot parity; this pass leaves Pokemon species unchanged.");
+            var speciesChanges = RandomizePokemonSpecies(data, table, options, writtenFiles);
+            commonChanged |= speciesChanges.Pokespots > 0;
+            messages.Add(
+                $"Randomized XD Pokemon species: {speciesChanges.Gifts:N0} gifts, {speciesChanges.Pokespots:N0} Pokespot rows, {speciesChanges.TrainerPokemon:N0} trainer/deck Pokemon.");
         }
 
         if (options.PokemonMoves)
@@ -163,6 +166,240 @@ public sealed partial class XdProjectContext
         }
 
         return changedPokemon;
+    }
+
+    private XdRandomizedSpeciesCounts RandomizePokemonSpecies(
+        BinaryData data,
+        RelocationTable table,
+        XdRandomizerOptions options,
+        ICollection<string> writtenFiles)
+    {
+        var speciesPool = EligibleSpecies(data, table);
+        if (speciesPool.Count == 0)
+        {
+            return new XdRandomizedSpeciesCounts(0, 0, 0);
+        }
+
+        var speciesById = speciesPool.ToDictionary(species => species.Index);
+        var usedObtainableSpecies = new HashSet<int>();
+        var gifts = RandomizeGiftPokemonSpecies(data, table, speciesPool, usedObtainableSpecies, options, writtenFiles);
+        var pokespots = options.ObtainablePokemon
+            ? RandomizePokespotSpecies(data, table, speciesPool, speciesById, usedObtainableSpecies, options.SimilarBaseStatTotal)
+            : 0;
+        var trainerPokemon = RandomizeDeckPokemonSpecies(data, table, speciesPool, speciesById, usedObtainableSpecies, options, writtenFiles);
+        return new XdRandomizedSpeciesCounts(gifts, pokespots, trainerPokemon);
+    }
+
+    private int RandomizeGiftPokemonSpecies(
+        BinaryData data,
+        RelocationTable table,
+        IReadOnlyList<XdSpeciesInfo> speciesPool,
+        ISet<int> usedObtainableSpecies,
+        XdRandomizerOptions options,
+        ICollection<string> writtenFiles)
+    {
+        var layouts = XdGiftLayouts(Iso.Region);
+        if (layouts.Count == 0)
+        {
+            return 0;
+        }
+
+        var dolEntry = FindIsoFile("Start.dol")
+            ?? throw new FileNotFoundException("Start.dol was not found in the ISO.");
+        var dol = new BinaryData(GameCubeIsoReader.ReadFile(Iso, dolEntry));
+        var changed = 0;
+        foreach (var layout in layouts)
+        {
+            var isStarter = layout.GiftType.Contains("Starter", StringComparison.OrdinalIgnoreCase);
+            if ((isStarter && !options.StarterPokemon) || (!isStarter && !options.ObtainablePokemon))
+            {
+                continue;
+            }
+
+            var speciesOffset = layout.StartOffset + layout.SpeciesOffset;
+            if (speciesOffset < 0 || speciesOffset + 2 > dol.Length)
+            {
+                continue;
+            }
+
+            var oldSpecies = dol.ReadUInt16(speciesOffset);
+            var level = GiftLevel(dol, layout);
+            var newSpecies = RandomSpeciesFor(oldSpecies, speciesPool, options.SimilarBaseStatTotal, usedObtainableSpecies);
+            dol.WriteUInt16(speciesOffset, ClampUInt16ToU16(newSpecies.Index));
+            if (!layout.UsesLevelUpMoves)
+            {
+                var moves = DefaultMovesForLevel(data, table, newSpecies.Index, level);
+                for (var move = 0; move < layout.MoveOffsets.Count; move++)
+                {
+                    dol.WriteUInt16(layout.StartOffset + layout.MoveOffsets[move], ClampUInt16ToU16(ValueAt(moves, move)));
+                }
+            }
+
+            changed++;
+        }
+
+        if (changed > 0)
+        {
+            writtenFiles.Add(WriteStartDol(dol, dolEntry));
+        }
+
+        return changed;
+    }
+
+    private int RandomizePokespotSpecies(
+        BinaryData data,
+        RelocationTable table,
+        IReadOnlyList<XdSpeciesInfo> speciesPool,
+        IReadOnlyDictionary<int, XdSpeciesInfo> speciesById,
+        ISet<int> usedObtainableSpecies,
+        bool similarBaseStatTotal)
+    {
+        var changed = 0;
+        foreach (var spot in XdPokespotTargets)
+        {
+            var start = table.GetPointer(spot.PointerIndex);
+            var count = table.GetValueAtPointer(spot.CountIndex);
+            if (!IsSafeTableRange(data, start, count, XdPokespotEntrySize, maxCount: 64))
+            {
+                continue;
+            }
+
+            for (var index = 0; index < count; index++)
+            {
+                var rowOffset = start + (index * XdPokespotEntrySize);
+                var oldSpecies = data.ReadUInt16(rowOffset + 2);
+                if (!speciesById.ContainsKey(oldSpecies))
+                {
+                    continue;
+                }
+
+                var newSpecies = RandomSpeciesFor(oldSpecies, speciesPool, similarBaseStatTotal, usedObtainableSpecies);
+                data.WriteUInt16(rowOffset + 2, ClampUInt16ToU16(newSpecies.Index));
+                changed++;
+            }
+        }
+
+        return changed;
+    }
+
+    private int RandomizeDeckPokemonSpecies(
+        BinaryData data,
+        RelocationTable table,
+        IReadOnlyList<XdSpeciesInfo> speciesPool,
+        IReadOnlyDictionary<int, XdSpeciesInfo> speciesById,
+        ISet<int> usedObtainableSpecies,
+        XdRandomizerOptions options,
+        ICollection<string> writtenFiles)
+    {
+        if (!options.ObtainablePokemon && !options.UnobtainablePokemon)
+        {
+            return 0;
+        }
+
+        var archive = TryReadFsys("deck_archive.fsys", out var error)
+            ?? throw new InvalidDataException(error ?? "deck_archive.fsys was not found.");
+        var replacements = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        var darkEntry = FindDeckEntry(archive, "DeckData_DarkPokemon");
+        byte[]? darkBytes = null;
+        var shadowStoryRows = new Dictionary<int, int>();
+        if (darkEntry is not null)
+        {
+            darkBytes = archive.Extract(darkEntry);
+            if (darkBytes.Length >= 0x20)
+            {
+                var entries = checked((int)BigEndian.ReadUInt32(darkBytes, 0x18));
+                for (var index = 0; index < entries; index++)
+                {
+                    var rowOffset = 0x20 + (index * XdShadowPokemonSize);
+                    if (rowOffset + XdShadowPokemonSize > darkBytes.Length)
+                    {
+                        break;
+                    }
+
+                    if (IsActiveShadowPokemonRow(darkBytes, rowOffset))
+                    {
+                        shadowStoryRows[ReadU16(darkBytes, rowOffset + XdShadowStoryIndexOffset)] = rowOffset;
+                    }
+                }
+            }
+        }
+
+        var changed = 0;
+        foreach (var deckName in XdTrainerDecks.Where(deck => deck is "DeckData_Story" or "DeckData_Colosseum" or "DeckData_Hundred"))
+        {
+            var entry = FindDeckEntry(archive, deckName);
+            if (entry is null)
+            {
+                continue;
+            }
+
+            var bytes = archive.Extract(entry);
+            if (!TryReadDeckLayout(bytes, out var layout, out _))
+            {
+                continue;
+            }
+
+            var deckChanged = false;
+            for (var index = 0; index < layout.PokemonEntries; index++)
+            {
+                var rowOffset = layout.PokemonDataOffset + (index * XdDeckPokemonSize);
+                if (rowOffset + XdDeckPokemonSize > bytes.Length)
+                {
+                    break;
+                }
+
+                var oldSpecies = ReadU16(bytes, rowOffset + XdDeckPokemonSpeciesOffset);
+                if (!speciesById.ContainsKey(oldSpecies))
+                {
+                    continue;
+                }
+
+                var isShadow = deckName == "DeckData_Story" && shadowStoryRows.ContainsKey(index);
+                if ((isShadow && !options.ObtainablePokemon) || (!isShadow && !options.UnobtainablePokemon))
+                {
+                    continue;
+                }
+
+                var newSpecies = RandomSpeciesFor(
+                    oldSpecies,
+                    speciesPool,
+                    options.SimilarBaseStatTotal,
+                    isShadow ? usedObtainableSpecies : null);
+                WriteU16(bytes, rowOffset + XdDeckPokemonSpeciesOffset, newSpecies.Index);
+                bytes[rowOffset + 0x03] = 128;
+                var level = bytes[rowOffset + XdDeckPokemonLevelOffset];
+                var moves = DefaultMovesForLevel(data, table, newSpecies.Index, level);
+                for (var move = 0; move < 4; move++)
+                {
+                    WriteU16(bytes, rowOffset + XdDeckPokemonFirstMoveOffset + (move * 2), ValueAt(moves, move));
+                }
+
+                if (isShadow && darkBytes is not null && shadowStoryRows.TryGetValue(index, out var darkRow))
+                {
+                    darkBytes[darkRow + XdShadowCatchRateOffset] = ClampByte(newSpecies.CatchRate);
+                }
+
+                deckChanged = true;
+                changed++;
+            }
+
+            if (deckChanged)
+            {
+                replacements[entry.Name] = bytes;
+            }
+        }
+
+        if (darkEntry is not null && darkBytes is not null && changed > 0)
+        {
+            replacements[darkEntry.Name] = darkBytes;
+        }
+
+        if (replacements.Count > 0)
+        {
+            writtenFiles.Add(WriteFsysEntries("deck_archive.fsys", replacements));
+        }
+
+        return changed;
     }
 
     private int RandomizePokemonTypes(BinaryData data, RelocationTable table)
@@ -479,6 +716,32 @@ public sealed partial class XdProjectContext
         return species;
     }
 
+    private IReadOnlyList<XdSpeciesInfo> EligibleSpecies(BinaryData data, RelocationTable table)
+    {
+        var start = PokemonStatsTableStart(data, table, out var count);
+        var species = new List<XdSpeciesInfo>();
+        for (var pokemon = 1; pokemon < count; pokemon++)
+        {
+            var rowOffset = start + (pokemon * XdPokemonStatsSize);
+            var catchRate = data.ReadByte(rowOffset + XdPokemonCatchRateOffset);
+            if (data.ReadUInt32(rowOffset + XdPokemonStatsNameIdOffset) == 0 || catchRate == 0)
+            {
+                continue;
+            }
+
+            var baseStatTotal =
+                data.ReadByte(rowOffset + XdPokemonHpOffset)
+                + data.ReadByte(rowOffset + XdPokemonAttackOffset)
+                + data.ReadByte(rowOffset + XdPokemonDefenseOffset)
+                + data.ReadByte(rowOffset + XdPokemonSpecialAttackOffset)
+                + data.ReadByte(rowOffset + XdPokemonSpecialDefenseOffset)
+                + data.ReadByte(rowOffset + XdPokemonSpeedOffset);
+            species.Add(new XdSpeciesInfo(pokemon, catchRate, baseStatTotal));
+        }
+
+        return species;
+    }
+
     private IReadOnlyList<int> EligibleMoveIds(BinaryData data, RelocationTable table, bool includeShadow)
     {
         var start = MovesTableStart(data, table, out var count);
@@ -544,6 +807,92 @@ public sealed partial class XdProjectContext
         var selected = RandomElement(options.Count > 0 ? options : movePool);
         usedMoveIds?.Add(selected);
         return selected;
+    }
+
+    private static XdSpeciesInfo RandomSpeciesFor(
+        int oldSpeciesId,
+        IReadOnlyList<XdSpeciesInfo> speciesPool,
+        bool similarBaseStatTotal,
+        ISet<int>? usedSpecies)
+    {
+        var oldSpecies = speciesPool.FirstOrDefault(species => species.Index == oldSpeciesId);
+        var options = speciesPool;
+        if (usedSpecies is not null && usedSpecies.Count >= speciesPool.Count)
+        {
+            usedSpecies.Clear();
+        }
+
+        if (usedSpecies is not null && options.Any(species => !usedSpecies.Contains(species.Index)))
+        {
+            options = options.Where(species => !usedSpecies.Contains(species.Index)).ToArray();
+        }
+
+        if (similarBaseStatTotal && oldSpecies is not null)
+        {
+            var radius = 50;
+            while (radius <= 600)
+            {
+                var filtered = options
+                    .Where(species => species.BaseStatTotal >= oldSpecies.BaseStatTotal - radius)
+                    .Where(species => species.BaseStatTotal <= oldSpecies.BaseStatTotal + radius)
+                    .ToArray();
+                if (filtered.Length > 1)
+                {
+                    options = filtered;
+                    break;
+                }
+
+                radius += 20;
+            }
+        }
+
+        var selected = options.Count == 0 ? oldSpecies ?? RandomElement(speciesPool) : RandomElement(options);
+        usedSpecies?.Add(selected.Index);
+        return selected;
+    }
+
+    private static int GiftLevel(BinaryData dol, XdGiftLayout layout)
+    {
+        if (layout.LevelOffset >= 0)
+        {
+            var offset = layout.StartOffset + layout.LevelOffset;
+            return offset >= 0 && offset < dol.Length ? dol.ReadByte(offset) : 0;
+        }
+
+        return layout.SharedLevelOffset >= 0 && layout.SharedLevelOffset < dol.Length
+            ? dol.ReadByte(layout.SharedLevelOffset)
+            : 0;
+    }
+
+    private static IReadOnlyList<int> DefaultMovesForLevel(BinaryData data, RelocationTable table, int species, int level)
+    {
+        var start = table.GetPointer(XdPokemonStatsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfPokemonIndex);
+        if (!IsSafeTableRange(data, start, count, XdPokemonStatsSize, maxCount: 1000)
+            || species < 0
+            || species >= count)
+        {
+            return [0, 0, 0, 0];
+        }
+
+        var rowOffset = start + (species * XdPokemonStatsSize);
+        var moves = Enumerable.Range(0, XdPokemonLevelUpMoveCount)
+            .Select(row =>
+            {
+                var moveOffset = rowOffset + XdPokemonFirstLevelUpMoveOffset + (row * 4);
+                return (Level: (int)data.ReadByte(moveOffset), Move: (int)data.ReadUInt16(moveOffset + 2));
+            })
+            .Where(move => move.Move > 0 && move.Level <= level)
+            .Select(move => move.Move)
+            .Distinct()
+            .TakeLast(4)
+            .ToList();
+        while (moves.Count < 4)
+        {
+            moves.Insert(0, 0);
+        }
+
+        return moves;
     }
 
     private static RandomizedStats RandomBaseStatsFor(int hp, int attack, int defense, int specialAttack, int specialDefense, int speed)
@@ -628,4 +977,8 @@ public sealed partial class XdProjectContext
         int SpecialAttack,
         int SpecialDefense,
         int Speed);
+
+    private sealed record XdSpeciesInfo(int Index, int CatchRate, int BaseStatTotal);
+
+    private sealed record XdRandomizedSpeciesCounts(int Gifts, int Pokespots, int TrainerPokemon);
 }
