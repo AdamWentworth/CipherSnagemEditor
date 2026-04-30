@@ -22,27 +22,25 @@
                        FontSize="10"
                        VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis"/>
-            <controls:LegacyPokemonComboBox Grid.Column="1"
-                                            Classes="LegacyPokemonField"
-                                            Background="{Binding FieldBackgroundBrush}"
-                                            BorderBrush="{Binding FieldBorderBrush}"
-                                            Foreground="{Binding TextBrush}"
-                                            ItemsSource="{Binding ShadowOptions}"
-                                            SelectedItem="{Binding SelectedShadow, Mode=TwoWay}"
-                                            MaxDropDownHeight="260"/>
-            <controls:LegacyPokemonComboBox Grid.Row="1"
-                                            Grid.ColumnSpan="2"
-                                            Classes="LegacyPokemonField"
-                                            Background="{Binding FieldBackgroundBrush}"
-                                            BorderBrush="{Binding FieldBorderBrush}"
-                                            Foreground="{Binding TextBrush}"
-                                            ItemsSource="{Binding SpeciesOptions}"
-                                            SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
-                                            MaxDropDownHeight="260"
-                                            Width="296"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top"
-                                            Margin="0,36,0,0"/>
+            <controls:LegacyPicker Grid.Column="1"
+                                   Background="{Binding FieldBackgroundBrush}"
+                                   BorderBrush="{Binding FieldBorderBrush}"
+                                   Foreground="{Binding TextBrush}"
+                                   ItemsSource="{Binding ShadowOptions}"
+                                   SelectedItem="{Binding SelectedShadow, Mode=TwoWay}"
+                                   MaxDropDownHeight="260"/>
+            <controls:LegacyPicker Grid.Row="1"
+                                   Grid.ColumnSpan="2"
+                                   Background="{Binding FieldBackgroundBrush}"
+                                   BorderBrush="{Binding FieldBorderBrush}"
+                                   Foreground="{Binding TextBrush}"
+                                   ItemsSource="{Binding SpeciesOptions}"
+                                   SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                   MaxDropDownHeight="260"
+                                   Width="296"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Top"
+                                   Margin="0,36,0,0"/>
         </Grid>
     </Border>
 </UserControl>

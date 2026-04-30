@@ -7,7 +7,7 @@ param(
     [switch]$NoArchive,
     [switch]$NoDeb,
     [switch]$NoReadyToRun,
-    [string]$PackageVersion = "0.1.6"
+    [string]$PackageVersion = "0.1.7"
 )
 
 $ErrorActionPreference = "Stop"
