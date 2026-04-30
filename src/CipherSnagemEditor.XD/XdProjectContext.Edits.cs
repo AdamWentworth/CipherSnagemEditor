@@ -1,0 +1,318 @@
+using CipherSnagemEditor.Core.Archives;
+using CipherSnagemEditor.Core.Binary;
+using CipherSnagemEditor.Core.GameCube;
+
+namespace CipherSnagemEditor.XD;
+
+public sealed partial class XdProjectContext
+{
+    public string SaveShadowPokemon(XdShadowPokemonUpdate update)
+    {
+        var archive = TryReadFsys("deck_archive.fsys", out var error)
+            ?? throw new InvalidDataException(error ?? "deck_archive.fsys was not found.");
+        var darkEntry = FindDeckEntry(archive, "DeckData_DarkPokemon")
+            ?? throw new InvalidDataException("DeckData_DarkPokemon was not found in deck_archive.fsys.");
+        var storyEntry = FindDeckEntry(archive, "DeckData_Story")
+            ?? throw new InvalidDataException("DeckData_Story was not found in deck_archive.fsys.");
+
+        var darkBytes = archive.Extract(darkEntry);
+        var storyBytes = archive.Extract(storyEntry);
+        if (!TryReadDeckLayout(storyBytes, out var storyLayout, out var storyError))
+        {
+            throw new InvalidDataException(storyError);
+        }
+
+        var darkStart = 0x20 + (update.Index * XdShadowPokemonSize);
+        if (darkStart < 0 || darkStart + XdShadowPokemonSize > darkBytes.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(update), $"Shadow Pokemon #{update.Index} is outside DeckData_DarkPokemon.");
+        }
+
+        var storyStart = storyLayout.PokemonDataOffset + (update.StoryPokemonIndex * XdDeckPokemonSize);
+        if (storyStart < 0 || storyStart + XdDeckPokemonSize > storyBytes.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(update), $"Story Pokemon #{update.StoryPokemonIndex} is outside DeckData_Story.");
+        }
+
+        darkBytes[darkStart + XdShadowFleeOffset] = ClampByte(update.FleeValue);
+        darkBytes[darkStart + XdShadowCatchRateOffset] = ClampByte(update.CatchRate);
+        darkBytes[darkStart + XdShadowLevelOffset] = ClampByte(update.Level);
+        darkBytes[darkStart + XdShadowInUseOffset] = ClampByte(update.InUseFlag);
+        WriteU16(darkBytes, darkStart + XdShadowStoryIndexOffset, update.StoryPokemonIndex);
+        WriteU16(darkBytes, darkStart + XdShadowHeartGaugeOffset, update.HeartGauge);
+        for (var slot = 0; slot < 4; slot++)
+        {
+            WriteU16(darkBytes, darkStart + XdShadowFirstMoveOffset + (slot * 2), ValueAt(update.ShadowMoveIds, slot));
+        }
+
+        darkBytes[darkStart + XdShadowAggressionOffset] = ClampByte(update.Aggression);
+        darkBytes[darkStart + XdShadowAlwaysFleeOffset] = ClampByte(update.AlwaysFlee);
+
+        WriteU16(storyBytes, storyStart + XdDeckPokemonSpeciesOffset, update.SpeciesId);
+        storyBytes[storyStart + XdDeckPokemonLevelOffset] = ClampByte(update.ShadowBoostLevel);
+        storyBytes[storyStart + 0x03] = ClampByte(update.Happiness);
+        WriteU16(storyBytes, storyStart + XdDeckPokemonItemOffset, update.ItemId);
+        for (var iv = 0; iv < 6; iv++)
+        {
+            storyBytes[storyStart + 0x08 + iv] = ClampByte(update.Iv);
+        }
+
+        for (var ev = 0; ev < 6; ev++)
+        {
+            storyBytes[storyStart + 0x0e + ev] = ClampByte(ValueAt(update.Evs, ev));
+        }
+
+        for (var slot = 0; slot < 4; slot++)
+        {
+            WriteU16(storyBytes, storyStart + XdDeckPokemonFirstMoveOffset + (slot * 2), ValueAt(update.RegularMoveIds, slot));
+        }
+
+        var originalPid = storyBytes[storyStart + 0x1e];
+        var ability = update.Ability is 0 or 1 ? update.Ability : originalPid % 2;
+        var gender = update.Gender is >= 0 and <= 3 ? update.Gender : (originalPid / 2) % 4;
+        var nature = update.Nature is >= 0 and <= 24 ? update.Nature : originalPid / 8;
+        storyBytes[storyStart + 0x1e] = checked((byte)((nature << 3) + (gender << 1) + ability));
+
+        return WriteFsysEntries("deck_archive.fsys", new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            [darkEntry.Name] = darkBytes,
+            [storyEntry.Name] = storyBytes
+        });
+    }
+
+    public string SavePokespot(XdPokespotUpdate update)
+    {
+        var (data, _, _) = ReadCommonRelOrThrow();
+        if (update.StartOffset < 0 || update.StartOffset + XdPokespotEntrySize > data.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(update), $"Pokespot row at 0x{update.StartOffset:x} is outside common.rel.");
+        }
+
+        data.WriteByte(update.StartOffset, ClampByte(update.MinLevel));
+        data.WriteByte(update.StartOffset + 1, ClampByte(update.MaxLevel));
+        data.WriteUInt16(update.StartOffset + 2, checked((ushort)ClampUInt16(update.SpeciesId)));
+        data.WriteByte(update.StartOffset + 7, ClampByte(update.EncounterPercentage));
+        data.WriteUInt16(update.StartOffset + 0x0a, checked((ushort)ClampUInt16(update.StepsPerSnack)));
+
+        return WriteFsysEntries("common.fsys", new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["common.rel"] = data.ToArray()
+        });
+    }
+
+    private string WriteFsysEntries(string fsysName, IReadOnlyDictionary<string, byte[]> replacements)
+    {
+        var isoEntry = FindIsoFile(fsysName)
+            ?? throw new FileNotFoundException($"{fsysName} was not found in the ISO.");
+        var archive = FsysArchive.Parse(isoEntry.Name, GameCubeIsoReader.ReadFile(Iso, isoEntry));
+        var result = archive.ReplaceFiles(replacements);
+        if (result.ReplacedFiles.Count != replacements.Count)
+        {
+            var replaced = result.ReplacedFiles.Select(file => file.EntryName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missing = replacements.Keys.Where(key => !replaced.Contains(key));
+            throw new InvalidDataException($"{fsysName} is missing expected entries: {string.Join(", ", missing)}");
+        }
+
+        WriteIsoEntry(isoEntry, result.ArchiveBytes);
+
+        string? firstPath = null;
+        foreach (var replacement in replacements)
+        {
+            var path = WriteWorkspaceFile(fsysName, replacement.Key, replacement.Value);
+            firstPath ??= path;
+        }
+
+        return firstPath ?? isoEntry.Name;
+    }
+
+    private string WriteWorkspaceFile(string fsysName, string entryName, byte[] bytes)
+    {
+        var archiveFolder = Path.GetFileNameWithoutExtension(SafeFileName(fsysName));
+        if (string.IsNullOrWhiteSpace(archiveFolder))
+        {
+            archiveFolder = SafeFileName(fsysName);
+        }
+
+        var folder = Path.Combine(WorkspaceDirectory, "Game Files", archiveFolder);
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, SafeFileName(entryName));
+        File.WriteAllBytes(path, bytes);
+        return path;
+    }
+
+    private void WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
+    {
+        var maximumBytes = MaximumReplacementSize(entry);
+        if (entry.TocEntryOffset is null && sourceBytes.Length > entry.Size)
+        {
+            throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
+        }
+
+        using (var stream = File.Open(Iso.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+        {
+            var insertedBytes = EnsureIsoCapacity(stream, entry, sourceBytes.Length, maximumBytes);
+            maximumBytes = checked(maximumBytes + (uint)insertedBytes);
+
+            stream.Position = entry.Offset;
+            stream.Write(sourceBytes);
+
+            if (entry.Size > sourceBytes.Length)
+            {
+                WriteZeros(stream, checked((int)(entry.Size - sourceBytes.Length)));
+            }
+
+            if (entry.TocEntryOffset is not null)
+            {
+                Span<byte> sizeBytes = stackalloc byte[4];
+                BigEndian.WriteUInt32(sizeBytes, 0, checked((uint)sourceBytes.Length));
+                stream.Position = entry.TocEntryOffset.Value + 8;
+                stream.Write(sizeBytes);
+            }
+        }
+
+        Iso = GameCubeIsoReader.Open(Iso.Path);
+    }
+
+    private uint MaximumReplacementSize(GameCubeIsoFileEntry entry)
+    {
+        if (entry.TocEntryOffset is null)
+        {
+            return entry.Size;
+        }
+
+        var nextFile = Iso.Files
+            .Where(file => file.Offset > entry.Offset)
+            .OrderBy(file => file.Offset)
+            .FirstOrDefault();
+        var maxEnd = nextFile?.Offset ?? checked((uint)new FileInfo(Iso.Path).Length);
+        return maxEnd <= entry.Offset ? entry.Size : maxEnd - entry.Offset;
+    }
+
+    private int EnsureIsoCapacity(FileStream stream, GameCubeIsoFileEntry entry, int sourceLength, uint currentMaximumBytes)
+    {
+        if (sourceLength <= currentMaximumBytes)
+        {
+            return 0;
+        }
+
+        if (entry.TocEntryOffset is null)
+        {
+            throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
+        }
+
+        var insertedBytes = Align16(checked(sourceLength - (int)currentMaximumBytes));
+        var insertOffset = checked((long)entry.Offset + entry.Size);
+        InsertZeros(stream, insertOffset, insertedBytes);
+
+        Span<byte> offsetBytes = stackalloc byte[4];
+        foreach (var shiftedEntry in Iso.Files
+            .Where(file => file.TocEntryOffset is not null && file.Offset > entry.Offset)
+            .OrderBy(file => file.Offset))
+        {
+            BigEndian.WriteUInt32(offsetBytes, 0, checked(shiftedEntry.Offset + (uint)insertedBytes));
+            stream.Position = shiftedEntry.TocEntryOffset!.Value + 4;
+            stream.Write(offsetBytes);
+        }
+
+        UpdateUserDataSize(stream);
+        return insertedBytes;
+    }
+
+    private static void InsertZeros(FileStream stream, long offset, int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        var oldLength = stream.Length;
+        if (offset < 0 || offset > oldLength)
+        {
+            throw new ArgumentOutOfRangeException(nameof(offset), $"Offset 0x{offset:x} is outside the ISO.");
+        }
+
+        var buffer = new byte[1024 * 1024];
+        stream.SetLength(oldLength + count);
+        var readEnd = oldLength;
+        while (readEnd > offset)
+        {
+            var readStart = Math.Max(offset, readEnd - buffer.Length);
+            var length = checked((int)(readEnd - readStart));
+            stream.Position = readStart;
+            ReadExactly(stream, buffer.AsSpan(0, length));
+            stream.Position = readStart + count;
+            stream.Write(buffer, 0, length);
+            readEnd = readStart;
+        }
+
+        stream.Position = offset;
+        WriteZeros(stream, count);
+    }
+
+    private static void UpdateUserDataSize(FileStream stream)
+    {
+        const int userDataStartOffsetLocation = 0x434;
+        const int userDataSizeLocation = 0x438;
+
+        Span<byte> headerBytes = stackalloc byte[4];
+        stream.Position = userDataStartOffsetLocation;
+        ReadExactly(stream, headerBytes);
+        var userDataStart = BigEndian.ReadUInt32(headerBytes, 0);
+        if (userDataStart == 0 || userDataStart > stream.Length)
+        {
+            return;
+        }
+
+        BigEndian.WriteUInt32(headerBytes, 0, checked((uint)(stream.Length - userDataStart)));
+        stream.Position = userDataSizeLocation;
+        stream.Write(headerBytes);
+    }
+
+    private static void ReadExactly(Stream stream, Span<byte> buffer)
+    {
+        var read = 0;
+        while (read < buffer.Length)
+        {
+            var count = stream.Read(buffer[read..]);
+            if (count == 0)
+            {
+                throw new EndOfStreamException("Unexpected end of ISO while shifting file data.");
+            }
+
+            read += count;
+        }
+    }
+
+    private static void WriteU16(byte[] bytes, int offset, int value)
+        => BigEndian.WriteUInt16(bytes, offset, checked((ushort)ClampUInt16(value)));
+
+    private static int ValueAt(IReadOnlyList<int> values, int index)
+        => index < values.Count ? values[index] : 0;
+
+    private static byte ClampByte(int value)
+        => checked((byte)Math.Clamp(value, 0, byte.MaxValue));
+
+    private static int ClampUInt16(int value)
+        => Math.Clamp(value, 0, ushort.MaxValue);
+
+    private static int Align16(int value)
+        => (value + 0x0f) & ~0x0f;
+
+    private static void WriteZeros(Stream stream, int count)
+    {
+        Span<byte> zeros = stackalloc byte[4096];
+        while (count > 0)
+        {
+            var length = Math.Min(count, zeros.Length);
+            stream.Write(zeros[..length]);
+            count -= length;
+        }
+    }
+
+    private static string SafeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
+        return new string(chars);
+    }
+}

@@ -27,7 +27,7 @@ public sealed partial class XdProjectContext
 
     public string WorkspaceDirectory { get; }
 
-    public GameCubeIso Iso { get; }
+    public GameCubeIso Iso { get; private set; }
 
     public XdSettings Settings { get; }
 

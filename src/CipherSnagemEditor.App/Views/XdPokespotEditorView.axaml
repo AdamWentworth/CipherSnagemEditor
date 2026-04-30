@@ -1,55 +1,40 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             xmlns:controls="using:CipherSnagemEditor.App.Controls"
              x:Class="CipherSnagemEditor.App.Views.XdPokespotEditorView"
              x:DataType="vm:MainWindowViewModel"
              x:CompileBindings="False"
              FontFamily="Arial"
              Background="#303030">
     <UserControl.Styles>
-        <Style Selector="TextBox.XdField">
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="5,1"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="Background" Value="#444444"/>
-            <Setter Property="BorderBrush" Value="#666666"/>
-            <Setter Property="CaretBrush" Value="#FFFFFF"/>
-            <Setter Property="SelectionBrush" Value="#80ACFF"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style Selector="Border.XdPicker">
+        <Style Selector="ComboBox.XdPickerField">
             <Setter Property="Height" Value="20"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="3,0,2,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Background" Value="#666666"/>
             <Setter Property="BorderBrush" Value="#747474"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
-            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
-        <Style Selector="Border.XdMiniField">
+        <Style Selector="TextBox.XdMiniInput">
             <Setter Property="Height" Value="20"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="4,1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Background" Value="#444444"/>
             <Setter Property="BorderBrush" Value="#5A5A5A"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="ClipToBounds" Value="True"/>
-        </Style>
-        <Style Selector="TextBlock.XdPickerText">
-            <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="TextAlignment" Value="Center"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="Margin" Value="5,0"/>
-        </Style>
-        <Style Selector="TextBlock.XdMiniText">
-            <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="TextAlignment" Value="Right"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="Margin" Value="4,0"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style Selector="TextBox.XdSearch">
             <Setter Property="Height" Value="28"/>
@@ -131,40 +116,62 @@
                     CornerRadius="6"
                     ClipToBounds="True">
                 <Canvas Width="260" Height="340">
-                    <Image Source="{Binding SelectedXdPokespot.BodyImage}"
+                    <Image DataContext="{Binding SelectedXdPokespot}"
+                           Source="{Binding BodyImage}"
+                           Classes="PokemonBodyImage"
                            Canvas.Left="80"
                            Canvas.Top="48"
                            Width="100"
                            Height="100"
                            Stretch="Uniform"/>
 
-                    <Border Classes="XdPicker" Canvas.Left="78" Canvas.Top="135" Width="105">
-                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdPokespot.Encounter.SpeciesName}"/>
-                    </Border>
+                    <controls:LegacyPokemonComboBox Classes="XdPickerField"
+                                                    Canvas.Left="78"
+                                                    Canvas.Top="135"
+                                                    Width="105"
+                                                    ItemsSource="{Binding SelectedXdPokespot.SpeciesOptions}"
+                                                    SelectedItem="{Binding SelectedXdPokespot.SelectedSpecies, Mode=TwoWay}"
+                                                    MaxDropDownHeight="260"/>
 
                     <TextBlock Canvas.Left="42" Canvas.Top="180" Width="70" Text="Min" Classes="XdLabel" TextAlignment="Center"/>
                     <TextBlock Canvas.Left="148" Canvas.Top="180" Width="70" Text="Max" Classes="XdLabel" TextAlignment="Center"/>
-                    <Border Classes="XdPicker" Canvas.Left="5" Canvas.Top="205" Width="100">
-                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdPokespot.Encounter.MinLevel, StringFormat='Lv. {0}'}"/>
-                    </Border>
-                    <Border Classes="XdPicker" Canvas.Left="155" Canvas.Top="205" Width="95">
-                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdPokespot.Encounter.MaxLevel, StringFormat='Lv. {0}'}"/>
-                    </Border>
+                    <controls:LegacyPokemonComboBox Classes="XdPickerField"
+                                                    Canvas.Left="5"
+                                                    Canvas.Top="205"
+                                                    Width="100"
+                                                    ItemsSource="{Binding SelectedXdPokespot.LevelOptions}"
+                                                    SelectedItem="{Binding SelectedXdPokespot.MinLevel, Mode=TwoWay}"
+                                                    MaxDropDownHeight="260">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat='Lv. {0}'}" HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </controls:LegacyPokemonComboBox>
+                    <controls:LegacyPokemonComboBox Classes="XdPickerField"
+                                                    Canvas.Left="155"
+                                                    Canvas.Top="205"
+                                                    Width="95"
+                                                    ItemsSource="{Binding SelectedXdPokespot.LevelOptions}"
+                                                    SelectedItem="{Binding SelectedXdPokespot.MaxLevel, Mode=TwoWay}"
+                                                    MaxDropDownHeight="260">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat='Lv. {0}'}" HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </controls:LegacyPokemonComboBox>
 
                     <TextBlock Canvas.Left="5" Canvas.Top="250" Width="105" Text="Encounter Chance" Classes="XdLabel" TextAlignment="Center"/>
                     <TextBlock Canvas.Left="153" Canvas.Top="250" Width="100" Text="Steps Per Snack" Classes="XdLabel" TextAlignment="Center"/>
-                    <Border Classes="XdMiniField" Canvas.Left="5" Canvas.Top="275" Width="100">
-                        <TextBlock Classes="XdMiniText" Text="{Binding SelectedXdPokespot.Encounter.EncounterPercentage}"/>
-                    </Border>
-                    <Border Classes="XdMiniField" Canvas.Left="155" Canvas.Top="275" Width="90">
-                        <TextBlock Classes="XdMiniText" Text="{Binding SelectedXdPokespot.Encounter.StepsPerSnack}"/>
-                    </Border>
+                    <TextBox Classes="XdMiniInput" Canvas.Left="5" Canvas.Top="275" Width="100" Text="{Binding SelectedXdPokespot.EncounterPercentage, Mode=TwoWay}"/>
+                    <TextBox Classes="XdMiniInput" Canvas.Left="155" Canvas.Top="275" Width="90" Text="{Binding SelectedXdPokespot.StepsPerSnack, Mode=TwoWay}"/>
 
                     <Button Classes="XdSave"
                             Content="Save"
                             Width="80"
                             Height="21"
-                            IsEnabled="False"
+                            Command="{Binding SaveXdPokespotCommand}"
                             Canvas.Left="90"
                             Canvas.Top="306"/>
                 </Canvas>

@@ -312,6 +312,45 @@ public sealed class FsysArchive
         return new FsysReplaceResult(data, replacements);
     }
 
+    public FsysReplaceResult ReplaceFiles(IReadOnlyDictionary<string, byte[]> replacementBytes, bool encodeCompressed = true)
+    {
+        if (replacementBytes.Count == 0)
+        {
+            return new FsysReplaceResult(_data.ToArray(), []);
+        }
+
+        var data = _data.ToArray();
+        var replacements = new List<FsysFileReplacement>();
+        var replacementsByName = replacementBytes.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value,
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in Entries)
+        {
+            if (!replacementsByName.TryGetValue(entry.Name, out var sourceBytes))
+            {
+                continue;
+            }
+
+            var archiveBytes = sourceBytes;
+            if (entry.IsCompressed && encodeCompressed && !LzssCodec.HasHeader(sourceBytes))
+            {
+                archiveBytes = LzssCodec.EncodeFile(sourceBytes);
+            }
+
+            data = ReplaceEntryBytes(data, entry.Index, archiveBytes, UncompressedSizeForReplacement(sourceBytes, archiveBytes));
+            replacements.Add(new FsysFileReplacement(
+                entry.Name,
+                entry.Name,
+                sourceBytes.Length,
+                archiveBytes.Length,
+                entry.IsCompressed));
+        }
+
+        return new FsysReplaceResult(data, replacements);
+    }
+
     private static string NormalizeName(string name, GameFileType fileType)
     {
         if (string.IsNullOrWhiteSpace(name))

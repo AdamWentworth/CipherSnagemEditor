@@ -186,3 +186,33 @@ public sealed record XdPokespotRecord(
     int EncounterPercentage,
     int StepsPerSnack,
     int StartOffset);
+
+public sealed record XdShadowPokemonUpdate(
+    int Index,
+    int StoryPokemonIndex,
+    int SpeciesId,
+    int Level,
+    int CatchRate,
+    int HeartGauge,
+    int InUseFlag,
+    int FleeValue,
+    int Aggression,
+    int AlwaysFlee,
+    IReadOnlyList<int> ShadowMoveIds,
+    int ShadowBoostLevel,
+    int ItemId,
+    int Ability,
+    int Nature,
+    int Gender,
+    int Happiness,
+    int Iv,
+    IReadOnlyList<int> Evs,
+    IReadOnlyList<int> RegularMoveIds);
+
+public sealed record XdPokespotUpdate(
+    int StartOffset,
+    int SpeciesId,
+    int MinLevel,
+    int MaxLevel,
+    int EncounterPercentage,
+    int StepsPerSnack);

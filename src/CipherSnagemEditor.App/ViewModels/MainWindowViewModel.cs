@@ -1235,6 +1235,64 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSaveXdShadowPokemon))]
+    private async Task SaveXdShadowPokemonAsync()
+    {
+        if (CurrentXdProject is null || SelectedXdShadowPokemon is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var shadow = SelectedXdShadowPokemon;
+        Logs.Add($"Saving XD shadow Pokemon {shadow.Shadow.Index}: {shadow.SpeciesName}");
+
+        try
+        {
+            var path = await Task.Run(() => CurrentXdProject.SaveShadowPokemon(shadow.ToUpdate()));
+            shadow.MarkSaved();
+            Logs.Add($"XD shadow Pokemon saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"XD shadow Pokemon save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+            SaveXdShadowPokemonCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveXdPokespot))]
+    private async Task SaveXdPokespotAsync()
+    {
+        if (CurrentXdProject is null || SelectedXdPokespot is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        var pokespot = SelectedXdPokespot;
+        Logs.Add($"Saving XD pokespot {pokespot.Encounter.SpotName} #{pokespot.Encounter.Index}: {pokespot.SpeciesName}");
+
+        try
+        {
+            var path = await Task.Run(() => CurrentXdProject.SavePokespot(pokespot.ToUpdate()));
+            pokespot.MarkSaved();
+            Logs.Add($"XD pokespot saved to {path}");
+        }
+        catch (Exception ex)
+        {
+            Logs.Add($"XD pokespot save failed: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+            SaveXdPokespotCommand.NotifyCanExecuteChanged();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanSaveMessage))]
     private async Task SaveMessageAsync()
     {
@@ -1526,6 +1584,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private bool CanSaveInteraction()
         => CurrentProject?.Iso is not null && SelectedInteractionDetail is not null && !IsBusy;
+
+    private bool CanSaveXdShadowPokemon()
+        => CurrentXdProject?.Iso is not null && SelectedXdShadowPokemon?.HasChanges == true && !IsBusy;
+
+    private bool CanSaveXdPokespot()
+        => CurrentXdProject?.Iso is not null && SelectedXdPokespot?.HasChanges == true && !IsBusy;
 
     private bool CanSaveMessage()
         => CurrentProject is not null
@@ -2005,6 +2069,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             entry.IsSelected = ReferenceEquals(entry, value);
         }
+
+        SaveXdShadowPokemonCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedXdPokespotChanged(XdPokespotEntryViewModel? value)
@@ -2013,6 +2079,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             entry.IsSelected = ReferenceEquals(entry, value);
         }
+
+        SaveXdPokespotCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedMessageIdTextChanged(string value)
@@ -2111,6 +2179,8 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveTypeCommand.NotifyCanExecuteChanged();
         SaveTreasureCommand.NotifyCanExecuteChanged();
         SaveInteractionCommand.NotifyCanExecuteChanged();
+        SaveXdShadowPokemonCommand.NotifyCanExecuteChanged();
+        SaveXdPokespotCommand.NotifyCanExecuteChanged();
         SaveMessageCommand.NotifyCanExecuteChanged();
         EncodeTableEditorCommand.NotifyCanExecuteChanged();
         DecodeTableEditorCommand.NotifyCanExecuteChanged();
@@ -2768,10 +2838,31 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
+            var shadows = CurrentXdProject.LoadShadowPokemonRecords();
+            var pokemonStats = MapXdPokemonStats(CurrentXdProject.LoadPokemonStatsRecords());
+            var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
+            var items = MapXdItems(CurrentXdProject.LoadItemRecords());
+            _trainerPokemonResources = TrainerPokemonEditorResources.FromRows(
+                pokemonStats,
+                moves,
+                items,
+                shadows.Select(MapXdShadowPokemon).ToArray());
+            var storyOptions = shadows
+                .Select(shadow => new PickerOptionViewModel(
+                    shadow.StoryPokemonIndex,
+                    $"{shadow.StoryPokemonIndex}: Lv. {shadow.ShadowBoostLevel} {shadow.SpeciesName}"))
+                .GroupBy(option => option.Value)
+                .Select(group => group.First())
+                .ToArray();
+
             _allXdShadowPokemon.Clear();
-            foreach (var shadow in CurrentXdProject.LoadShadowPokemonRecords())
+            foreach (var shadow in shadows)
             {
-                _allXdShadowPokemon.Add(new XdShadowPokemonEntryViewModel(shadow));
+                _allXdShadowPokemon.Add(new XdShadowPokemonEntryViewModel(
+                    shadow,
+                    _trainerPokemonResources,
+                    storyOptions,
+                    OnXdShadowPokemonChanged));
             }
 
             ApplyXdShadowPokemonFilter(XdShadowPokemonSearchText);
@@ -2876,10 +2967,17 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
+            var pokemonStats = MapXdPokemonStats(CurrentXdProject.LoadPokemonStatsRecords());
+            var resources = TrainerPokemonEditorResources.FromRows(
+                pokemonStats,
+                [],
+                [],
+                []);
+
             _allXdPokespots.Clear();
             foreach (var encounter in CurrentXdProject.LoadPokespotRecords())
             {
-                _allXdPokespots.Add(new XdPokespotEntryViewModel(encounter));
+                _allXdPokespots.Add(new XdPokespotEntryViewModel(encounter, resources, OnXdPokespotChanged));
             }
 
             ApplyXdPokespotFilter(XdPokespotSearchText);
@@ -4018,6 +4116,15 @@ public partial class MainWindowViewModel : ViewModelBase
                     0,
                     pokemon.ShadowData.HeartGauge));
 
+    private static ColosseumShadowPokemonData MapXdShadowPokemon(XdShadowPokemonRecord shadow)
+        => new(
+            shadow.Index,
+            shadow.CatchRate,
+            shadow.SpeciesId,
+            0,
+            0,
+            shadow.HeartGauge);
+
     private static IReadOnlyList<ColosseumPokemonStats> MapXdPokemonStats(IReadOnlyList<XdPokemonStatsRecord> rows)
         => rows.Select(row => new ColosseumPokemonStats(
             row.Index,
@@ -4503,6 +4610,16 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OnInteractionChanged()
     {
         SaveInteractionCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnXdShadowPokemonChanged()
+    {
+        SaveXdShadowPokemonCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnXdPokespotChanged()
+    {
+        SaveXdPokespotCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshSavedPokemonStatsEntry(int index)
