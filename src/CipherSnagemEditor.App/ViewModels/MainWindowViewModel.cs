@@ -392,7 +392,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool IsMessageEditorReadOnly => SelectedMessageString is null || IsBusy;
 
-    public ObservableCollection<TrainerPokemonSlotViewModel> SelectedTrainerPokemon { get; } = [];
+    [ObservableProperty]
+    private IReadOnlyList<TrainerPokemonSlotViewModel> _selectedTrainerPokemon = [];
 
     public bool HasSelectedTableEditorEntry => SelectedTableEditorEntry is not null;
 
@@ -504,7 +505,7 @@ public partial class MainWindowViewModel : ViewModelBase
             ResetRandomizerDefaults();
             SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
-            SelectedTrainerPokemon.Clear();
+            SelectedTrainerPokemon = [];
             LogPerformance("Open reset UI state", resetTimer);
             PopulateIsoFiles(context);
 
@@ -602,7 +603,7 @@ public partial class MainWindowViewModel : ViewModelBase
             ResetRandomizerDefaults();
             SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
-            SelectedTrainerPokemon.Clear();
+            SelectedTrainerPokemon = [];
             RefreshSelectedToolView(SelectedTool);
             Logs.Add($"Error: {ex.Message}");
             LogPerformance("Open failed total", openTimer);
@@ -1383,7 +1384,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedTypeDetail = null;
         SelectedTreasure = null;
         SelectedTreasureDetail = null;
-        SelectedTrainerPokemon.Clear();
+        SelectedTrainerPokemon = [];
     }
 
     public bool PrepareToolWindow(ToolEntryViewModel tool)
@@ -3262,7 +3263,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RefreshSelectedTrainerDetails(TrainerEntryViewModel? value)
     {
-        SelectedTrainerPokemon.Clear();
+        SelectedTrainerPokemon = [];
 
         if (value is null)
         {
@@ -3292,10 +3293,9 @@ public partial class MainWindowViewModel : ViewModelBase
         TrainerDetailBackgroundBrush = trainer.HasShadow ? TrainerShadowBrush : TrainerNormalBrush;
 
         var slotTimer = Stopwatch.StartNew();
-        foreach (var pokemon in trainer.Pokemon)
-        {
-            SelectedTrainerPokemon.Add(new TrainerPokemonSlotViewModel(pokemon, _trainerPokemonResources, OnTrainerPokemonChanged));
-        }
+        SelectedTrainerPokemon = trainer.Pokemon
+            .Select(pokemon => new TrainerPokemonSlotViewModel(pokemon, _trainerPokemonResources, OnTrainerPokemonChanged))
+            .ToArray();
         LogPerformance("Trainer Editor build selected Pokemon slots", slotTimer, SelectedTrainerPokemon.Count);
 
         SaveTrainerCommand.NotifyCanExecuteChanged();
@@ -3731,6 +3731,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var countText = count is null ? string.Empty : $" ({count.Value:N0})";
         Logs.Add($"[perf] {label}{countText}: {elapsed.TotalMilliseconds:N0} ms");
+    }
+
+    public void LogPerformanceDetail(string message)
+    {
+        Logs.Add($"[perf] {message}");
     }
 
     private static string BuildLogSummary(ColosseumProjectContext context)

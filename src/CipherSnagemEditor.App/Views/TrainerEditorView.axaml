@@ -175,7 +175,12 @@
                 <ListBox Grid.Row="1"
                          Classes="LegacySidebarList"
                          ItemsSource="{Binding Trainers}"
-                         SelectedItem="{Binding SelectedTrainer, Mode=TwoWay}">
+                         ScrollViewer.VerticalScrollBarVisibility="Visible">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel CacheLength="1"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:TrainerEntryViewModel">
                                 <Border PointerPressed="TrainerPointerPressed"

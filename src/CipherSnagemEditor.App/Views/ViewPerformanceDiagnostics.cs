@@ -45,6 +45,20 @@ internal static class ViewPerformanceDiagnostics
         if (control.DataContext is MainWindowViewModel viewModel)
         {
             viewModel.LogPerformance(label, stopwatch, visualCount);
+            if (visualCount >= 1000 && label.StartsWith("Trainer Editor", StringComparison.Ordinal))
+            {
+                viewModel.LogPerformanceDetail($"{label} visual types: {DescribeTopVisualTypes(control)}");
+            }
         }
     }
+
+    private static string DescribeTopVisualTypes(Visual visual)
+        => string.Join(", ", visual
+            .GetVisualDescendants()
+            .Append(visual)
+            .GroupBy(item => item.GetType().Name)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.Ordinal)
+            .Take(8)
+            .Select(group => $"{group.Key}={group.Count():N0}"));
 }
