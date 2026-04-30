@@ -243,7 +243,7 @@ public partial class MainWindow : Window
     {
         if (tool.Game == GameCubeGame.PokemonXD && tool.Title != "ISO Explorer")
         {
-            return new LegacySimpleToolView(tool.Title, ToolContentSize(tool.Title));
+            return new XdToolView();
         }
 
         return tool.Title switch

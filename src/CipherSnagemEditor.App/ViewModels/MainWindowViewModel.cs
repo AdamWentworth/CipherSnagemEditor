@@ -71,6 +71,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _selectedToolDetail = "Trainer Editor is the first parity target.";
 
     [ObservableProperty]
+    private XdToolContent _selectedXdToolContent = XdToolContent.Empty;
+
+    [ObservableProperty]
     private IsoFileEntryViewModel? _selectedIsoFile;
 
     [ObservableProperty]
@@ -702,6 +705,7 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyGameMode(GameCubeGame.PokemonXD);
         CurrentProject = null;
         CurrentXdProject = context;
+        SelectedXdToolContent = XdToolContent.Empty;
         HasProject = true;
         ProjectTitle = BuildProjectTitle(context);
         WorkspaceStatus = BuildWorkspaceStatus(context);
@@ -1589,8 +1593,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (tool.Title != "ISO Explorer")
             {
-                SelectedToolDetail =
-                    $"{tool.Title}\nLegacy segue: {tool.LegacySegue}\nReference: {tool.LegacySource}\nXD editor backend parity is the next porting pass.";
+                LoadXdToolContent(tool);
             }
 
             return true;
@@ -2016,6 +2019,20 @@ public partial class MainWindowViewModel : ViewModelBase
         LeftPanelWidth = new GridLength(220);
         WorkspacePanelHeight = GridLength.Auto;
         LogPanelHeight = new GridLength(150);
+    }
+
+    private void LoadXdToolContent(ToolEntryViewModel tool)
+    {
+        if (CurrentXdProject is null)
+        {
+            SelectedXdToolContent = XdToolContent.Empty;
+            return;
+        }
+
+        var timer = Stopwatch.StartNew();
+        SelectedXdToolContent = CurrentXdProject.BuildToolContent(tool.Title);
+        SelectedToolDetail = $"{tool.Title}\nLegacy segue: {tool.LegacySegue}\nReference: {tool.LegacySource}";
+        LogPerformance($"XD {tool.Title} load content", timer, SelectedXdToolContent.Sections.Sum(section => section.Rows.Count));
     }
 
     private void PopulateIsoFiles(ColosseumProjectContext context)

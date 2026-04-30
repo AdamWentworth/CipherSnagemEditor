@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             xmlns:xd="using:CipherSnagemEditor.XD"
+             x:Class="CipherSnagemEditor.App.Views.XdToolView"
+             x:DataType="vm:MainWindowViewModel"
+             FontFamily="Arial"
+             Background="#303030">
+    <Grid RowDefinitions="58,*"
+          Background="#303030">
+        <Border Background="#A77AF4"
+                BorderBrush="#B996FF"
+                BorderThickness="0,0,0,1"
+                Padding="16,8">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="3">
+                    <TextBlock Text="{Binding SelectedXdToolContent.Title}"
+                               Foreground="#FFFFFF"
+                               FontSize="15"
+                               FontWeight="Bold"/>
+                    <TextBlock Text="{Binding SelectedXdToolContent.Summary}"
+                               Foreground="#F4EDFF"
+                               FontSize="11"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <Border Grid.Column="1"
+                        Background="#6E55B6"
+                        BorderBrush="#C8B6FF"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="10,4"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="GoD Tool"
+                               Foreground="#FFFFFF"
+                               FontSize="12"
+                               FontWeight="Bold"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding SelectedXdToolContent.Sections}"
+                          Margin="14">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="xd:XdToolSection">
+                        <Border Background="#303030"
+                                BorderBrush="#555555"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Margin="0,0,0,12"
+                                Padding="12">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="{Binding Title}"
+                                           Foreground="#E8E8E8"
+                                           FontSize="13"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Center"/>
+                                <ItemsControl ItemsSource="{Binding Rows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="xd:XdToolRow">
+                                            <Grid ColumnDefinitions="180,150,*"
+                                                  Margin="0,0,0,6"
+                                                  MinHeight="24">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Foreground="#FFFFFF"
+                                                           FontSize="11"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <Border Grid.Column="1"
+                                                        Background="#666666"
+                                                        BorderBrush="#7B7B7B"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3"
+                                                        Padding="6,2"
+                                                        Margin="8,0">
+                                                    <TextBlock Text="{Binding Value}"
+                                                               Foreground="#FFFFFF"
+                                                               FontSize="10"
+                                                               FontWeight="Bold"
+                                                               TextAlignment="Right"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </Border>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="{Binding Detail}"
+                                                           Foreground="#D6D6D6"
+                                                           FontSize="11"
+                                                           VerticalAlignment="Center"
+                                                           TextWrapping="Wrap"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

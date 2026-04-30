@@ -235,6 +235,20 @@ static void RunXdProbe(string isoPath)
     Expect(iso.Files.Any(file => file.Name.Equals("Game.toc", StringComparison.OrdinalIgnoreCase)), failures, "Game.toc is missing from the FST.");
     Expect(iso.Files.Count > 100, failures, $"FST file count is unexpectedly low: {iso.Files.Count}.");
     Expect(iso.Files.Any(file => file.Name.EndsWith(".fsys", StringComparison.OrdinalIgnoreCase)), failures, "No FSYS archives were found in the XD ISO.");
+    foreach (var tool in XdToolCatalog.HomeTools.Where(tool => !tool.Title.Equals("ISO Explorer", StringComparison.OrdinalIgnoreCase)))
+    {
+        var content = context.BuildToolContent(tool.Title);
+        var rowCount = content.Sections.Sum(section => section.Rows.Count);
+        Expect(content.Sections.Count > 1, failures, $"{tool.Title} did not build tool content sections.");
+        Expect(rowCount > 3, failures, $"{tool.Title} content is unexpectedly sparse: {rowCount} rows.");
+        foreach (var requiredSection in RequiredXdContentSections(tool.Title))
+        {
+            Expect(
+                content.Sections.Any(section => section.Title.Equals(requiredSection, StringComparison.OrdinalIgnoreCase)),
+                failures,
+                $"{tool.Title} is missing required content section: {requiredSection}.");
+        }
+    }
 
     Console.WriteLine($"XD ISO: {iso.Path}");
     Console.WriteLine($"Game ID: {iso.GameId}");
@@ -245,6 +259,12 @@ static void RunXdProbe(string isoPath)
     foreach (var entry in iso.Files.Take(12))
     {
         Console.WriteLine($"0x{entry.Offset:x8} {entry.Size,10} {entry.Name}");
+    }
+
+    foreach (var tool in XdToolCatalog.HomeTools.Where(tool => !tool.Title.Equals("ISO Explorer", StringComparison.OrdinalIgnoreCase)))
+    {
+        var content = context.BuildToolContent(tool.Title);
+        Console.WriteLine($"XD content: {tool.Title}: {content.Sections.Count} sections, {content.Sections.Sum(section => section.Rows.Count)} rows.");
     }
 
     if (failures.Count == 0)
@@ -260,6 +280,22 @@ static void RunXdProbe(string isoPath)
 
     throw new InvalidDataException($"XD probe failed with {failures.Count} failure(s).");
 }
+
+static IReadOnlyList<string> RequiredXdContentSections(string toolTitle)
+    => toolTitle switch
+    {
+        "Trainer Editor" => ["Trainer Preview"],
+        "Shadow Pokemon Editor" => ["Shadow Pokemon Preview"],
+        "Pokemon Stats Editor" => ["common.rel Table Map"],
+        "Move Editor" => ["common.rel Table Map"],
+        "Item Editor" => ["common.rel Table Map"],
+        "Pokespot Editor" => ["Pokespot Encounters"],
+        "Gift Pokemon Editor" => ["common.rel Table Map"],
+        "Type Editor" => ["common.rel Table Map"],
+        "Treasure Editor" => ["common.rel Table Map"],
+        "Interaction Editor" => ["common.rel Table Map"],
+        _ => []
+    };
 
 static void RunParityProbe(string isoPath, int messageLimit, int assetLimit)
 {
