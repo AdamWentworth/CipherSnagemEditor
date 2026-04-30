@@ -1121,7 +1121,7 @@ static void ApplyXdSmokeOperation(string isoPath, string operation)
             TypeMatchups: true,
             TmMoves: true,
             ItemBoxes: true,
-            ShopItems: false,
+            ShopItems: true,
             BattleBingo: false,
             ShinyHues: false,
             SimilarBaseStatTotal: false,

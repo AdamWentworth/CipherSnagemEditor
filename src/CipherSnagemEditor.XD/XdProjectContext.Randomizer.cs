@@ -9,6 +9,8 @@ public sealed partial class XdProjectContext
     private const int MinimumRandomStatSmallTotal = 10;
     private const int MinimumRandomStatLargeTotal = 40;
     private const int WonderGuardAbilityId = 25;
+    private const int XdPocketMartItemsIndex = 4;
+    private const int XdPocketNumberOfMartItemsIndex = 5;
 
     public XdRandomizerApplyResult Randomize(XdRandomizerOptions options)
     {
@@ -106,7 +108,10 @@ public sealed partial class XdProjectContext
 
         if (options.ShopItems)
         {
-            messages.Add("XD shop randomization is pending pocket_menu parity.");
+            var shopResult = RandomizePocketMenuShops(data, table);
+            writtenFiles.Add(shopResult.PocketMenuRelPath);
+            commonChanged = true;
+            messages.Add($"Randomized {shopResult.ChangedItems:N0} XD shop item slot(s).");
         }
 
         if (options.BattleBingo)
@@ -593,6 +598,53 @@ public sealed partial class XdProjectContext
         return changed;
     }
 
+    private XdShopRandomizerResult RandomizePocketMenuShops(BinaryData commonData, RelocationTable commonTable)
+    {
+        var itemPool = EligibleShopItemIds(commonData, commonTable);
+        if (itemPool.Count == 0)
+        {
+            return new XdShopRandomizerResult(string.Empty, 0);
+        }
+
+        var archive = TryReadFsys("pocket_menu.fsys", out var error)
+            ?? throw new InvalidDataException(error ?? "pocket_menu.fsys was not found.");
+        var relEntry = archive.Entries.FirstOrDefault(entry => entry.Name.Equals("pocket_menu.rel", StringComparison.OrdinalIgnoreCase))
+            ?? archive.Entries.FirstOrDefault(entry => entry.Name.EndsWith(".rel", StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException("pocket_menu.rel was not found inside pocket_menu.fsys.");
+        var rel = new BinaryData(archive.Extract(relEntry));
+        var pocketTable = RelocationTable.Parse(rel.ToArray());
+        var itemOffset = pocketTable.GetPointer(XdPocketMartItemsIndex);
+        var itemCount = pocketTable.GetValueAtPointer(XdPocketNumberOfMartItemsIndex);
+        if (!IsSafeTableRange(rel, itemOffset, itemCount, 2, maxCount: 5000))
+        {
+            throw new InvalidDataException("XD shop item table is outside pocket_menu.rel.");
+        }
+
+        var itemPoolSet = itemPool.ToHashSet();
+        var changed = 0;
+        for (var index = 0; index < itemCount; index++)
+        {
+            var offset = itemOffset + (index * 2);
+            var itemId = rel.ReadUInt16(offset);
+            if (itemId == 0 || !itemPoolSet.Contains(itemId))
+            {
+                continue;
+            }
+
+            rel.WriteUInt16(offset, ClampUInt16ToU16(RandomElement(itemPool)));
+            changed++;
+        }
+
+        UpdateCouponPrices(commonData, commonTable);
+        var path = changed > 0
+            ? WriteFsysEntries("pocket_menu.fsys", new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                [relEntry.Name] = rel.ToArray()
+            })
+            : string.Empty;
+        return new XdShopRandomizerResult(path, changed);
+    }
+
     private int RewriteEvolutionMethods(BinaryData data, RelocationTable table, Func<int, bool> matchesMethod)
     {
         var start = PokemonStatsTableStart(data, table, out var count);
@@ -791,6 +843,54 @@ public sealed partial class XdProjectContext
         return items;
     }
 
+    private IReadOnlyList<int> EligibleShopItemIds(BinaryData data, RelocationTable table)
+    {
+        var start = table.GetPointer(XdItemsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfItemsIndex);
+        if (!IsSafeTableRange(data, start, count, XdItemSize, maxCount: 2000))
+        {
+            throw new InvalidDataException("Item table is outside common.rel.");
+        }
+
+        var items = new List<int>();
+        for (var item = 1; item < count; item++)
+        {
+            var rowOffset = start + (item * XdItemSize);
+            var bagSlot = data.ReadByte(rowOffset + XdItemBagSlotOffset);
+            if (bagSlot is >= 5 and <= 7)
+            {
+                continue;
+            }
+
+            if (data.ReadUInt16(rowOffset + XdItemPriceOffset) > 0)
+            {
+                items.Add(item);
+            }
+        }
+
+        return items;
+    }
+
+    private static void UpdateCouponPrices(BinaryData data, RelocationTable table)
+    {
+        var start = table.GetPointer(XdItemsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfItemsIndex);
+        if (!IsSafeTableRange(data, start, count, XdItemSize, maxCount: 2000))
+        {
+            throw new InvalidDataException("Item table is outside common.rel.");
+        }
+
+        for (var item = 1; item < count; item++)
+        {
+            var rowOffset = start + (item * XdItemSize);
+            var price = data.ReadUInt16(rowOffset + XdItemPriceOffset);
+            if (price > 0)
+            {
+                data.WriteUInt16(rowOffset + XdItemCouponOffset, ClampUInt16ToU16(checked(price * 10)));
+            }
+        }
+    }
+
     private IReadOnlyList<int> RandomTypeIds(BinaryData data, RelocationTable table)
     {
         TypeTableStart(data, table, out var count);
@@ -981,4 +1081,6 @@ public sealed partial class XdProjectContext
     private sealed record XdSpeciesInfo(int Index, int CatchRate, int BaseStatTotal);
 
     private sealed record XdRandomizedSpeciesCounts(int Gifts, int Pokespots, int TrainerPokemon);
+
+    private sealed record XdShopRandomizerResult(string PocketMenuRelPath, int ChangedItems);
 }
