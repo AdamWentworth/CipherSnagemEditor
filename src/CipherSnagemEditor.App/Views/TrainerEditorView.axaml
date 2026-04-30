@@ -152,7 +152,13 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="246,*">
+    <Viewbox Stretch="Uniform"
+             StretchDirection="DownOnly"
+             HorizontalAlignment="Left"
+             VerticalAlignment="Top">
+    <Grid Width="1420"
+          Height="736"
+          ColumnDefinitions="246,*">
         <Border Grid.Column="0"
                 Background="#222222"
                 BorderBrush="#111111"
@@ -322,4 +328,5 @@
             </Border>
         </Grid>
     </Grid>
+    </Viewbox>
 </UserControl>
