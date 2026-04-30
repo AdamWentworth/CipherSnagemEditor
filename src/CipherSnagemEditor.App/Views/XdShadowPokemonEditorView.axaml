@@ -88,28 +88,62 @@
         </Border>
 
         <Grid Grid.Column="1" RowDefinitions="*,32" Margin="10">
-            <Border Background="#303030" BorderBrush="#545454" BorderThickness="1" CornerRadius="6" Padding="12">
-                <Grid ColumnDefinitions="115,*" RowDefinitions="70,28,28,28,28,28,28,28,*" ColumnSpacing="10" RowSpacing="7">
-                    <Border Grid.RowSpan="3" Width="88" Height="88" Background="#242424" BorderBrush="#545454" BorderThickness="1" HorizontalAlignment="Center">
-                        <Image Source="{Binding SelectedXdShadowPokemon.BodyImage}" Stretch="Uniform"/>
-                    </Border>
+            <Border Background="#303030" BorderBrush="#545454" BorderThickness="1" CornerRadius="6" Padding="10">
+                <Grid RowDefinitions="100,92,*" RowSpacing="8">
+                    <Grid ColumnDefinitions="112,*" ColumnSpacing="12">
+                        <Border Width="88" Height="88" Background="#242424" BorderBrush="#545454" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Image Source="{Binding SelectedXdShadowPokemon.BodyImage}" Stretch="Uniform"/>
+                        </Border>
+                        <Grid Grid.Column="1" RowDefinitions="34,22,34">
+                            <TextBlock Text="{Binding SelectedXdShadowPokemon.Shadow.SpeciesName}"
+                                       FontSize="18"
+                                       FontWeight="Bold"
+                                       Foreground="#FFFFFF"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Row="1"
+                                       Text="Shadow Pokemon"
+                                       FontSize="12"
+                                       Foreground="#CFCFCF"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="2"
+                                       Text="{Binding SelectedXdShadowPokemon.RowText}"
+                                       FontSize="12"
+                                       Foreground="#CFCFCF"
+                                       VerticalAlignment="Center"
+                                       MaxLines="2"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                    </Grid>
 
-                    <TextBlock Grid.Column="1" Text="{Binding SelectedXdShadowPokemon.Shadow.SpeciesName}" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="Shadow Pokemon" FontSize="12" Foreground="#CFCFCF"/>
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedXdShadowPokemon.RowText}" FontSize="12" Foreground="#CFCFCF"/>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="24,24,24" ColumnSpacing="12" RowSpacing="7">
+                        <Grid ColumnDefinitions="92,*" ColumnSpacing="8">
+                            <TextBlock Text="Shadow ID:" Classes="XdLabel"/>
+                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.Index}" IsReadOnly="True"/>
+                        </Grid>
+                        <Grid Grid.Column="1" ColumnDefinitions="92,*" ColumnSpacing="8">
+                            <TextBlock Text="Story PKM:" Classes="XdLabel"/>
+                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.StoryPokemonIndex}" IsReadOnly="True"/>
+                        </Grid>
+                        <Grid Grid.Row="1" ColumnDefinitions="92,*" ColumnSpacing="8">
+                            <TextBlock Text="Catch Rate:" Classes="XdLabel"/>
+                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.CatchRate}" IsReadOnly="True"/>
+                        </Grid>
+                        <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="92,*" ColumnSpacing="8">
+                            <TextBlock Text="Heart Gauge:" Classes="XdLabel"/>
+                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.HeartGauge}" IsReadOnly="True"/>
+                        </Grid>
+                        <Grid Grid.Row="2" ColumnDefinitions="92,*" ColumnSpacing="8">
+                            <TextBlock Text="Aggression:" Classes="XdLabel"/>
+                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.Aggression}" IsReadOnly="True"/>
+                        </Grid>
+                        <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="92,*" ColumnSpacing="8">
+                            <TextBlock Text="Flee:" Classes="XdLabel"/>
+                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.FleeValue}" IsReadOnly="True"/>
+                        </Grid>
+                    </Grid>
 
-                    <TextBlock Grid.Row="3" Text="Shadow ID:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.Index}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="4" Text="Story PKM:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.StoryPokemonIndex}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="5" Text="Catch Rate:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="5" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.CatchRate}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="6" Text="Heart Gauge:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="6" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.HeartGauge}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="7" Text="Behavior:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="7" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.Aggression, StringFormat='Aggression {0}'}" IsReadOnly="True"/>
-
-                    <Grid Grid.Row="8" Grid.ColumnSpan="2" RowDefinitions="24,*">
+                    <Grid Grid.Row="2" RowDefinitions="22,*">
                         <TextBlock Text="Shadow Moves" Foreground="#E6E6E6" FontWeight="Bold" HorizontalAlignment="Center"/>
                         <TextBox Grid.Row="1"
                                  Classes="XdField"
@@ -119,7 +153,7 @@
                                  IsReadOnly="True"
                                  HorizontalContentAlignment="Left"
                                  VerticalContentAlignment="Top"
-                                 Height="82"/>
+                                 MinHeight="72"/>
                     </Grid>
                 </Grid>
             </Border>

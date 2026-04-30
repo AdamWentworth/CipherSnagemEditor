@@ -90,19 +90,44 @@
 
         <Grid Grid.Column="1" RowDefinitions="*,32" Margin="10">
             <Border Background="#303030" BorderBrush="#545454" BorderThickness="1" CornerRadius="6" Padding="12">
-                <Grid RowDefinitions="112,30,30,30,30,30" ColumnDefinitions="120,*" ColumnSpacing="12" RowSpacing="9">
-                    <Image Grid.RowSpan="2" Source="{Binding SelectedXdPokespot.BodyImage}" Stretch="Uniform" Width="96" Height="96" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Column="1" Text="{Binding SelectedXdPokespot.Encounter.SpeciesName}" Foreground="#FFFFFF" FontWeight="Bold" FontSize="18" VerticalAlignment="Center"/>
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedXdPokespot.Encounter.SpotName, StringFormat='Pokespot: {0}'}" Foreground="#CFCFCF" FontSize="12"/>
+                <Grid RowDefinitions="116,28,28,28,28,28,28" ColumnDefinitions="112,*" ColumnSpacing="12" RowSpacing="8">
+                    <Image Source="{Binding SelectedXdPokespot.BodyImage}"
+                           Stretch="Uniform"
+                           Width="100"
+                           Height="100"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+                    <Grid Grid.Column="1" RowDefinitions="62,24,24">
+                        <TextBlock Text="{Binding SelectedXdPokespot.Encounter.SpeciesName}"
+                                   Foreground="#FFFFFF"
+                                   FontWeight="Bold"
+                                   FontSize="18"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding SelectedXdPokespot.Encounter.SpotName, StringFormat='Pokespot: {0}'}"
+                                   Foreground="#CFCFCF"
+                                   FontSize="12"
+                                   VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2"
+                                 Classes="XdField"
+                                 Text="{Binding SelectedXdPokespot.Encounter.SpeciesName}"
+                                 IsReadOnly="True"
+                                 HorizontalContentAlignment="Center"/>
+                    </Grid>
 
-                    <TextBlock Grid.Row="2" Text="Species:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.SpeciesId, StringFormat='{}{0}'}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="3" Text="Min Level:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.MinLevel}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="4" Text="Max Level:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.MaxLevel}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="5" Text="Chance:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="5" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.EncounterPercentage, StringFormat='{}{0}%'}" IsReadOnly="True"/>
+                    <TextBlock Grid.Row="1" Text="Species ID:" Classes="XdLabel"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.SpeciesId, StringFormat='{}{0}'}" IsReadOnly="True"/>
+                    <TextBlock Grid.Row="2" Text="Min Level:" Classes="XdLabel"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.MinLevel}" IsReadOnly="True"/>
+                    <TextBlock Grid.Row="3" Text="Max Level:" Classes="XdLabel"/>
+                    <TextBox Grid.Row="3" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.MaxLevel}" IsReadOnly="True"/>
+                    <TextBlock Grid.Row="4" Text="Chance:" Classes="XdLabel"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.EncounterPercentage, StringFormat='{}{0}%'}" IsReadOnly="True"/>
+                    <TextBlock Grid.Row="5" Text="Snack Steps:" Classes="XdLabel"/>
+                    <TextBox Grid.Row="5" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.StepsPerSnack}" IsReadOnly="True"/>
+                    <TextBlock Grid.Row="6" Text="Start Offset:" Classes="XdLabel"/>
+                    <TextBox Grid.Row="6" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.StartOffset, StringFormat='0x{0:X}'}" IsReadOnly="True"/>
                 </Grid>
             </Border>
 
