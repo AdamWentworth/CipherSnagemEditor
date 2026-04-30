@@ -67,7 +67,11 @@ public sealed class LegacyPicker : Control
     public LegacyPicker()
     {
         MinHeight = 0;
+        MinWidth = 0;
         Height = 20;
+        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+        ClipToBounds = true;
         Focusable = true;
         Cursor = new Cursor(StandardCursorType.Hand);
     }
