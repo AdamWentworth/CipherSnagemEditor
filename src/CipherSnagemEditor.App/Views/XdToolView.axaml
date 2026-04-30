@@ -4,99 +4,361 @@
              xmlns:xd="using:CipherSnagemEditor.XD"
              x:Class="CipherSnagemEditor.App.Views.XdToolView"
              x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="False"
              FontFamily="Arial"
              Background="#303030">
-    <Grid RowDefinitions="58,*"
+    <UserControl.Styles>
+        <Style Selector="TextBox.LegacyXdSearch">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="4,4"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#5C5C5C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="PlaceholderForeground" Value="#A8A8A8"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdSearch:pointerover">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdSearch:focus">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
+        <Style Selector="Border.LegacyXdPanel">
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="BorderBrush" Value="#545454"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyXdLabel">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style Selector="TextBlock.LegacyXdHeader">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdField">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#707070"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#7D7D7D"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdReadout">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="6,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="BorderBrush" Value="#545454"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="CaretBrush" Value="#E6E6E6"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdReadout:pointerover">
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="CaretBrush" Value="#E6E6E6"/>
+            <Setter Property="BorderBrush" Value="#666666"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdReadout:focus">
+            <Setter Property="Foreground" Value="#E6E6E6"/>
+            <Setter Property="Background" Value="#303030"/>
+            <Setter Property="CaretBrush" Value="#E6E6E6"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#777777"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdHeaderField">
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Padding" Value="4,1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#B895FF"/>
+            <Setter Property="BorderBrush" Value="#C7AEFF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdHeaderField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#B895FF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#D4C1FF"/>
+        </Style>
+        <Style Selector="TextBox.LegacyXdHeaderField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#B895FF"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#E1D2FF"/>
+        </Style>
+        <Style Selector="Button.LegacyXdButton">
+            <Setter Property="Background" Value="#6E6E6E"/>
+            <Setter Property="BorderBrush" Value="#7B7B7B"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.LegacyXdButton:disabled">
+            <Setter Property="Opacity" Value="0.55"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="200,*"
           Background="#303030">
-        <Border Background="#A77AF4"
-                BorderBrush="#B996FF"
-                BorderThickness="0,0,0,1"
-                Padding="16,8">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="3">
-                    <TextBlock Text="{Binding SelectedXdToolContent.Title}"
-                               Foreground="#FFFFFF"
-                               FontSize="15"
-                               FontWeight="Bold"/>
-                    <TextBlock Text="{Binding SelectedXdToolContent.Summary}"
-                               Foreground="#F4EDFF"
-                               FontSize="11"
-                               TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-                <Border Grid.Column="1"
-                        Background="#6E55B6"
-                        BorderBrush="#C8B6FF"
-                        BorderThickness="1"
-                        CornerRadius="4"
-                        Padding="10,4"
-                        VerticalAlignment="Center">
-                    <TextBlock Text="GoD Tool"
-                               Foreground="#FFFFFF"
-                               FontSize="12"
-                               FontWeight="Bold"/>
-                </Border>
+        <Border Grid.Column="0"
+                Background="#222222"
+                BorderBrush="#111111"
+                BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto,*">
+                <TextBox Classes="LegacyXdSearch"
+                         Text="{Binding XdToolSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         PlaceholderText="Search"
+                         IsTabStop="False"/>
+                <ListBox Grid.Row="1"
+                         Classes="LegacySidebarList"
+                         ItemsSource="{Binding XdToolEntries}"
+                         SelectedItem="{Binding SelectedXdToolEntry, Mode=TwoWay}"
+                         SelectionMode="Single">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:XdToolEntryViewModel">
+                            <Border Cursor="Hand"
+                                    HorizontalAlignment="Stretch"
+                                    Height="50"
+                                    Background="{Binding BackgroundBrush}"
+                                    BorderBrush="{Binding SelectionBorderBrush}"
+                                    BorderThickness="{Binding SelectionBorderThickness}">
+                                <TextBlock Text="{Binding RowText}"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Center"
+                                           FontSize="12"
+                                           Foreground="#000000"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           MaxLines="2"
+                                           Margin="8,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </Grid>
         </Border>
 
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding SelectedXdToolContent.Sections}"
-                          Margin="14">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="xd:XdToolSection">
-                        <Border Background="#303030"
-                                BorderBrush="#555555"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Margin="0,0,0,12"
-                                Padding="12">
-                            <StackPanel Spacing="8">
-                                <TextBlock Text="{Binding Title}"
-                                           Foreground="#E8E8E8"
-                                           FontSize="13"
-                                           FontWeight="Bold"
-                                           HorizontalAlignment="Center"/>
-                                <ItemsControl ItemsSource="{Binding Rows}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="xd:XdToolRow">
-                                            <Grid ColumnDefinitions="180,150,*"
-                                                  Margin="0,0,0,6"
-                                                  MinHeight="24">
-                                                <TextBlock Text="{Binding Name}"
-                                                           Foreground="#FFFFFF"
-                                                           FontSize="11"
-                                                           VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <Border Grid.Column="1"
-                                                        Background="#666666"
-                                                        BorderBrush="#7B7B7B"
-                                                        BorderThickness="1"
-                                                        CornerRadius="3"
-                                                        Padding="6,2"
-                                                        Margin="8,0">
-                                                    <TextBlock Text="{Binding Value}"
-                                                               Foreground="#FFFFFF"
-                                                               FontSize="10"
-                                                               FontWeight="Bold"
-                                                               TextAlignment="Right"
-                                                               TextTrimming="CharacterEllipsis"/>
-                                                </Border>
-                                                <TextBlock Grid.Column="2"
-                                                           Text="{Binding Detail}"
-                                                           Foreground="#D6D6D6"
-                                                           FontSize="11"
-                                                           VerticalAlignment="Center"
-                                                           TextWrapping="Wrap"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
+        <Grid Grid.Column="1"
+              RowDefinitions="80,*"
+              Background="#303030">
+            <Border Background="#A77AF4"
+                    BorderBrush="#B996FF"
+                    BorderThickness="0,0,0,1"
+                    Padding="10,8">
+                <Grid ColumnDefinitions="150,150,150,*"
+                      RowDefinitions="24,24"
+                      ColumnSpacing="10"
+                      RowSpacing="8">
+                    <TextBox Classes="LegacyXdHeaderField"
+                             Text="{Binding SelectedXdToolContent.Title, Mode=OneWay}"
+                             IsReadOnly="True"/>
+                    <TextBox Grid.Column="1"
+                             Classes="LegacyXdHeaderField"
+                             Text="{Binding SelectedXdToolEntry.SectionTitle, Mode=OneWay}"
+                             IsReadOnly="True"/>
+                    <TextBox Grid.Column="2"
+                             Classes="LegacyXdHeaderField"
+                             Text="{Binding SelectedXdToolEntry.Value, Mode=OneWay}"
+                             IsReadOnly="True"/>
+                    <TextBlock Grid.Column="3"
+                               Text="GoD Tool"
+                               Foreground="#FFFFFF"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+
+                    <TextBox Grid.Row="1"
+                             Classes="LegacyXdHeaderField"
+                             Text="{Binding SelectedXdToolEntry.Name, Mode=OneWay}"
+                             IsReadOnly="True"/>
+                    <TextBox Grid.Row="1"
+                             Grid.Column="1"
+                             Grid.ColumnSpan="2"
+                             Classes="LegacyXdHeaderField"
+                             Text="{Binding SelectedTool.LegacySource, Mode=OneWay}"
+                             IsReadOnly="True"/>
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="3"
+                               Text="{Binding SelectedXdToolContent.Summary}"
+                               Foreground="#FFFFFF"
+                               FontSize="11"
+                               TextAlignment="Right"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto">
+                <StackPanel Margin="10"
+                            Spacing="10"
+                            MinWidth="440">
+                    <Grid ColumnDefinitions="210,*"
+                          ColumnSpacing="10">
+                        <Border Classes="LegacyXdPanel"
+                                MinHeight="158"
+                                Padding="10">
+                            <Grid RowDefinitions="26,26,26,26,26"
+                                  ColumnDefinitions="72,*"
+                                  ColumnSpacing="8">
+                                <TextBlock Text="Name:" Classes="LegacyXdLabel"/>
+                                <TextBox Grid.Column="1"
+                                         Classes="LegacyXdField"
+                                         Text="{Binding SelectedXdToolEntry.Name, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+                                <TextBlock Grid.Row="1" Text="Value:" Classes="LegacyXdLabel"/>
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="1"
+                                         Classes="LegacyXdField"
+                                         Text="{Binding SelectedXdToolEntry.Value, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+                                <Separator Grid.Row="2" Grid.ColumnSpan="2" Margin="0,4"/>
+                                <TextBlock Grid.Row="3" Text="Section:" Classes="LegacyXdLabel"/>
+                                <TextBox Grid.Row="3"
+                                         Grid.Column="1"
+                                         Classes="LegacyXdField"
+                                         Text="{Binding SelectedXdToolEntry.SectionTitle, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+                                <TextBlock Grid.Row="4" Text="Index:" Classes="LegacyXdLabel"/>
+                                <TextBox Grid.Row="4"
+                                         Grid.Column="1"
+                                         Classes="LegacyXdField"
+                                         Text="{Binding SelectedXdToolEntry.Index, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+                            </Grid>
                         </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+
+                        <Border Grid.Column="1"
+                                Classes="LegacyXdPanel"
+                                MinHeight="158"
+                                Padding="10">
+                            <Grid RowDefinitions="24,*">
+                                <TextBlock Text="Details"
+                                           Classes="LegacyXdHeader"/>
+                                <TextBox Grid.Row="1"
+                                         Classes="LegacyXdReadout"
+                                         Text="{Binding SelectedXdToolEntry.DetailReadout, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding SelectedXdToolContent.Sections}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="xd:XdToolSection">
+                                <Border Classes="LegacyXdPanel"
+                                        Margin="0,0,0,10"
+                                        Padding="10">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="{Binding Title}"
+                                                   Classes="LegacyXdHeader"/>
+                                        <ItemsControl ItemsSource="{Binding Rows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="xd:XdToolRow">
+                                                    <Grid ColumnDefinitions="145,130,*"
+                                                          MinHeight="24"
+                                                          Margin="0,0,0,5"
+                                                          ColumnSpacing="8">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Classes="LegacyXdLabel"
+                                                                   Foreground="#FFFFFF"/>
+                                                        <TextBox Grid.Column="1"
+                                                                 Classes="LegacyXdField"
+                                                                 Text="{Binding Value, Mode=OneWay}"
+                                                                 IsReadOnly="True"/>
+                                                        <TextBlock Grid.Column="2"
+                                                                   Text="{Binding Detail}"
+                                                                   Foreground="#D6D6D6"
+                                                                   FontSize="11"
+                                                                   VerticalAlignment="Center"
+                                                                   TextWrapping="Wrap"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Classes="LegacyXdButton"
+                            Content="Save"
+                            IsEnabled="False"
+                            HorizontalAlignment="Center"
+                            Width="120"
+                            Height="22"
+                            Margin="0,0,0,8"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </UserControl>

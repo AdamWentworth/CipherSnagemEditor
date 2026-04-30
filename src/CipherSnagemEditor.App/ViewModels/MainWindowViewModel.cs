@@ -33,6 +33,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<PatchEntryViewModel> _allPatches = [];
     private readonly List<CollisionFileEntryViewModel> _allCollisionFiles = [];
     private readonly List<VertexFilterFileEntryViewModel> _allVertexFilterFiles = [];
+    private readonly List<XdToolEntryViewModel> _allXdToolEntries = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
     private PokemonStatsEditorResources _pokemonStatsResources = PokemonStatsEditorResources.Empty;
     private MoveEditorResources _moveEditorResources = MoveEditorResources.Empty;
@@ -72,6 +73,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private XdToolContent _selectedXdToolContent = XdToolContent.Empty;
+
+    [ObservableProperty]
+    private XdToolEntryViewModel? _selectedXdToolEntry;
 
     [ObservableProperty]
     private IsoFileEntryViewModel? _selectedIsoFile;
@@ -202,6 +206,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _vertexFilterSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _xdToolSearchText = string.Empty;
 
     [ObservableProperty]
     private bool _showIsoExplorer;
@@ -395,6 +402,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<PickerOptionViewModel> VertexFilterOptions { get; } = [];
 
+    public ObservableCollection<XdToolEntryViewModel> XdToolEntries { get; } = [];
+
     public bool CanAddFileToSelectedIsoFile => CanExportSelectedIsoFile() && SelectedIsoFile?.IsFsys == true;
 
     public int SelectedCollisionInteractionValue => SelectedCollisionInteraction?.Value ?? -1;
@@ -525,6 +534,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _allPatches.Clear();
             _allCollisionFiles.Clear();
             _allVertexFilterFiles.Clear();
+            _allXdToolEntries.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -539,6 +549,7 @@ public partial class MainWindowViewModel : ViewModelBase
             PatchEntries.Clear();
             CollisionFiles.Clear();
             VertexFilterFiles.Clear();
+            XdToolEntries.Clear();
             CollisionInteractionOptions.Clear();
             CollisionSectionOptions.Clear();
             TrainerSearchText = string.Empty;
@@ -553,6 +564,8 @@ public partial class MainWindowViewModel : ViewModelBase
             TableEditorSearchText = string.Empty;
             CollisionSearchText = string.Empty;
             VertexFilterSearchText = string.Empty;
+            XdToolSearchText = string.Empty;
+            SelectedXdToolContent = XdToolContent.Empty;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
             SelectedPokemonStatsDetail = null;
@@ -578,6 +591,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedCollisionSection = null;
             SelectedVertexFilterFile = null;
             SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
+            SelectedXdToolEntry = null;
             PatchStatus = "Select a patch to apply it.";
             CollisionStatus = "Extract ISO files, then select a collision file.";
             VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
@@ -624,6 +638,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _allPatches.Clear();
             _allCollisionFiles.Clear();
             _allVertexFilterFiles.Clear();
+            _allXdToolEntries.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -638,6 +653,7 @@ public partial class MainWindowViewModel : ViewModelBase
             PatchEntries.Clear();
             CollisionFiles.Clear();
             VertexFilterFiles.Clear();
+            XdToolEntries.Clear();
             CollisionInteractionOptions.Clear();
             CollisionSectionOptions.Clear();
             TrainerSearchText = string.Empty;
@@ -652,6 +668,8 @@ public partial class MainWindowViewModel : ViewModelBase
             TableEditorSearchText = string.Empty;
             CollisionSearchText = string.Empty;
             VertexFilterSearchText = string.Empty;
+            XdToolSearchText = string.Empty;
+            SelectedXdToolContent = XdToolContent.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
@@ -678,6 +696,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedCollisionSection = null;
             SelectedVertexFilterFile = null;
             SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
+            SelectedXdToolEntry = null;
             PatchStatus = "Select a patch to apply it.";
             CollisionStatus = "Extract ISO files, then select a collision file.";
             VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
@@ -706,6 +725,8 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentProject = null;
         CurrentXdProject = context;
         SelectedXdToolContent = XdToolContent.Empty;
+        _allXdToolEntries.Clear();
+        XdToolEntries.Clear();
         HasProject = true;
         ProjectTitle = BuildProjectTitle(context);
         WorkspaceStatus = BuildWorkspaceStatus(context);
@@ -730,6 +751,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _allPatches.Clear();
         _allCollisionFiles.Clear();
         _allVertexFilterFiles.Clear();
+        _allXdToolEntries.Clear();
         Trainers.Clear();
         PokemonStatsEntries.Clear();
         MoveEntries.Clear();
@@ -744,6 +766,7 @@ public partial class MainWindowViewModel : ViewModelBase
         PatchEntries.Clear();
         CollisionFiles.Clear();
         VertexFilterFiles.Clear();
+        XdToolEntries.Clear();
         CollisionInteractionOptions.Clear();
         CollisionSectionOptions.Clear();
         TrainerSearchText = string.Empty;
@@ -758,6 +781,7 @@ public partial class MainWindowViewModel : ViewModelBase
         TableEditorSearchText = string.Empty;
         CollisionSearchText = string.Empty;
         VertexFilterSearchText = string.Empty;
+        XdToolSearchText = string.Empty;
         SelectedIsoFile = null;
         SelectedTrainer = null;
         SelectedPokemonStats = null;
@@ -784,6 +808,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedCollisionSection = null;
         SelectedVertexFilterFile = null;
         SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
+        SelectedXdToolEntry = null;
         PatchStatus = "Select a patch to apply it.";
         CollisionStatus = "Extract ISO files, then select a collision file.";
         VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
@@ -1892,6 +1917,14 @@ public partial class MainWindowViewModel : ViewModelBase
         SaveVertexFilterCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnSelectedXdToolEntryChanged(XdToolEntryViewModel? value)
+    {
+        foreach (var entry in _allXdToolEntries)
+        {
+            entry.IsSelected = ReferenceEquals(entry, value);
+        }
+    }
+
     partial void OnSelectedMessageIdTextChanged(string value)
     {
         SaveMessageCommand.NotifyCanExecuteChanged();
@@ -1960,6 +1993,11 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnVertexFilterSearchTextChanged(string value)
     {
         ApplyVertexFilter(value);
+    }
+
+    partial void OnXdToolSearchTextChanged(string value)
+    {
+        ApplyXdToolFilter(value);
     }
 
     partial void OnIsBusyChanged(bool value)
@@ -2032,7 +2070,41 @@ public partial class MainWindowViewModel : ViewModelBase
         var timer = Stopwatch.StartNew();
         SelectedXdToolContent = CurrentXdProject.BuildToolContent(tool.Title);
         SelectedToolDetail = $"{tool.Title}\nLegacy segue: {tool.LegacySegue}\nReference: {tool.LegacySource}";
+        RebuildXdToolEntries();
         LogPerformance($"XD {tool.Title} load content", timer, SelectedXdToolContent.Sections.Sum(section => section.Rows.Count));
+    }
+
+    private void RebuildXdToolEntries()
+    {
+        _allXdToolEntries.Clear();
+        var index = 0;
+        foreach (var section in SelectedXdToolContent.Sections)
+        {
+            foreach (var row in section.Rows)
+            {
+                _allXdToolEntries.Add(new XdToolEntryViewModel(index++, section.Title, row));
+            }
+        }
+
+        ApplyXdToolFilter(XdToolSearchText);
+    }
+
+    private void ApplyXdToolFilter(string filterText)
+    {
+        var current = SelectedXdToolEntry;
+        var filter = SimplifySearchText(filterText);
+        var rows = string.IsNullOrEmpty(filter)
+            ? _allXdToolEntries
+            : _allXdToolEntries.Where(entry => Contains(entry.SearchText, filter)).ToList();
+
+        XdToolEntries.Clear();
+        foreach (var row in rows)
+        {
+            XdToolEntries.Add(row);
+        }
+
+        SelectedXdToolEntry = rows.FirstOrDefault(entry => ReferenceEquals(entry, current))
+            ?? rows.FirstOrDefault();
     }
 
     private void PopulateIsoFiles(ColosseumProjectContext context)
