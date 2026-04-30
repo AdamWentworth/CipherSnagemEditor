@@ -18,6 +18,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private static readonly IBrush TrainerNormalBrush = SolidColorBrush.Parse("#FC6848");
     private static readonly IBrush TrainerShadowBrush = SolidColorBrush.Parse("#A77AF4");
+    private readonly GameCubeGame _startupGame;
     private readonly List<IsoFileEntryViewModel> _allIsoFiles = [];
     private readonly List<TrainerEntryViewModel> _allTrainers = [];
     private readonly List<PokemonStatsEntryViewModel> _allPokemonStats = [];
@@ -332,18 +333,23 @@ public partial class MainWindowViewModel : ViewModelBase
     private IBrush _trainerDetailBackgroundBrush = TrainerNormalBrush;
 
     public MainWindowViewModel()
+        : this(GameCubeGame.PokemonColosseum)
     {
+    }
+
+    public MainWindowViewModel(GameCubeGame startupGame)
+    {
+        _startupGame = startupGame;
         Tools = [];
-        LoadToolCatalog(GameCubeGame.PokemonColosseum);
+        ApplyGameMode(startupGame);
         foreach (var option in BuildVertexFilterOptions())
         {
             VertexFilterOptions.Add(option);
         }
 
         SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
-        SelectedTool = Tools.FirstOrDefault();
         Logs.Add("Cipher Snagem Editor ready.");
-        Logs.Add("Legacy mode: Colosseum Tool.");
+        Logs.Add($"Legacy mode: {LegacyToolTitle}.");
     }
 
     public ObservableCollection<ToolEntryViewModel> Tools { get; }
@@ -461,11 +467,27 @@ public partial class MainWindowViewModel : ViewModelBase
                 var probeTimer = Stopwatch.StartNew();
                 var probeIso = await Task.Run(() => GameCubeIsoReader.Open(path));
                 LogPerformance("Open probe ISO game", probeTimer);
-                if (probeIso.IsPokemonXD)
+
+                if (_startupGame == GameCubeGame.PokemonXD)
                 {
+                    if (!probeIso.IsPokemonXD)
+                    {
+                        throw new InvalidDataException($"Expected Pokemon XD ISO GXXE/GXXP/GXXJ, found {probeIso.GameId}.");
+                    }
+
                     await OpenXdPathAsync(path, openTimer);
                     return;
                 }
+
+                if (!probeIso.IsPokemonColosseum)
+                {
+                    throw new InvalidDataException($"Expected Pokemon Colosseum ISO GC6E/GC6P/GC6J, found {probeIso.GameId}.");
+                }
+            }
+            else if (_startupGame == GameCubeGame.PokemonXD)
+            {
+                await OpenXdPathAsync(path, openTimer);
+                return;
             }
 
             var contextTimer = Stopwatch.StartNew();
@@ -574,7 +596,7 @@ public partial class MainWindowViewModel : ViewModelBase
             HasProject = false;
             CurrentProject = null;
             CurrentXdProject = null;
-            ApplyGameMode(GameCubeGame.PokemonColosseum);
+            ApplyGameMode(_startupGame);
             ProjectTitle = "Open failed";
             WorkspaceStatus = ex.Message;
             _allIsoFiles.Clear();
@@ -1551,8 +1573,14 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool PrepareToolWindow(ToolEntryViewModel tool)
     {
         SelectedTool = tool;
-        if (CurrentXdProject?.Iso is not null)
+        if (CurrentGame == GameCubeGame.PokemonXD)
         {
+            if (CurrentXdProject?.Iso is null)
+            {
+                Logs.Add($"Open a Pokemon XD ISO before launching {tool.Title}.");
+                return false;
+            }
+
             if (tool.Game != GameCubeGame.PokemonXD)
             {
                 Logs.Add($"Open a {tool.LegacyToolName} ISO before launching {tool.Title}.");

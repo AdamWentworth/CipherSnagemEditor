@@ -1,4 +1,6 @@
 param(
+    [ValidateSet("Colosseum", "GoD")]
+    [string]$Tool = "Colosseum",
     [ValidateSet("linux-x64", "linux-arm64")]
     [string]$Runtime = "linux-x64",
     [string]$Configuration = "Release",
@@ -13,15 +15,26 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$toolSlug = if ($Tool -eq "GoD") { "god-tool" } else { "colosseum-tool" }
+$projectRelativePath = if ($Tool -eq "GoD") {
+    "src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj"
+} else {
+    "src\CipherSnagemEditor.ColosseumTool\CipherSnagemEditor.ColosseumTool.csproj"
+}
+$launcherExecutable = if ($Tool -eq "GoD") { "GoDTool" } else { "ColosseumTool" }
 $outputRootFull = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputRoot))
-$publishDir = Join-Path $outputRootFull "publish-$Runtime"
-$packageDir = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime"
-$archivePath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime.tar.gz"
-$debPath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime.deb"
-$versionedDebPath = Join-Path $outputRootFull "packages\cipher-snagem-editor-$Runtime-$PackageVersion.deb"
-$projectPath = Join-Path $repoRoot "src\CipherSnagemEditor.App\CipherSnagemEditor.App.csproj"
+$publishDir = Join-Path $outputRootFull "publish-$toolSlug-$Runtime"
+$packageDir = Join-Path $outputRootFull "packages\$toolSlug-$Runtime"
+$archivePath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime.tar.gz"
+$debPath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime.deb"
+$versionedDebPath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime-$PackageVersion.deb"
+$projectPath = Join-Path $repoRoot $projectRelativePath
 $linuxTemplateDir = Join-Path $repoRoot "packaging\linux"
-$iconPath = Join-Path $repoRoot "assets\ui\app-icons\colosseum\icon-256.png"
+$iconPath = if ($Tool -eq "GoD") {
+    Join-Path $repoRoot "assets\ui\app-icons\xd\icon-32.png"
+} else {
+    Join-Path $repoRoot "assets\ui\app-icons\colosseum\icon-256.png"
+}
 $debScriptPath = Join-Path $repoRoot "scripts\create-linux-deb.py"
 
 function Assert-UnderPath([string]$Path, [string]$Root) {
@@ -90,6 +103,11 @@ Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "install-linux-user.sh") -De
 Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "cipher-snagem-editor.desktop") -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "README-linux.txt") -Destination $packageDir -Force
 
+$launcherScript = Join-Path $packageDir "run-cipher-snagem-editor.sh"
+$launcherText = Get-Content -LiteralPath $launcherScript -Raw
+$launcherText = $launcherText.Replace("CipherSnagemEditor.App", $launcherExecutable)
+Set-Content -LiteralPath $launcherScript -Value $launcherText -NoNewline
+
 $resourceDir = Join-Path $packageDir "resources"
 New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
 Copy-Item -LiteralPath $iconPath -Destination (Join-Path $resourceDir "cipher-snagem-editor.png") -Force
@@ -123,6 +141,7 @@ if (-not $NoDeb) {
 }
 
 Write-Host "Linux publish complete."
+Write-Host "Tool: $Tool"
 Write-Host "Runtime: $Runtime"
 Write-Host "Self-contained: $selfContained"
 Write-Host "ReadyToRun: $readyToRun"

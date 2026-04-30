@@ -5,6 +5,7 @@ using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using CipherSnagemEditor.Core.Files;
+using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.App.ViewModels;
 using CipherSnagemEditor.App.Views;
 
@@ -12,6 +13,13 @@ namespace CipherSnagemEditor.App;
 
 public partial class App : Application
 {
+    private static GameCubeGame StartupGame { get; set; } = GameCubeGame.PokemonColosseum;
+
+    public static void ConfigureStartupGame(GameCubeGame game)
+    {
+        StartupGame = game;
+    }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -23,7 +31,7 @@ public partial class App : Application
         {
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(),
+                DataContext = new MainWindowViewModel(StartupGame),
             };
 
             var startupPath = GetStartupPath(desktop.Args);

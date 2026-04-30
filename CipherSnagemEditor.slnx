@@ -3,7 +3,9 @@
     <Project Path="src/CipherSnagemEditor.App/CipherSnagemEditor.App.csproj" />
     <Project Path="src/CipherSnagemEditor.Cli/CipherSnagemEditor.Cli.csproj" />
     <Project Path="src/CipherSnagemEditor.Colosseum/CipherSnagemEditor.Colosseum.csproj" />
+    <Project Path="src/CipherSnagemEditor.ColosseumTool/CipherSnagemEditor.ColosseumTool.csproj" />
     <Project Path="src/CipherSnagemEditor.Core/CipherSnagemEditor.Core.csproj" />
+    <Project Path="src/CipherSnagemEditor.GoDTool/CipherSnagemEditor.GoDTool.csproj" />
     <Project Path="src/CipherSnagemEditor.XD/CipherSnagemEditor.XD.csproj" />
   </Folder>
   <Folder Name="/tests/">

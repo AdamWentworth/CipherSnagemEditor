@@ -58,12 +58,20 @@ Future scope:
 - 1:1 Pokemon XD: Gale of Darkness editor parity
 - cross-platform packaging for macOS and Linux
 
+XD-specific legacy editors already represented in the GoD Tool shell:
+
+- Shadow Pokemon Editor
+- Pokespot Editor
+- Script Compiler
+
 ## Repository Layout
 
 ```text
 CipherSnagemEditor.slnx
 src/
-  CipherSnagemEditor.App/         Avalonia desktop UI
+  CipherSnagemEditor.App/         shared Avalonia desktop UI
+  CipherSnagemEditor.ColosseumTool/ Colosseum Tool executable launcher
+  CipherSnagemEditor.GoDTool/     GoD Tool executable launcher
   CipherSnagemEditor.Core/        binary, ISO, FSYS, text, and shared logic
   CipherSnagemEditor.Colosseum/   Colosseum-specific tables and models
   CipherSnagemEditor.XD/          XD-specific tool shell, tables, and models
@@ -135,10 +143,16 @@ Run the local XD open probe, if
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-open-probe.ps1
 ```
 
-Publish a Windows build:
+Publish a Windows Colosseum Tool build:
 
 ```powershell
-dotnet publish src\CipherSnagemEditor.App\CipherSnagemEditor.App.csproj -c Release -r win-x64 --self-contained false -o artifacts\publish-win-x64
+dotnet publish src\CipherSnagemEditor.ColosseumTool\CipherSnagemEditor.ColosseumTool.csproj -c Release -r win-x64 --self-contained false -o artifacts\publish-win-x64-colosseum
+```
+
+Publish a Windows GoD Tool build:
+
+```powershell
+dotnet publish src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj -c Release -r win-x64 --self-contained false -o artifacts\publish-win-x64-god
 ```
 
 Publish an experimental self-contained Linux build for Ubuntu-style x64
