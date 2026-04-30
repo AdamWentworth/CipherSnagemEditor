@@ -1442,7 +1442,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanApplyPatch))]
     private async Task ApplyPatchAsync(PatchEntryViewModel? patch)
     {
-        if (patch?.Definition is null || CurrentProject is null)
+        if (patch is null)
         {
             return;
         }
@@ -1452,17 +1452,39 @@ public partial class MainWindowViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var result = await Task.Run(() => CurrentProject.ApplyPatch(patch.Definition.Kind));
-            PatchStatus = "Patch completed. Rebuild the ISO after exporting/importing changed files.";
-            Logs.Add($"Patch applied: {result.Patch.Name}");
-            foreach (var message in result.Messages)
+            if (patch.Definition is not null && CurrentProject is not null)
             {
-                Logs.Add(message);
-            }
+                var result = await Task.Run(() => CurrentProject.ApplyPatch(patch.Definition.Kind));
+                PatchStatus = "Patch completed. Rebuild the ISO after exporting/importing changed files.";
+                Logs.Add($"Patch applied: {result.Patch.Name}");
+                foreach (var message in result.Messages)
+                {
+                    Logs.Add(message);
+                }
 
-            foreach (var file in result.WrittenFiles)
+                foreach (var file in result.WrittenFiles)
+                {
+                    Logs.Add($"Wrote {file}");
+                }
+            }
+            else if (patch.XdDefinition is not null && CurrentXdProject is not null)
             {
-                Logs.Add($"Wrote {file}");
+                var result = await Task.Run(() => CurrentXdProject.ApplyPatch(patch.XdDefinition.Kind));
+                PatchStatus = "XD patch completed. Rebuild the ISO after exporting/importing changed files.";
+                Logs.Add($"XD patch applied: {result.Patch.Name}");
+                foreach (var message in result.Messages)
+                {
+                    Logs.Add(message);
+                }
+
+                foreach (var file in result.WrittenFiles)
+                {
+                    Logs.Add($"Wrote {file}");
+                }
+            }
+            else
+            {
+                PatchStatus = "Open the matching game ISO before applying this patch.";
             }
         }
         catch (Exception ex)
@@ -1479,27 +1501,10 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRunRandomizer))]
     private async Task RunRandomizerAsync()
     {
-        if (CurrentProject is null)
+        if (CurrentProject is null && CurrentXdProject is null)
         {
             return;
         }
-
-        var options = new ColosseumRandomizerOptions(
-            RandomizerStarterPokemon,
-            RandomizerShadowPokemon,
-            RandomizerNpcPokemon,
-            RandomizerPokemonMoves,
-            RandomizerPokemonTypes,
-            RandomizerPokemonAbilities,
-            RandomizerPokemonStats,
-            RandomizerPokemonEvolutions,
-            RandomizerMoveTypes,
-            RandomizerTypeMatchups,
-            RandomizerTmMoves,
-            RandomizerItemBoxes,
-            RandomizerShopItems,
-            RandomizerSimilarBaseStatTotal,
-            RandomizerRemoveItemOrTradeEvolutions);
 
         IsBusy = true;
         RandomizerStatus = "Randomisation starting.";
@@ -1507,16 +1512,67 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var result = await Task.Run(() => CurrentProject.Randomize(options));
-            RandomizerStatus = "Randomisation complete.";
-            foreach (var message in result.Messages)
+            if (CurrentGame == GameCubeGame.PokemonXD && CurrentXdProject is not null)
             {
-                Logs.Add(message);
-            }
+                var options = new XdRandomizerOptions(
+                    RandomizerStarterPokemon,
+                    RandomizerShadowPokemon,
+                    RandomizerNpcPokemon,
+                    RandomizerPokemonMoves,
+                    RandomizerPokemonTypes,
+                    RandomizerPokemonAbilities,
+                    RandomizerPokemonStats,
+                    RandomizerPokemonEvolutions,
+                    RandomizerMoveTypes,
+                    RandomizerTypeMatchups,
+                    RandomizerTmMoves,
+                    RandomizerItemBoxes,
+                    RandomizerShopItems,
+                    RandomizerBattleBingo,
+                    RandomizerShinyHues,
+                    RandomizerSimilarBaseStatTotal,
+                    RandomizerRemoveItemOrTradeEvolutions);
+                var result = await Task.Run(() => CurrentXdProject.Randomize(options));
+                RandomizerStatus = "Randomisation complete.";
+                foreach (var message in result.Messages)
+                {
+                    Logs.Add(message);
+                }
 
-            foreach (var file in result.WrittenFiles)
+                foreach (var file in result.WrittenFiles.Where(file => !string.IsNullOrWhiteSpace(file)))
+                {
+                    Logs.Add($"Wrote {file}");
+                }
+            }
+            else if (CurrentProject is not null)
             {
-                Logs.Add($"Wrote {file}");
+                var options = new ColosseumRandomizerOptions(
+                    RandomizerStarterPokemon,
+                    RandomizerShadowPokemon,
+                    RandomizerNpcPokemon,
+                    RandomizerPokemonMoves,
+                    RandomizerPokemonTypes,
+                    RandomizerPokemonAbilities,
+                    RandomizerPokemonStats,
+                    RandomizerPokemonEvolutions,
+                    RandomizerMoveTypes,
+                    RandomizerTypeMatchups,
+                    RandomizerTmMoves,
+                    RandomizerItemBoxes,
+                    RandomizerShopItems,
+                    RandomizerSimilarBaseStatTotal,
+                    RandomizerRemoveItemOrTradeEvolutions);
+                var result = await Task.Run(() => CurrentProject.Randomize(options));
+                RandomizerStatus = "Randomisation complete.";
+                foreach (var message in result.Messages)
+                {
+                    Logs.Add(message);
+                }
+
+                foreach (var file in result.WrittenFiles)
+                {
+                    Logs.Add($"Wrote {file}");
+                }
             }
 
             RefreshLoadedEditorRowsAfterRandomizer();
@@ -1690,10 +1746,12 @@ public partial class MainWindowViewModel : ViewModelBase
         => SelectedTableEditorEntry?.RawDefinition is not null && CurrentProject is not null && !IsBusy;
 
     private bool CanApplyPatch(PatchEntryViewModel? patch)
-        => patch?.Definition is not null && CurrentProject?.Iso is not null && !IsBusy;
+        => !IsBusy
+            && ((patch?.Definition is not null && CurrentProject?.Iso is not null)
+                || (patch?.XdDefinition is not null && CurrentXdProject?.Iso is not null));
 
     private bool CanRunRandomizer()
-        => CurrentProject?.Iso is not null && !IsBusy;
+        => !IsBusy && (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null);
 
     private bool CanUseVertexFilter()
         => CurrentProject is not null && SelectedVertexFilterFile is not null && !IsBusy;
@@ -1849,7 +1907,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     LoadXdPatchRows();
                     break;
                 case "Randomizer":
-                    RandomizerStatus = "XD randomizer options mirror the Swift GoD Tool. Backend application is still being ported.";
+                    RandomizerStatus = "Select randomizer options. XD data-table options are writable; remaining assembly/deck lanes are logged when selected.";
                     RunRandomizerCommand.NotifyCanExecuteChanged();
                     break;
                 case "Message Editor":
@@ -3264,14 +3322,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _allPatches.Clear();
         PatchEntries.Clear();
-        foreach (var definition in XdPatchDefinition.XdPatches.Select((patch, index) => new PatchEntryViewModel(patch.Name, index)))
+        foreach (var definition in XdPatchDefinition.XdPatches.Select((patch, index) => new PatchEntryViewModel(patch, index)))
         {
             _allPatches.Add(definition);
             PatchEntries.Add(definition);
         }
 
         SelectedPatch = PatchEntries.FirstOrDefault();
-        PatchStatus = "XD patch list matches the Swift GoD Tool. Patch application backend is still being ported.";
+        PatchStatus = "Click a patch row to apply supported XD patches; assembly-only patches report their remaining parity gap.";
         Logs.Add($"XD Patches loaded: {_allPatches.Count} patch rows.");
         LogPerformance("XD Patches load total", totalTimer, _allPatches.Count);
         ApplyPatchCommand.NotifyCanExecuteChanged();

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CipherSnagemEditor.Colosseum.Data;
+using CipherSnagemEditor.XD;
 
 namespace CipherSnagemEditor.App.ViewModels;
 
@@ -13,24 +14,32 @@ public sealed partial class PatchEntryViewModel : ObservableObject
     private static readonly IBrush TransparentBrush = Brushes.Transparent;
 
     public PatchEntryViewModel(ColosseumPatchDefinition definition, int row)
-        : this(definition.Name, row, definition)
+        : this(definition.Name, row, definition, null)
+    {
+    }
+
+    public PatchEntryViewModel(XdPatchDefinition definition, int row)
+        : this(definition.Name, row, null, definition)
     {
     }
 
     public PatchEntryViewModel(string name, int row)
-        : this(name, row, null)
+        : this(name, row, null, null)
     {
     }
 
-    private PatchEntryViewModel(string name, int row, ColosseumPatchDefinition? definition)
+    private PatchEntryViewModel(string name, int row, ColosseumPatchDefinition? definition, XdPatchDefinition? xdDefinition)
     {
         Definition = definition;
+        XdDefinition = xdDefinition;
         Name = name;
         Row = row;
         BackgroundBrush = row % 2 == 0 ? EvenBrush : OddBrush;
     }
 
     public ColosseumPatchDefinition? Definition { get; }
+
+    public XdPatchDefinition? XdDefinition { get; }
 
     public int Row { get; }
 

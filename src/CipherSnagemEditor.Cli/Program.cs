@@ -15,6 +15,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
+    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -92,6 +93,18 @@ try
         }
 
         RunXdTrainerProbe(args[1], args[2]);
+        return 0;
+    }
+
+    if (args[0].Equals("xd-smoke-apply", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 3)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data>");
+            return 1;
+        }
+
+        ApplyXdSmokeOperation(args[1], args[2]);
         return 0;
     }
 
@@ -1076,6 +1089,65 @@ static void ApplySmokeOperation(string isoPath, string operation)
     ImportWrittenFiles(context, writtenFiles);
 }
 
+static void ApplyXdSmokeOperation(string isoPath, string operation)
+{
+    var context = XdProjectContext.Open(isoPath);
+    var writtenFiles = new List<string>();
+    if (operation.StartsWith("patch:", StringComparison.OrdinalIgnoreCase))
+    {
+        var patchName = operation["patch:".Length..];
+        var patchKind = ParseXdPatchKind(patchName);
+        var result = context.ApplyPatch(patchKind);
+        writtenFiles.AddRange(result.WrittenFiles);
+        Console.WriteLine($"Applied XD patch: {result.Patch.Kind}");
+        Console.WriteLine(result.Patch.Name);
+        foreach (var message in result.Messages)
+        {
+            Console.WriteLine(message);
+        }
+    }
+    else if (operation.Equals("randomizer-data", StringComparison.OrdinalIgnoreCase))
+    {
+        var result = context.Randomize(new XdRandomizerOptions(
+            StarterPokemon: false,
+            ObtainablePokemon: false,
+            UnobtainablePokemon: false,
+            PokemonMoves: false,
+            PokemonTypes: true,
+            PokemonAbilities: true,
+            PokemonStats: false,
+            PokemonEvolutions: true,
+            MoveTypes: true,
+            TypeMatchups: true,
+            TmMoves: true,
+            ItemBoxes: true,
+            ShopItems: false,
+            BattleBingo: false,
+            ShinyHues: false,
+            SimilarBaseStatTotal: false,
+            RemoveItemOrTradeEvolutions: true));
+        writtenFiles.AddRange(result.WrittenFiles);
+        Console.WriteLine("Applied XD randomizer: data-table smoke");
+        foreach (var message in result.Messages)
+        {
+            Console.WriteLine(message);
+        }
+    }
+    else
+    {
+        throw new InvalidOperationException($"Unknown XD smoke operation: {operation}");
+    }
+
+    foreach (var path in writtenFiles.Where(path => !string.IsNullOrWhiteSpace(path)))
+    {
+        Console.WriteLine($"Workspace write: {Path.GetFullPath(path)}");
+    }
+
+    var reopened = XdProjectContext.Open(isoPath);
+    Console.WriteLine(
+        $"XD reopen: stats={reopened.LoadPokemonStatsRecords().Count}, moves={reopened.LoadMoveRecords().Count}, tms={reopened.LoadTmMoveRecords().Count}, types={reopened.LoadTypeRecords().Count}, treasures={reopened.LoadTreasureRecords().Count}");
+}
+
 static ColosseumPatchKind ParsePatchKind(string patchName)
 {
     if (Enum.TryParse<ColosseumPatchKind>(patchName, ignoreCase: true, out var parsed))
@@ -1095,6 +1167,27 @@ static ColosseumPatchKind ParsePatchKind(string patchName)
     }
 
     throw new InvalidOperationException($"Unknown patch kind: {patchName}");
+}
+
+static XdPatchKind ParseXdPatchKind(string patchName)
+{
+    if (Enum.TryParse<XdPatchKind>(patchName, ignoreCase: true, out var parsed))
+    {
+        return parsed;
+    }
+
+    var normalized = patchName.Replace("-", string.Empty, StringComparison.Ordinal)
+        .Replace("_", string.Empty, StringComparison.Ordinal)
+        .Replace(" ", string.Empty, StringComparison.Ordinal);
+    foreach (var value in Enum.GetValues<XdPatchKind>())
+    {
+        if (value.ToString().Equals(normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+    }
+
+    throw new InvalidOperationException($"Unknown XD patch kind: {patchName}");
 }
 
 static void ImportWrittenFiles(ColosseumProjectContext context, IReadOnlyList<string> writtenFiles)

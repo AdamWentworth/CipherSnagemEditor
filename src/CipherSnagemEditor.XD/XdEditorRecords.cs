@@ -273,6 +273,34 @@ public sealed record XdMessageString(
     string IdHex,
     string Text);
 
+public sealed record XdPatchApplyResult(
+    XdPatchDefinition Patch,
+    IReadOnlyList<string> WrittenFiles,
+    IReadOnlyList<string> Messages);
+
+public sealed record XdRandomizerOptions(
+    bool StarterPokemon,
+    bool ObtainablePokemon,
+    bool UnobtainablePokemon,
+    bool PokemonMoves,
+    bool PokemonTypes,
+    bool PokemonAbilities,
+    bool PokemonStats,
+    bool PokemonEvolutions,
+    bool MoveTypes,
+    bool TypeMatchups,
+    bool TmMoves,
+    bool ItemBoxes,
+    bool ShopItems,
+    bool BattleBingo,
+    bool ShinyHues,
+    bool SimilarBaseStatTotal,
+    bool RemoveItemOrTradeEvolutions);
+
+public sealed record XdRandomizerApplyResult(
+    IReadOnlyList<string> WrittenFiles,
+    IReadOnlyList<string> Messages);
+
 public sealed record XdPokemonStatsUpdate(
     int Index,
     int NameId,

@@ -74,11 +74,16 @@ public sealed class XdScaffoldTests
     public void XdPatchListMatchesLegacySwiftOrder()
     {
         var names = XdPatchDefinition.XdPatches.Select(patch => patch.Name).ToArray();
+        var kinds = XdPatchDefinition.XdPatches.Select(patch => patch.Kind).ToArray();
 
         Assert.Equal(29, names.Length);
         Assert.Equal("Removes foreign language text from the US version", names[0]);
         Assert.Equal("Apply the gen IV physical/special split and set moves to their default category", names[1]);
         Assert.Equal("Disable attack animations during battles", names[^1]);
+        Assert.Equal(XdPatchKind.PurgeUnusedText, kinds[0]);
+        Assert.Equal(XdPatchKind.TradeEvolutions, kinds[16]);
+        Assert.Equal(XdPatchKind.PokemonCanLearnAnyTm, kinds[19]);
+        Assert.Equal(XdPatchKind.DisableBattleAnimations, kinds[^1]);
     }
 
     [Fact]
