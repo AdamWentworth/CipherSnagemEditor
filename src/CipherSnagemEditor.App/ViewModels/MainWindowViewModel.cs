@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using Avalonia.Controls;
@@ -410,10 +411,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
         IsBusy = true;
         Logs.Add($"Opening {path}");
+        var openTimer = Stopwatch.StartNew();
 
         try
         {
+            var contextTimer = Stopwatch.StartNew();
             var context = await Task.Run(() => ColosseumProjectContext.Open(path));
+            LogPerformance("Open project context", contextTimer);
+
+            var resetTimer = Stopwatch.StartNew();
             CurrentProject = context;
             HasProject = true;
             ProjectTitle = BuildProjectTitle(context);
@@ -499,9 +505,14 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedMessageIdText = string.Empty;
             SelectedMessageText = string.Empty;
             SelectedTrainerPokemon.Clear();
+            LogPerformance("Open reset UI state", resetTimer);
             PopulateIsoFiles(context);
+
+            var selectedToolTimer = Stopwatch.StartNew();
             RefreshSelectedToolView(SelectedTool);
+            LogPerformance("Open refresh selected tool", selectedToolTimer);
             Logs.Add(BuildLogSummary(context));
+            LogPerformance("Open total", openTimer);
         }
         catch (Exception ex)
         {
@@ -594,6 +605,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTrainerPokemon.Clear();
             RefreshSelectedToolView(SelectedTool);
             Logs.Add($"Error: {ex.Message}");
+            LogPerformance("Open failed total", openTimer);
         }
         finally
         {
@@ -1454,17 +1466,24 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedTrainerChanged(TrainerEntryViewModel? value)
     {
+        var timer = Stopwatch.StartNew();
         foreach (var trainer in _allTrainers)
         {
             trainer.IsSelected = ReferenceEquals(trainer, value);
         }
 
         RefreshSelectedTrainerDetails(value);
+        if (value is not null)
+        {
+            LogPerformance("Trainer Editor selected trainer detail", timer);
+        }
+
         SaveTrainerCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedPokemonStatsChanged(PokemonStatsEntryViewModel? value)
     {
+        var timer = Stopwatch.StartNew();
         foreach (var pokemon in _allPokemonStats)
         {
             pokemon.IsSelected = ReferenceEquals(pokemon, value);
@@ -1473,11 +1492,17 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedPokemonStatsDetail = value is null
             ? null
             : new PokemonStatsEditorViewModel(value.Stats, _pokemonStatsResources, value.FaceImage, OnPokemonStatsChanged);
+        if (value is not null)
+        {
+            LogPerformance("Pokemon Stats Editor selected detail", timer);
+        }
+
         SavePokemonStatsCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedMoveChanged(MoveEntryViewModel? value)
     {
+        var timer = Stopwatch.StartNew();
         foreach (var move in _allMoves)
         {
             move.IsSelected = ReferenceEquals(move, value);
@@ -1486,11 +1511,17 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedMoveDetail = value is null
             ? null
             : new MoveEditorViewModel(value.Move, _moveEditorResources, OnMoveChanged);
+        if (value is not null)
+        {
+            LogPerformance("Move Editor selected detail", timer);
+        }
+
         SaveMoveCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedItemChanged(ItemEntryViewModel? value)
     {
+        var timer = Stopwatch.StartNew();
         foreach (var item in _allItems)
         {
             item.IsSelected = ReferenceEquals(item, value);
@@ -1499,11 +1530,17 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedItemDetail = value is null
             ? null
             : new ItemEditorViewModel(value.Item, _itemEditorResources, OnItemChanged);
+        if (value is not null)
+        {
+            LogPerformance("Item Editor selected detail", timer);
+        }
+
         SaveItemCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedGiftPokemonChanged(GiftPokemonEntryViewModel? value)
     {
+        var timer = Stopwatch.StartNew();
         foreach (var gift in _allGiftPokemon)
         {
             gift.IsSelected = ReferenceEquals(gift, value);
@@ -1512,11 +1549,17 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedGiftPokemonDetail = value is null
             ? null
             : new GiftPokemonEditorViewModel(value.Gift, _giftPokemonResources, value.FaceImage, OnGiftPokemonChanged);
+        if (value is not null)
+        {
+            LogPerformance("Gift Pokemon Editor selected detail", timer);
+        }
+
         SaveGiftPokemonCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedTypeChanged(TypeEntryViewModel? value)
     {
+        var timer = Stopwatch.StartNew();
         foreach (var type in _allTypes)
         {
             type.IsSelected = ReferenceEquals(type, value);
@@ -1525,11 +1568,17 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedTypeDetail = value is null
             ? null
             : new TypeEditorViewModel(value.Type, _allTypes.Select(entry => entry.Type).ToArray(), OnTypeChanged);
+        if (value is not null)
+        {
+            LogPerformance("Type Editor selected detail", timer);
+        }
+
         SaveTypeCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedTreasureChanged(TreasureEntryViewModel? value)
     {
+        var timer = Stopwatch.StartNew();
         foreach (var treasure in _allTreasures)
         {
             treasure.IsSelected = ReferenceEquals(treasure, value);
@@ -1538,6 +1587,11 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedTreasureDetail = value is null
             ? null
             : new TreasureEditorViewModel(value.Treasure, _treasureEditorResources, OnTreasureChanged);
+        if (value is not null)
+        {
+            LogPerformance("Treasure Editor selected detail", timer);
+        }
+
         SaveTreasureCommand.NotifyCanExecuteChanged();
     }
 
@@ -1749,6 +1803,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void PopulateIsoFiles(ColosseumProjectContext context)
     {
+        var totalTimer = Stopwatch.StartNew();
         _allIsoFiles.Clear();
         IsoFiles.Clear();
         if (context.Iso is null)
@@ -1757,16 +1812,21 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
 
+        var buildTimer = Stopwatch.StartNew();
         foreach (var entry in context.Iso.Files.OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase))
         {
             _allIsoFiles.Add(new IsoFileEntryViewModel(entry));
         }
+        LogPerformance("ISO Explorer build row cache", buildTimer, _allIsoFiles.Count);
 
+        var filterTimer = Stopwatch.StartNew();
         ApplyIsoFileFilter(IsoSearchText);
+        LogPerformance("ISO Explorer apply filter", filterTimer, IsoFiles.Count);
         SelectedIsoFile = IsoFiles.FirstOrDefault(file =>
                 string.Equals(Path.GetFileName(file.Name), "Start.dol", StringComparison.OrdinalIgnoreCase))
             ?? IsoFiles.FirstOrDefault();
         NotifyIsoExplorerCommands();
+        LogPerformance("ISO Explorer populate total", totalTimer, _allIsoFiles.Count);
     }
 
     private void RepopulateIsoFiles(string selectedFileName)
@@ -1783,6 +1843,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadTrainerRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allTrainers.Clear();
@@ -1794,23 +1855,37 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allTrainers.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyTrainerFilter(TrainerSearchText);
+            LogPerformance("Trainer Editor cached filter", cachedFilterTimer, Trainers.Count);
+            LogPerformance("Trainer Editor cached total", totalTimer, _allTrainers.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Trainer Editor load common.rel", commonTimer);
+
+            var resourceTimer = Stopwatch.StartNew();
             _trainerPokemonResources = TrainerPokemonEditorResources.FromCommonRel(commonRel);
             var trainers = commonRel.LoadStoryTrainers();
+            LogPerformance("Trainer Editor build resources", resourceTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var trainer in trainers)
             {
                 _allTrainers.Add(new TrainerEntryViewModel(trainer));
             }
+            LogPerformance("Trainer Editor build row cache", rowTimer, _allTrainers.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyTrainerFilter(TrainerSearchText);
+            LogPerformance("Trainer Editor apply filter", filterTimer, Trainers.Count);
             SelectedTrainer = Trainers.FirstOrDefault();
             Logs.Add($"Trainer Editor loaded: {_allTrainers.Count} story trainers.");
+            LogPerformance("Trainer Editor load total", totalTimer, _allTrainers.Count);
         }
         catch (Exception ex)
         {
@@ -1822,6 +1897,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadPokemonStatsRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allPokemonStats.Clear();
@@ -1834,22 +1910,36 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allPokemonStats.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyPokemonStatsFilter(PokemonStatsSearchText);
+            LogPerformance("Pokemon Stats Editor cached filter", cachedFilterTimer, PokemonStatsEntries.Count);
+            LogPerformance("Pokemon Stats Editor cached total", totalTimer, _allPokemonStats.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Pokemon Stats Editor load common.rel", commonTimer);
+
+            var resourceTimer = Stopwatch.StartNew();
             _pokemonStatsResources = PokemonStatsEditorResources.FromCommonRel(commonRel);
+            LogPerformance("Pokemon Stats Editor build resources", resourceTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var pokemon in commonRel.PokemonStats)
             {
                 _allPokemonStats.Add(new PokemonStatsEntryViewModel(pokemon));
             }
+            LogPerformance("Pokemon Stats Editor build row cache", rowTimer, _allPokemonStats.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyPokemonStatsFilter(PokemonStatsSearchText);
+            LogPerformance("Pokemon Stats Editor apply filter", filterTimer, PokemonStatsEntries.Count);
             SelectedPokemonStats = PokemonStatsEntries.FirstOrDefault();
             Logs.Add($"Pokemon Stats Editor loaded: {_allPokemonStats.Count} Pokemon.");
+            LogPerformance("Pokemon Stats Editor load total", totalTimer, _allPokemonStats.Count);
         }
         catch (Exception ex)
         {
@@ -1862,6 +1952,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadMoveRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allMoves.Clear();
@@ -1874,22 +1965,36 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allMoves.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyMoveFilter(MoveSearchText);
+            LogPerformance("Move Editor cached filter", cachedFilterTimer, MoveEntries.Count);
+            LogPerformance("Move Editor cached total", totalTimer, _allMoves.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Move Editor load common.rel", commonTimer);
+
+            var resourceTimer = Stopwatch.StartNew();
             _moveEditorResources = MoveEditorResources.FromCommonRel(commonRel);
+            LogPerformance("Move Editor build resources", resourceTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var move in commonRel.Moves)
             {
                 _allMoves.Add(new MoveEntryViewModel(move));
             }
+            LogPerformance("Move Editor build row cache", rowTimer, _allMoves.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyMoveFilter(MoveSearchText);
+            LogPerformance("Move Editor apply filter", filterTimer, MoveEntries.Count);
             SelectedMove = MoveEntries.FirstOrDefault();
             Logs.Add($"Move Editor loaded: {_allMoves.Count} moves.");
+            LogPerformance("Move Editor load total", totalTimer, _allMoves.Count);
         }
         catch (Exception ex)
         {
@@ -1902,6 +2007,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadItemRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allItems.Clear();
@@ -1914,22 +2020,36 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allItems.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyItemFilter(ItemSearchText);
+            LogPerformance("Item Editor cached filter", cachedFilterTimer, ItemEntries.Count);
+            LogPerformance("Item Editor cached total", totalTimer, _allItems.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Item Editor load common.rel", commonTimer);
+
+            var resourceTimer = Stopwatch.StartNew();
             _itemEditorResources = ItemEditorResources.FromCommonRel(commonRel);
+            LogPerformance("Item Editor build resources", resourceTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var item in commonRel.ItemData)
             {
                 _allItems.Add(new ItemEntryViewModel(item));
             }
+            LogPerformance("Item Editor build row cache", rowTimer, _allItems.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyItemFilter(ItemSearchText);
+            LogPerformance("Item Editor apply filter", filterTimer, ItemEntries.Count);
             SelectedItem = ItemEntries.FirstOrDefault();
             Logs.Add($"Item Editor loaded: {_allItems.Count} items.");
+            LogPerformance("Item Editor load total", totalTimer, _allItems.Count);
         }
         catch (Exception ex)
         {
@@ -1942,6 +2062,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadGiftPokemonRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allGiftPokemon.Clear();
@@ -1954,23 +2075,37 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allGiftPokemon.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyGiftPokemonFilter(GiftPokemonSearchText);
+            LogPerformance("Gift Pokemon Editor cached filter", cachedFilterTimer, GiftPokemonEntries.Count);
+            LogPerformance("Gift Pokemon Editor cached total", totalTimer, _allGiftPokemon.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Gift Pokemon Editor load common.rel", commonTimer);
+
+            var resourceTimer = Stopwatch.StartNew();
             _giftPokemonResources = GiftPokemonEditorResources.FromCommonRel(commonRel);
+            LogPerformance("Gift Pokemon Editor build resources", resourceTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             var rowIndex = 0;
             foreach (var gift in commonRel.GiftPokemon)
             {
                 _allGiftPokemon.Add(new GiftPokemonEntryViewModel(gift, rowIndex++));
             }
+            LogPerformance("Gift Pokemon Editor build row cache", rowTimer, _allGiftPokemon.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyGiftPokemonFilter(GiftPokemonSearchText);
+            LogPerformance("Gift Pokemon Editor apply filter", filterTimer, GiftPokemonEntries.Count);
             SelectedGiftPokemon = GiftPokemonEntries.FirstOrDefault();
             Logs.Add($"Gift Pokemon Editor loaded: {_allGiftPokemon.Count} gifts.");
+            LogPerformance("Gift Pokemon Editor load total", totalTimer, _allGiftPokemon.Count);
         }
         catch (Exception ex)
         {
@@ -1983,6 +2118,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadTypeRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allTypes.Clear();
@@ -1994,21 +2130,32 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allTypes.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyTypeFilter(TypeSearchText);
+            LogPerformance("Type Editor cached filter", cachedFilterTimer, TypeEntries.Count);
+            LogPerformance("Type Editor cached total", totalTimer, _allTypes.Count);
             return;
         }
 
         try
         {
+            var typeLoadTimer = Stopwatch.StartNew();
             var types = CurrentProject.LoadTypes();
+            LogPerformance("Type Editor load types", typeLoadTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var type in types)
             {
                 _allTypes.Add(new TypeEntryViewModel(type));
             }
+            LogPerformance("Type Editor build row cache", rowTimer, _allTypes.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyTypeFilter(TypeSearchText);
+            LogPerformance("Type Editor apply filter", filterTimer, TypeEntries.Count);
             SelectedType = TypeEntries.FirstOrDefault();
             Logs.Add($"Type Editor loaded: {_allTypes.Count} types.");
+            LogPerformance("Type Editor load total", totalTimer, _allTypes.Count);
         }
         catch (Exception ex)
         {
@@ -2021,6 +2168,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadTreasureRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allTreasures.Clear();
@@ -2033,22 +2181,36 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allTreasures.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyTreasureFilter(TreasureSearchText);
+            LogPerformance("Treasure Editor cached filter", cachedFilterTimer, TreasureEntries.Count);
+            LogPerformance("Treasure Editor cached total", totalTimer, _allTreasures.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Treasure Editor load common.rel", commonTimer);
+
+            var resourceTimer = Stopwatch.StartNew();
             _treasureEditorResources = TreasureEditorResources.FromCommonRel(commonRel);
+            LogPerformance("Treasure Editor build resources", resourceTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var treasure in commonRel.Treasures)
             {
                 _allTreasures.Add(new TreasureEntryViewModel(treasure));
             }
+            LogPerformance("Treasure Editor build row cache", rowTimer, _allTreasures.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyTreasureFilter(TreasureSearchText);
+            LogPerformance("Treasure Editor apply filter", filterTimer, TreasureEntries.Count);
             SelectedTreasure = TreasureEntries.FirstOrDefault();
             Logs.Add($"Treasure Editor loaded: {_allTreasures.Count} treasure boxes.");
+            LogPerformance("Treasure Editor load total", totalTimer, _allTreasures.Count);
         }
         catch (Exception ex)
         {
@@ -2061,6 +2223,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadPatchRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allPatches.Clear();
@@ -2072,26 +2235,32 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allPatches.Count == 0)
         {
+            var rowTimer = Stopwatch.StartNew();
             foreach (var definition in ColosseumPatchDefinition.ColosseumPatches.Select((patch, index) => new PatchEntryViewModel(patch, index)))
             {
                 _allPatches.Add(definition);
             }
+            LogPerformance("Patches build row cache", rowTimer, _allPatches.Count);
         }
 
+        var filterTimer = Stopwatch.StartNew();
         PatchEntries.Clear();
         foreach (var patch in _allPatches)
         {
             PatchEntries.Add(patch);
         }
+        LogPerformance("Patches apply rows", filterTimer, PatchEntries.Count);
 
         SelectedPatch ??= PatchEntries.FirstOrDefault();
         PatchStatus = "Click a patch row to apply it to the workspace files.";
         Logs.Add($"Patches loaded: {_allPatches.Count} Colosseum patches.");
+        LogPerformance("Patches load total", totalTimer, _allPatches.Count);
         ApplyPatchCommand.NotifyCanExecuteChanged();
     }
 
     private void LoadCollisionRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allCollisionFiles.Clear();
@@ -2106,18 +2275,23 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
+            var rowTimer = Stopwatch.StartNew();
             _allCollisionFiles.Clear();
             foreach (var file in CurrentProject.LoadCollisionFiles())
             {
                 _allCollisionFiles.Add(new CollisionFileEntryViewModel(file));
             }
+            LogPerformance("Collision Viewer build row cache", rowTimer, _allCollisionFiles.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyCollisionFilter(CollisionSearchText);
+            LogPerformance("Collision Viewer apply filter", filterTimer, CollisionFiles.Count);
             SelectedCollisionFile = CollisionFiles.FirstOrDefault();
             CollisionStatus = _allCollisionFiles.Count == 0
                 ? $"No .col files found in {Path.Combine(CurrentProject.WorkspaceDirectory ?? string.Empty, "Game Files")}. Extract ISO files and try again."
                 : $"Collision files loaded: {_allCollisionFiles.Count}.";
             Logs.Add(CollisionStatus);
+            LogPerformance("Collision Viewer load total", totalTimer, _allCollisionFiles.Count);
         }
         catch (Exception ex)
         {
@@ -2134,6 +2308,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadVertexFilterRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allVertexFilterFiles.Clear();
@@ -2145,19 +2320,24 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
+            var rowTimer = Stopwatch.StartNew();
             _allVertexFilterFiles.Clear();
             foreach (var file in CurrentProject.LoadVertexFilterFiles())
             {
                 _allVertexFilterFiles.Add(new VertexFilterFileEntryViewModel(file));
             }
+            LogPerformance("Vertex Filters build row cache", rowTimer, _allVertexFilterFiles.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyVertexFilter(VertexFilterSearchText);
+            LogPerformance("Vertex Filters apply filter", filterTimer, VertexFilterFiles.Count);
             SelectedVertexFilterFile = VertexFilterFiles.FirstOrDefault();
             SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
             VertexFilterStatus = _allVertexFilterFiles.Count == 0
                 ? "No images to import. Export and decode some texture files from the ISO."
                 : $"Vertex filter files loaded: {_allVertexFilterFiles.Count}.";
             Logs.Add(VertexFilterStatus);
+            LogPerformance("Vertex Filters load total", totalTimer, _allVertexFilterFiles.Count);
             SaveVertexFilterCommand.NotifyCanExecuteChanged();
         }
         catch (Exception ex)
@@ -2173,6 +2353,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadInteractionRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allInteractions.Clear();
@@ -2185,33 +2366,47 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allInteractions.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             InteractionEntries.Clear();
             foreach (var interaction in _allInteractions)
             {
                 InteractionEntries.Add(interaction);
             }
+            LogPerformance("Interaction Editor cached rows", cachedFilterTimer, InteractionEntries.Count);
 
             SelectedInteraction ??= InteractionEntries.FirstOrDefault();
+            LogPerformance("Interaction Editor cached total", totalTimer, _allInteractions.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Interaction Editor load common.rel", commonTimer);
+
+            var resourceTimer = Stopwatch.StartNew();
             _interactionEditorResources = InteractionEditorResources.FromCommonRel(commonRel);
+            LogPerformance("Interaction Editor build resources", resourceTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var interaction in commonRel.InteractionPoints)
             {
                 _allInteractions.Add(new InteractionEntryViewModel(interaction));
             }
+            LogPerformance("Interaction Editor build row cache", rowTimer, _allInteractions.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             InteractionEntries.Clear();
             foreach (var interaction in _allInteractions)
             {
                 InteractionEntries.Add(interaction);
             }
+            LogPerformance("Interaction Editor apply rows", filterTimer, InteractionEntries.Count);
 
             SelectedInteraction = InteractionEntries.FirstOrDefault();
             Logs.Add($"Interaction Editor loaded: {_allInteractions.Count} interaction points.");
+            LogPerformance("Interaction Editor load total", totalTimer, _allInteractions.Count);
         }
         catch (Exception ex)
         {
@@ -2224,6 +2419,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadMessageRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null && CurrentProject?.MessageTable is null)
         {
             MessageTables.Clear();
@@ -2238,19 +2434,25 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (MessageTables.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyMessageFilter(MessageSearchText);
+            LogPerformance("Message Editor cached filter", cachedFilterTimer, MessageStrings.Count);
+            LogPerformance("Message Editor cached total", totalTimer, MessageTables.Count);
             return;
         }
 
         try
         {
+            var tableTimer = Stopwatch.StartNew();
             foreach (var table in CurrentProject.LoadMessageTables())
             {
                 MessageTables.Add(new MessageTableViewModel(table));
             }
+            LogPerformance("Message Editor load tables", tableTimer, MessageTables.Count);
 
             SelectedMessageTable = MessageTables.FirstOrDefault();
             Logs.Add($"Message Editor loaded: {MessageTables.Count} message tables.");
+            LogPerformance("Message Editor load total", totalTimer, MessageTables.Count);
         }
         catch (Exception ex)
         {
@@ -2265,6 +2467,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void LoadTableEditorRows()
     {
+        var totalTimer = Stopwatch.StartNew();
         if (CurrentProject?.Iso is null)
         {
             _allTableEditorEntries.Clear();
@@ -2275,21 +2478,32 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (_allTableEditorEntries.Count > 0)
         {
+            var cachedFilterTimer = Stopwatch.StartNew();
             ApplyTableEditorFilter(TableEditorSearchText);
+            LogPerformance("Table Editor cached filter", cachedFilterTimer, TableEditorEntries.Count);
+            LogPerformance("Table Editor cached total", totalTimer, _allTableEditorEntries.Count);
             return;
         }
 
         try
         {
+            var commonTimer = Stopwatch.StartNew();
             var commonRel = CurrentProject.LoadCommonRel();
+            LogPerformance("Table Editor load common.rel", commonTimer);
+
+            var rowTimer = Stopwatch.StartNew();
             foreach (var table in BuildTableEditorEntries(commonRel, CurrentProject))
             {
                 _allTableEditorEntries.Add(table);
             }
+            LogPerformance("Table Editor build row cache", rowTimer, _allTableEditorEntries.Count);
 
+            var filterTimer = Stopwatch.StartNew();
             ApplyTableEditorFilter(TableEditorSearchText);
+            LogPerformance("Table Editor apply filter", filterTimer, TableEditorEntries.Count);
             SelectedTableEditorEntry = TableEditorEntries.FirstOrDefault();
             Logs.Add($"Table Editor loaded: {_allTableEditorEntries.Count} universal tables.");
+            LogPerformance("Table Editor load total", totalTimer, _allTableEditorEntries.Count);
         }
         catch (Exception ex)
         {
@@ -3077,10 +3291,12 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedTrainerStringIds = $"Name ID: {trainer.NameId}   Pre: {trainer.PreBattleTextId}   Win: {trainer.VictoryTextId}   Loss: {trainer.DefeatTextId}";
         TrainerDetailBackgroundBrush = trainer.HasShadow ? TrainerShadowBrush : TrainerNormalBrush;
 
+        var slotTimer = Stopwatch.StartNew();
         foreach (var pokemon in trainer.Pokemon)
         {
             SelectedTrainerPokemon.Add(new TrainerPokemonSlotViewModel(pokemon, _trainerPokemonResources, OnTrainerPokemonChanged));
         }
+        LogPerformance("Trainer Editor build selected Pokemon slots", slotTimer, SelectedTrainerPokemon.Count);
 
         SaveTrainerCommand.NotifyCanExecuteChanged();
     }
@@ -3347,7 +3563,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         SelectedIsoFileSize = value.FileSizeText;
+        var detailTimer = Stopwatch.StartNew();
         IsoExplorerFilesText = BuildIsoFileDetails(value, out var groupId);
+        LogPerformance("ISO Explorer selected file details", detailTimer, value.IsFsys ? 1 : 0);
         SelectedIsoFileName = groupId is null
             ? value.FileNameText
             : $"{value.FileNameText} GID: {groupId.Value}";
@@ -3501,6 +3719,13 @@ public partial class MainWindowViewModel : ViewModelBase
             ColosseumSourceKind.Texture => "Texture file loaded.",
             _ => "File loaded."
         };
+    }
+
+    private void LogPerformance(string label, Stopwatch stopwatch, int? count = null)
+    {
+        stopwatch.Stop();
+        var countText = count is null ? string.Empty : $" ({count.Value:N0})";
+        Logs.Add($"[perf] {label}{countText}: {stopwatch.Elapsed.TotalMilliseconds:N0} ms");
     }
 
     private static string BuildLogSummary(ColosseumProjectContext context)
