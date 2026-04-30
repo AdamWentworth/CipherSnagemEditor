@@ -675,6 +675,7 @@ public sealed partial class XdProjectContext
     public IReadOnlyList<XdMoveRecord> LoadMoveRecords()
     {
         var (data, table, strings) = ReadCommonRelOrThrow();
+        var descriptionStrings = TryReadStartDolStringTable();
         var moveNames = BuildMoveNameMap(data, table, strings);
         var typeNames = BuildTypeNameMap(data, table, strings);
         var start = table.GetPointer(XdMovesIndex);
@@ -697,7 +698,7 @@ public sealed partial class XdProjectContext
                 offset,
                 CleanName(strings?.StringWithId(nameId), index, "Move"),
                 nameId,
-                $"String {descriptionId}",
+                CleanDescription(descriptionStrings?.StringWithId(descriptionId), descriptionId),
                 descriptionId,
                 typeId,
                 TypeName(typeNames, typeId),
@@ -762,6 +763,7 @@ public sealed partial class XdProjectContext
     public IReadOnlyList<XdItemRecord> LoadItemRecords()
     {
         var (data, table, strings) = ReadCommonRelOrThrow();
+        var descriptionStrings = TryReadPocketMenuStringTable();
         var itemNames = BuildItemNameMap(data, table, strings);
         var start = table.GetPointer(XdItemsIndex);
         var count = table.GetValueAtPointer(XdNumberOfItemsIndex);
@@ -781,7 +783,7 @@ public sealed partial class XdProjectContext
                 offset,
                 CleanName(strings?.StringWithId(nameId), index, "Item"),
                 nameId,
-                $"String {descriptionId}",
+                CleanDescription(descriptionStrings?.StringWithId(descriptionId), descriptionId),
                 descriptionId,
                 data.ReadByte(offset + XdItemBagSlotOffset),
                 data.ReadByte(offset + XdItemCantBeHeldOffset) == 0,
@@ -1535,6 +1537,50 @@ public sealed partial class XdProjectContext
         return new BinaryData(GameCubeIsoReader.ReadFile(Iso, entry));
     }
 
+    private GameStringTable? TryReadStartDolStringTable()
+    {
+        try
+        {
+            var (start, size) = XdDolStringTableRange(Iso.Region);
+            if (start <= 0 || size <= 0)
+            {
+                return null;
+            }
+
+            var dol = ReadStartDolOrThrow();
+            if (start + size > dol.Length)
+            {
+                return null;
+            }
+
+            return GameStringTable.Parse(dol.ReadBytes(start, size));
+        }
+        catch (Exception ex) when (IsParseException(ex))
+        {
+            return null;
+        }
+    }
+
+    private GameStringTable? TryReadPocketMenuStringTable()
+    {
+        try
+        {
+            var archive = TryReadFsys("pocket_menu.fsys", out _);
+            var entry = archive?.Entries.FirstOrDefault(entry => entry.Name.Equals("pocket_menu.msg", StringComparison.OrdinalIgnoreCase))
+                ?? archive?.Entries.FirstOrDefault(entry => entry.Name.EndsWith(".msg", StringComparison.OrdinalIgnoreCase));
+            if (archive is null || entry is null)
+            {
+                return null;
+            }
+
+            return GameStringTable.Parse(archive.Extract(entry));
+        }
+        catch (Exception ex) when (IsParseException(ex))
+        {
+            return null;
+        }
+    }
+
     private static int FirstXdTmListOffset(GameCubeRegion region)
         => region switch
         {
@@ -1542,6 +1588,15 @@ public sealed partial class XdProjectContext
             GameCubeRegion.Europe => 0x43cc80,
             GameCubeRegion.Japan => 0x3dfa60,
             _ => 0
+        };
+
+    private static (int Start, int Size) XdDolStringTableRange(GameCubeRegion region)
+        => region switch
+        {
+            GameCubeRegion.UnitedStates => (0x374fc0, 0x178bc),
+            GameCubeRegion.Europe => (0x372ad8, 0x17938),
+            GameCubeRegion.Japan => (0x38b0b0, 0x11d10),
+            _ => (0, 0)
         };
 
     private static IReadOnlyDictionary<int, string> BuildTypeNameMap(BinaryData data, RelocationTable table, GameStringTable? strings)
@@ -1976,6 +2031,19 @@ public sealed partial class XdProjectContext
         var cleaned = StripDisplayControlTokens(value.Replace('\n', ' ')).Trim();
         return string.IsNullOrWhiteSpace(cleaned) || cleaned == "-"
             ? $"{fallback} {index}"
+            : cleaned;
+    }
+
+    private static string CleanDescription(string? value, int id)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value == "-")
+        {
+            return id == 0 ? "-" : $"#{id}";
+        }
+
+        var cleaned = value.Replace('\r', ' ').Replace('\n', ' ').Trim();
+        return string.IsNullOrWhiteSpace(cleaned) || cleaned == "-"
+            ? id == 0 ? "-" : $"#{id}"
             : cleaned;
     }
 

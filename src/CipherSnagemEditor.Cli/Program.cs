@@ -353,10 +353,14 @@ static void RunXdEditorsProbe(string isoPath)
     var trainersWithBattleData = trainers.Count(trainer => trainer.Battle is not null);
     var trainersWithResolvedClasses = trainers.Count(trainer => !trainer.ClassName.StartsWith("Class ", StringComparison.Ordinal));
     var firstBattleTrainer = trainers.FirstOrDefault(trainer => trainer.Battle is not null);
+    var firstResolvedMoveDescription = moves.FirstOrDefault(move => move.DescriptionId > 0
+        && !move.Description.StartsWith("String ", StringComparison.Ordinal)
+        && !move.Description.StartsWith('#'));
 
     Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, tms={tms.Count}, items={items.Count}, pokespots={pokespots.Count}, gifts={gifts.Count}, types={types.Count}, treasures={treasures.Count}");
     Console.WriteLine($"XD trainer header data: classes={trainersWithResolvedClasses}, battles={trainersWithBattleData}, first battle={firstBattleTrainer?.Index}: {firstBattleTrainer?.ClassName} {firstBattleTrainer?.Name} / {firstBattleTrainer?.Battle?.BattleStyleName} {firstBattleTrainer?.Battle?.BattleTypeName}");
     Console.WriteLine($"First XD TM: {tms.FirstOrDefault()?.Index}: {tms.FirstOrDefault()?.MoveName}");
+    Console.WriteLine($"First XD move description: {firstResolvedMoveDescription?.Index}: {firstResolvedMoveDescription?.Description}");
     Console.WriteLine($"First trainer: {trainers.FirstOrDefault()?.Index}: {trainers.FirstOrDefault()?.ClassName} {trainers.FirstOrDefault()?.Name}");
     Console.WriteLine($"First shadow: {shadows.FirstOrDefault()?.Index}: {shadows.FirstOrDefault()?.SpeciesName}");
     Console.WriteLine($"First pokespot: {pokespots.FirstOrDefault()?.SpotName} {pokespots.FirstOrDefault()?.SpeciesName}");
@@ -368,6 +372,7 @@ static void RunXdEditorsProbe(string isoPath)
     Expect(shadows.Count > 40, failures, $"Shadow parser is unexpectedly sparse: {shadows.Count}.");
     Expect(stats.Count > 300, failures, $"Pokemon stats parser is unexpectedly sparse: {stats.Count}.");
     Expect(moves.Count > 350, failures, $"Move parser is unexpectedly sparse: {moves.Count}.");
+    Expect(firstResolvedMoveDescription is not null, failures, "Move descriptions did not resolve from the XD string table.");
     Expect(tms.Count == 58, failures, $"TM/HM parser should resolve the Swift GoD Tool's 58 TM/HM rows, but returned {tms.Count}.");
     Expect(tms.Any(tm => !tm.MoveName.StartsWith("Move ", StringComparison.Ordinal) && tm.MoveName != "-"), failures, "TM/HM parser did not resolve TM move names.");
     Expect(items.Count > 300, failures, $"Item parser is unexpectedly sparse: {items.Count}.");
