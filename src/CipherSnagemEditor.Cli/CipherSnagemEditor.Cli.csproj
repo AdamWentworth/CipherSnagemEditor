@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CipherSnagemEditor.Core\CipherSnagemEditor.Core.csproj" />
     <ProjectReference Include="..\CipherSnagemEditor.Colosseum\CipherSnagemEditor.Colosseum.csproj" />
+    <ProjectReference Include="..\CipherSnagemEditor.XD\CipherSnagemEditor.XD.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

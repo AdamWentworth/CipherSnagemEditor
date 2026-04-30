@@ -4,6 +4,7 @@ using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Files;
 using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Text;
+using CipherSnagemEditor.XD;
 
 if (args.Length == 0)
 {
@@ -11,6 +12,7 @@ if (args.Length == 0)
     Console.WriteLine("Usage: ciphersnagem inspect <.iso|.fsys|.msg|.gtx|.atx>");
     Console.WriteLine("       ciphersnagem trainers <iso>");
     Console.WriteLine("       ciphersnagem extract-iso <iso> <file-name> [output-path]");
+    Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -52,6 +54,18 @@ try
         }
 
         PrintTrainers(args[1]);
+        return 0;
+    }
+
+    if (args[0].Equals("xd-probe", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem xd-probe <iso>");
+            return 1;
+        }
+
+        RunXdProbe(args[1]);
         return 0;
     }
 
@@ -125,6 +139,12 @@ static void PrintTrainers(string isoPath)
 
 static void Inspect(string path)
 {
+    if (GameFileTypes.FromExtension(path) == GameFileType.Iso)
+    {
+        InspectIso(path);
+        return;
+    }
+
     var context = ColosseumProjectContext.Open(path);
     Console.WriteLine($"Source: {context.SourcePath}");
     Console.WriteLine($"Kind: {context.SourceKind}");
@@ -160,6 +180,29 @@ static void Inspect(string path)
     }
 }
 
+static void InspectIso(string path)
+{
+    var iso = GameCubeIsoReader.Open(path);
+    var workspace = iso.IsPokemonXD
+        ? XdProjectContext.Open(path).WorkspaceDirectory
+        : iso.IsPokemonColosseum
+            ? ColosseumProjectContext.Open(path).WorkspaceDirectory
+            : iso.WorkspaceDirectory;
+
+    Console.WriteLine($"Source: {path}");
+    Console.WriteLine("Kind: Iso");
+    Console.WriteLine($"Game ID: {iso.GameId}");
+    Console.WriteLine($"Game: {iso.Game}");
+    Console.WriteLine($"Legacy tool: {iso.LegacyToolName}");
+    Console.WriteLine($"Region: {iso.Region}");
+    Console.WriteLine($"Workspace: {workspace}");
+    Console.WriteLine($"FST files: {iso.Files.Count}");
+    foreach (var entry in iso.Files.Take(20))
+    {
+        Console.WriteLine($"0x{entry.Offset:x8} {entry.Size,10} {entry.Name}");
+    }
+}
+
 static void ExtractIsoFile(string isoPath, string fileName, string? outputPath)
 {
     var context = ColosseumProjectContext.Open(isoPath);
@@ -176,6 +219,46 @@ static void ExtractIsoFile(string isoPath, string fileName, string? outputPath)
 
     var extractedPath = context.ExtractIsoFile(entry, outputPath);
     Console.WriteLine(extractedPath);
+}
+
+static void RunXdProbe(string isoPath)
+{
+    var context = XdProjectContext.Open(isoPath);
+    var iso = context.Iso;
+    var failures = new List<string>();
+
+    Expect(iso.IsPokemonXD, failures, $"Expected an XD ISO, found {iso.GameId}.");
+    Expect(iso.Region != GameCubeRegion.OtherGame, failures, $"Unexpected XD region for {iso.GameId}.");
+    Expect(Directory.Exists(context.WorkspaceDirectory), failures, "XD workspace was not created.");
+    Expect(File.Exists(Path.Combine(context.WorkspaceDirectory, "Settings.json")), failures, "XD Settings.json was not created.");
+    Expect(iso.Files.Any(file => file.Name.Equals("Start.dol", StringComparison.OrdinalIgnoreCase)), failures, "Start.dol is missing from the FST.");
+    Expect(iso.Files.Any(file => file.Name.Equals("Game.toc", StringComparison.OrdinalIgnoreCase)), failures, "Game.toc is missing from the FST.");
+    Expect(iso.Files.Count > 100, failures, $"FST file count is unexpectedly low: {iso.Files.Count}.");
+    Expect(iso.Files.Any(file => file.Name.EndsWith(".fsys", StringComparison.OrdinalIgnoreCase)), failures, "No FSYS archives were found in the XD ISO.");
+
+    Console.WriteLine($"XD ISO: {iso.Path}");
+    Console.WriteLine($"Game ID: {iso.GameId}");
+    Console.WriteLine($"Region: {iso.Region}");
+    Console.WriteLine($"Workspace: {context.WorkspaceDirectory}");
+    Console.WriteLine($"FST files: {iso.Files.Count}");
+    Console.WriteLine($"FSYS files: {iso.Files.Count(file => file.Name.EndsWith(".fsys", StringComparison.OrdinalIgnoreCase))}");
+    foreach (var entry in iso.Files.Take(12))
+    {
+        Console.WriteLine($"0x{entry.Offset:x8} {entry.Size,10} {entry.Name}");
+    }
+
+    if (failures.Count == 0)
+    {
+        Console.WriteLine("XD open probe passed.");
+        return;
+    }
+
+    foreach (var failure in failures)
+    {
+        Console.Error.WriteLine($"XD probe failure: {failure}");
+    }
+
+    throw new InvalidDataException($"XD probe failed with {failures.Count} failure(s).");
 }
 
 static void RunParityProbe(string isoPath, int messageLimit, int assetLimit)

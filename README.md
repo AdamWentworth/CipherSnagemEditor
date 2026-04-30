@@ -6,8 +6,8 @@ the legacy Pokemon Colosseum and Pokemon XD modding tools from the
 
 The first milestone is 1:1 Colosseum Tool parity: same editor windows, same
 data model behavior, same ISO workspace flow, and the same practical workflows
-that made the original macOS Swift app useful. XD support is planned as a
-future branch of the same app once the Colosseum path is solid.
+that made the original macOS Swift app useful. XD support is now being built as
+the sibling `GoD Tool` path in the same repository with shared core code.
 
 ## Original Work And Credit
 
@@ -31,6 +31,7 @@ the codebase easier to maintain and extend.
 Current target:
 
 - Pokemon Colosseum
+- Pokemon XD shell/open-path support
 - Windows desktop
 - .NET 10
 - Avalonia UI
@@ -54,7 +55,7 @@ Implemented or in progress:
 
 Future scope:
 
-- Pokemon XD: Gale of Darkness support
+- 1:1 Pokemon XD: Gale of Darkness editor parity
 - cross-platform packaging for macOS and Linux
 
 ## Repository Layout
@@ -65,6 +66,7 @@ src/
   CipherSnagemEditor.App/         Avalonia desktop UI
   CipherSnagemEditor.Core/        binary, ISO, FSYS, text, and shared logic
   CipherSnagemEditor.Colosseum/   Colosseum-specific tables and models
+  CipherSnagemEditor.XD/          XD-specific tool shell, tables, and models
   CipherSnagemEditor.Cli/         command-line inspection/test harness
 tests/
   CipherSnagemEditor.Tests.csproj unit and parity-focused test project
@@ -124,6 +126,13 @@ exists:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-colosseum-closeout.ps1
+```
+
+Run the local XD open probe, if
+`.local\fixtures\Pokemon XD - Gale of Darkness.iso` exists:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-open-probe.ps1
 ```
 
 Publish a Windows build:
