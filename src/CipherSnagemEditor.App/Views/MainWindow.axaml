@@ -83,7 +83,7 @@
                 chrome:WindowDecorationProperties.ElementRole="TitleBar">
             <Grid ColumnDefinitions="138,*,138">
                 <TextBlock Grid.Column="1"
-                           Text="Colosseum Tool"
+                           Text="{Binding LegacyToolTitle}"
                            Foreground="#CFCFCF"
                            FontSize="12"
                            FontWeight="Bold"

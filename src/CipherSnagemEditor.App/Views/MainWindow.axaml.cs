@@ -6,9 +6,11 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using CipherSnagemEditor.App.ViewModels;
+using CipherSnagemEditor.Core.GameCube;
 
 namespace CipherSnagemEditor.App.Views;
 
@@ -35,11 +37,11 @@ public partial class MainWindow : Window
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open Colosseum Tool File",
+            Title = "Open Cipher Snagem Editor File",
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType("Colosseum Tool Files")
+                new FilePickerFileType("Cipher Snagem Editor Files")
                 {
                     Patterns = ["*.iso", "*.fsys", "*.msg", "*.gtx", "*.atx"]
                 },
@@ -152,12 +154,19 @@ public partial class MainWindow : Window
         }
     }
 
-    private Task OpenPathAsync(string path)
+    public Task OpenPathFromStartupAsync(string path)
+        => OpenPathAsync(path);
+
+    private async Task OpenPathAsync(string path)
     {
         CloseToolWindows();
-        return DataContext is MainWindowViewModel viewModel
-            ? viewModel.OpenPathAsync(path)
-            : Task.CompletedTask;
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        await viewModel.OpenPathAsync(path);
+        ApplyWindowIcon(viewModel.MainWindowIconResource);
     }
 
     private void OpenToolWindow(ToolEntryViewModel tool, MainWindowViewModel viewModel)
@@ -181,7 +190,7 @@ public partial class MainWindow : Window
         var windowBuildTimer = Stopwatch.StartNew();
         var window = new Window
         {
-            Title = $"{tool.Title} - Colosseum Tool",
+            Title = $"{tool.Title} - {tool.LegacyToolName}",
             Width = size.Width,
             Height = size.Height,
             MinWidth = minSize.Width,
@@ -224,7 +233,13 @@ public partial class MainWindow : Window
     }
 
     private static Control CreateToolContent(ToolEntryViewModel tool)
-        => tool.Title switch
+    {
+        if (tool.Game == GameCubeGame.PokemonXD && tool.Title != "ISO Explorer")
+        {
+            return new LegacySimpleToolView(tool.Title, ToolContentSize(tool.Title));
+        }
+
+        return tool.Title switch
         {
             "Trainer Editor" => new TrainerEditorView(),
             "Pokemon Stats Editor" => new PokemonStatsEditorView(),
@@ -243,6 +258,20 @@ public partial class MainWindow : Window
             "ISO Explorer" => new IsoExplorerView(),
             _ => new LegacySimpleToolView(tool.Title, ToolContentSize(tool.Title))
         };
+    }
+
+    private void ApplyWindowIcon(string resourceUri)
+    {
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri(resourceUri));
+            Icon = new WindowIcon(stream);
+        }
+        catch
+        {
+            // Keep the packaged executable icon if the resource cannot be loaded.
+        }
+    }
 
     private static Control CreateToolWindowShell(Window window, string title, Control content)
     {

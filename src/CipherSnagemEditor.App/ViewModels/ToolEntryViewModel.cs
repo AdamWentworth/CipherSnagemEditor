@@ -2,6 +2,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CipherSnagemEditor.Colosseum;
+using CipherSnagemEditor.Core.GameCube;
+using CipherSnagemEditor.XD;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CipherSnagemEditor.App.ViewModels;
@@ -17,11 +19,27 @@ public sealed partial class ToolEntryViewModel : ObservableObject
     private static readonly IImage? SelectedCellImage = LoadImage("avares://CipherSnagemEditor.App/Assets/Ui/Cells/selected-cell.png");
 
     public ToolEntryViewModel(int index, ColosseumToolDefinition definition)
+        : this(index, definition.Title, definition.LegacySegue, definition.LegacySource, GameCubeGame.PokemonColosseum)
+    {
+    }
+
+    public ToolEntryViewModel(int index, XdToolDefinition definition)
+        : this(index, definition.Title, definition.LegacySegue, definition.LegacySource, GameCubeGame.PokemonXD)
+    {
+    }
+
+    private ToolEntryViewModel(
+        int index,
+        string title,
+        string legacySegue,
+        string legacySource,
+        GameCubeGame game)
     {
         Index = index;
-        Title = definition.Title;
-        LegacySegue = definition.LegacySegue;
-        LegacySource = definition.LegacySource;
+        Title = title;
+        LegacySegue = legacySegue;
+        LegacySource = legacySource;
+        Game = game;
         BackgroundImage = index % 2 == 0 ? ItemCellImage : ToolCellImage;
         FallbackBrush = index % 2 == 0 ? ItemCellFallback : ToolCellFallback;
     }
@@ -38,6 +56,14 @@ public sealed partial class ToolEntryViewModel : ObservableObject
     public string LegacySegue { get; }
 
     public string LegacySource { get; }
+
+    public GameCubeGame Game { get; }
+
+    public string LegacyToolName => Game switch
+    {
+        GameCubeGame.PokemonXD => "GoD Tool",
+        _ => "Colosseum Tool"
+    };
 
     public IImage? BackgroundImage { get; }
 

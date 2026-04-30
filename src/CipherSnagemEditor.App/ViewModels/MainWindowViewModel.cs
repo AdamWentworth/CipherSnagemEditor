@@ -8,6 +8,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CipherSnagemEditor.Colosseum;
 using CipherSnagemEditor.Colosseum.Data;
+using CipherSnagemEditor.Core.Files;
+using CipherSnagemEditor.Core.GameCube;
+using CipherSnagemEditor.XD;
 
 namespace CipherSnagemEditor.App.ViewModels;
 
@@ -50,6 +53,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _windowTitle = "Colosseum Tool - Cipher Snagem Editor";
+
+    [ObservableProperty]
+    private string _legacyToolTitle = "Colosseum Tool";
+
+    [ObservableProperty]
+    private string _mainWindowIconResource = "avares://CipherSnagemEditor.App/Assets/AppIcon.png";
 
     [ObservableProperty]
     private string _projectTitle = "No file loaded";
@@ -324,8 +333,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
-        Tools = new ObservableCollection<ToolEntryViewModel>(
-            ColosseumToolCatalog.HomeTools.Select((tool, index) => new ToolEntryViewModel(index + 1, tool)));
+        Tools = [];
+        LoadToolCatalog(GameCubeGame.PokemonColosseum);
         foreach (var option in BuildVertexFilterOptions())
         {
             VertexFilterOptions.Add(option);
@@ -404,6 +413,36 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ColosseumProjectContext? CurrentProject { get; private set; }
 
+    public XdProjectContext? CurrentXdProject { get; private set; }
+
+    public GameCubeGame CurrentGame { get; private set; } = GameCubeGame.PokemonColosseum;
+
+    private void LoadToolCatalog(GameCubeGame game)
+    {
+        Tools.Clear();
+        IEnumerable<ToolEntryViewModel> tools = game == GameCubeGame.PokemonXD
+            ? XdToolCatalog.HomeTools.Select((tool, index) => new ToolEntryViewModel(index + 1, tool))
+            : ColosseumToolCatalog.HomeTools.Select((tool, index) => new ToolEntryViewModel(index + 1, tool));
+
+        foreach (var tool in tools)
+        {
+            Tools.Add(tool);
+        }
+
+        SelectedTool = Tools.FirstOrDefault();
+    }
+
+    private void ApplyGameMode(GameCubeGame game)
+    {
+        CurrentGame = game;
+        LegacyToolTitle = game == GameCubeGame.PokemonXD ? "GoD Tool" : "Colosseum Tool";
+        WindowTitle = $"{LegacyToolTitle} - Cipher Snagem Editor";
+        MainWindowIconResource = game == GameCubeGame.PokemonXD
+            ? "avares://CipherSnagemEditor.App/Assets/AppIconXd.png"
+            : "avares://CipherSnagemEditor.App/Assets/AppIcon.png";
+        LoadToolCatalog(game);
+    }
+
     public async Task OpenPathAsync(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -417,12 +456,26 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
+            if (GameFileTypes.FromExtension(path) == GameFileType.Iso)
+            {
+                var probeTimer = Stopwatch.StartNew();
+                var probeIso = await Task.Run(() => GameCubeIsoReader.Open(path));
+                LogPerformance("Open probe ISO game", probeTimer);
+                if (probeIso.IsPokemonXD)
+                {
+                    await OpenXdPathAsync(path, openTimer);
+                    return;
+                }
+            }
+
             var contextTimer = Stopwatch.StartNew();
             var context = await Task.Run(() => ColosseumProjectContext.Open(path));
             LogPerformance("Open project context", contextTimer);
 
             var resetTimer = Stopwatch.StartNew();
+            ApplyGameMode(GameCubeGame.PokemonColosseum);
             CurrentProject = context;
+            CurrentXdProject = null;
             HasProject = true;
             ProjectTitle = BuildProjectTitle(context);
             WorkspaceStatus = BuildWorkspaceStatus(context);
@@ -520,6 +573,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             HasProject = false;
             CurrentProject = null;
+            CurrentXdProject = null;
+            ApplyGameMode(GameCubeGame.PokemonColosseum);
             ProjectTitle = "Open failed";
             WorkspaceStatus = ex.Message;
             _allIsoFiles.Clear();
@@ -613,6 +668,111 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsBusy = false;
         }
+    }
+
+    private async Task OpenXdPathAsync(string path, Stopwatch openTimer)
+    {
+        var contextTimer = Stopwatch.StartNew();
+        var context = await Task.Run(() => XdProjectContext.Open(path));
+        LogPerformance("Open XD project context", contextTimer);
+
+        var resetTimer = Stopwatch.StartNew();
+        ApplyGameMode(GameCubeGame.PokemonXD);
+        CurrentProject = null;
+        CurrentXdProject = context;
+        HasProject = true;
+        ProjectTitle = BuildProjectTitle(context);
+        WorkspaceStatus = BuildWorkspaceStatus(context);
+        _allIsoFiles.Clear();
+        _allTrainers.Clear();
+        _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
+        _allPokemonStats.Clear();
+        _pokemonStatsResources = PokemonStatsEditorResources.Empty;
+        _allMoves.Clear();
+        _moveEditorResources = MoveEditorResources.Empty;
+        _allItems.Clear();
+        _itemEditorResources = ItemEditorResources.Empty;
+        _allGiftPokemon.Clear();
+        _giftPokemonResources = GiftPokemonEditorResources.Empty;
+        _allTypes.Clear();
+        _allTreasures.Clear();
+        _treasureEditorResources = TreasureEditorResources.Empty;
+        _allInteractions.Clear();
+        _interactionEditorResources = InteractionEditorResources.Empty;
+        _allMessageStrings.Clear();
+        _allTableEditorEntries.Clear();
+        _allPatches.Clear();
+        _allCollisionFiles.Clear();
+        _allVertexFilterFiles.Clear();
+        Trainers.Clear();
+        PokemonStatsEntries.Clear();
+        MoveEntries.Clear();
+        ItemEntries.Clear();
+        GiftPokemonEntries.Clear();
+        TypeEntries.Clear();
+        TreasureEntries.Clear();
+        InteractionEntries.Clear();
+        MessageTables.Clear();
+        MessageStrings.Clear();
+        TableEditorEntries.Clear();
+        PatchEntries.Clear();
+        CollisionFiles.Clear();
+        VertexFilterFiles.Clear();
+        CollisionInteractionOptions.Clear();
+        CollisionSectionOptions.Clear();
+        TrainerSearchText = string.Empty;
+        PokemonStatsSearchText = string.Empty;
+        MoveSearchText = string.Empty;
+        ItemSearchText = string.Empty;
+        GiftPokemonSearchText = string.Empty;
+        TypeSearchText = string.Empty;
+        TreasureSearchText = string.Empty;
+        MessageSearchText = string.Empty;
+        IsoSearchText = string.Empty;
+        TableEditorSearchText = string.Empty;
+        CollisionSearchText = string.Empty;
+        VertexFilterSearchText = string.Empty;
+        SelectedIsoFile = null;
+        SelectedTrainer = null;
+        SelectedPokemonStats = null;
+        SelectedPokemonStatsDetail = null;
+        SelectedMove = null;
+        SelectedMoveDetail = null;
+        SelectedItem = null;
+        SelectedItemDetail = null;
+        SelectedGiftPokemon = null;
+        SelectedGiftPokemonDetail = null;
+        SelectedType = null;
+        SelectedTypeDetail = null;
+        SelectedTreasure = null;
+        SelectedTreasureDetail = null;
+        SelectedInteraction = null;
+        SelectedInteractionDetail = null;
+        SelectedMessageTable = null;
+        SelectedMessageString = null;
+        SelectedTableEditorEntry = null;
+        SelectedPatch = null;
+        SelectedCollisionFile = null;
+        SelectedCollisionData = null;
+        SelectedCollisionInteraction = null;
+        SelectedCollisionSection = null;
+        SelectedVertexFilterFile = null;
+        SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
+        PatchStatus = "Select a patch to apply it.";
+        CollisionStatus = "Extract ISO files, then select a collision file.";
+        VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
+        ResetRandomizerDefaults();
+        SelectedMessageIdText = string.Empty;
+        SelectedMessageText = string.Empty;
+        SelectedTrainerPokemon = [];
+        LogPerformance("Open XD reset UI state", resetTimer);
+        PopulateIsoFiles(context.Iso);
+
+        var selectedToolTimer = Stopwatch.StartNew();
+        RefreshSelectedToolView(SelectedTool);
+        LogPerformance("Open XD refresh selected tool", selectedToolTimer);
+        Logs.Add(BuildLogSummary(context));
+        LogPerformance("Open XD total", openTimer);
     }
 
     [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
@@ -1391,6 +1551,23 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool PrepareToolWindow(ToolEntryViewModel tool)
     {
         SelectedTool = tool;
+        if (CurrentXdProject?.Iso is not null)
+        {
+            if (tool.Game != GameCubeGame.PokemonXD)
+            {
+                Logs.Add($"Open a {tool.LegacyToolName} ISO before launching {tool.Title}.");
+                return false;
+            }
+
+            if (tool.Title != "ISO Explorer")
+            {
+                SelectedToolDetail =
+                    $"{tool.Title}\nLegacy segue: {tool.LegacySegue}\nReference: {tool.LegacySource}\nXD editor backend parity is the next porting pass.";
+            }
+
+            return true;
+        }
+
         if (CurrentProject?.Iso is null && !(tool.Title == "Message Editor" && CurrentProject?.MessageTable is not null))
         {
             Logs.Add($"Open a Colosseum ISO before launching {tool.Title}.");
@@ -1814,18 +1991,21 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private void PopulateIsoFiles(ColosseumProjectContext context)
+        => PopulateIsoFiles(context.Iso);
+
+    private void PopulateIsoFiles(GameCubeIso? iso)
     {
         var totalTimer = Stopwatch.StartNew();
         _allIsoFiles.Clear();
         IsoFiles.Clear();
-        if (context.Iso is null)
+        if (iso is null)
         {
             SelectedIsoFile = null;
             return;
         }
 
         var buildTimer = Stopwatch.StartNew();
-        foreach (var entry in context.Iso.Files.OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var entry in iso.Files.OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase))
         {
             _allIsoFiles.Add(new IsoFileEntryViewModel(entry));
         }
@@ -1843,12 +2023,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RepopulateIsoFiles(string selectedFileName)
     {
-        if (CurrentProject is null)
+        var iso = CurrentProject?.Iso ?? CurrentXdProject?.Iso;
+        if (iso is null)
         {
             return;
         }
 
-        PopulateIsoFiles(CurrentProject);
+        PopulateIsoFiles(iso);
         SelectedIsoFile = IsoFiles.FirstOrDefault(file =>
             string.Equals(file.Name, selectedFileName, StringComparison.OrdinalIgnoreCase)) ?? SelectedIsoFile;
     }
@@ -3721,6 +3902,12 @@ public partial class MainWindowViewModel : ViewModelBase
         return context.Iso is null ? name : $"{name} ({context.Iso.GameId}, {context.Iso.Region})";
     }
 
+    private static string BuildProjectTitle(XdProjectContext context)
+    {
+        var name = Path.GetFileName(context.SourcePath);
+        return $"{name} ({context.Iso.GameId}, {context.Iso.Region})";
+    }
+
     private static string BuildWorkspaceStatus(ColosseumProjectContext context)
     {
         return context.SourceKind switch
@@ -3732,6 +3919,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => "File loaded."
         };
     }
+
+    private static string BuildWorkspaceStatus(XdProjectContext context)
+        => $"Workspace: {context.WorkspaceDirectory}";
 
     public void LogPerformance(string label, Stopwatch stopwatch, int? count = null)
     {
@@ -3761,6 +3951,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _ => "File loaded."
         };
     }
+
+    private static string BuildLogSummary(XdProjectContext context)
+        => $"XD ISO loaded: {context.Iso.Files.Count} FST files.";
 
     private sealed record TableEditorDefinition(
         string Name,

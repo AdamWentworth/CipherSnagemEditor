@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\src\CipherSnagemEditor.Core\CipherSnagemEditor.Core.csproj" />
     <ProjectReference Include="..\src\CipherSnagemEditor.Colosseum\CipherSnagemEditor.Colosseum.csproj" />
+    <ProjectReference Include="..\src\CipherSnagemEditor.XD\CipherSnagemEditor.XD.csproj" />
   </ItemGroup>
 
 </Project>

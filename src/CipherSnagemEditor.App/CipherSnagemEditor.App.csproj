@@ -11,6 +11,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="..\..\assets\ui\app-icons\colosseum\icon-256.png" Link="Assets\AppIcon.png" />
+    <AvaloniaResource Include="..\..\assets\ui\app-icons\xd\icon-32.png" Link="Assets\AppIconXd.png" />
     <AvaloniaResource Include="..\..\assets\images\PokeBalls\ball-red.png" Link="Assets\Images\PokeBalls\ball-red.png" />
     <AvaloniaResource Include="..\..\assets\ui\cells\item-cell.png" Link="Assets\Ui\Cells\item-cell.png" />
     <AvaloniaResource Include="..\..\assets\ui\cells\selected-cell.png" Link="Assets\Ui\Cells\selected-cell.png" />
@@ -31,5 +32,6 @@
   <ItemGroup>
     <ProjectReference Include="..\CipherSnagemEditor.Core\CipherSnagemEditor.Core.csproj" />
     <ProjectReference Include="..\CipherSnagemEditor.Colosseum\CipherSnagemEditor.Colosseum.csproj" />
+    <ProjectReference Include="..\CipherSnagemEditor.XD\CipherSnagemEditor.XD.csproj" />
   </ItemGroup>
 </Project>

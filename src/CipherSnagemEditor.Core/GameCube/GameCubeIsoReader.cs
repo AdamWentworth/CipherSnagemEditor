@@ -130,9 +130,9 @@ public static class GameCubeIsoReader
 
     private static GameCubeRegion RegionFromGameId(string gameId) => gameId switch
     {
-        "GC6E" => GameCubeRegion.UnitedStates,
-        "GC6P" => GameCubeRegion.Europe,
-        "GC6J" => GameCubeRegion.Japan,
+        "GC6E" or "GXXE" => GameCubeRegion.UnitedStates,
+        "GC6P" or "GXXP" => GameCubeRegion.Europe,
+        "GC6J" or "GXXJ" => GameCubeRegion.Japan,
         _ => GameCubeRegion.OtherGame
     };
 

@@ -4,7 +4,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
-using CipherSnagemEditor.Colosseum;
+using CipherSnagemEditor.Core.Files;
 using CipherSnagemEditor.App.ViewModels;
 using CipherSnagemEditor.App.Views;
 
@@ -27,9 +27,9 @@ public partial class App : Application
             };
 
             var startupPath = GetStartupPath(desktop.Args);
-            if (startupPath is not null && desktop.MainWindow.DataContext is MainWindowViewModel viewModel)
+            if (startupPath is not null && desktop.MainWindow is MainWindow mainWindow)
             {
-                _ = viewModel.OpenPathAsync(startupPath);
+                _ = mainWindow.OpenPathFromStartupAsync(startupPath);
             }
         }
 
@@ -50,7 +50,12 @@ public partial class App : Application
                 return args[index + 1];
             }
 
-            if (ColosseumProjectContext.IsSupportedPath(args[index]))
+            if (GameFileTypes.FromExtension(args[index]) is GameFileType.Iso
+                or GameFileType.Fsys
+                or GameFileType.Message
+                or GameFileType.Gtx
+                or GameFileType.Atx
+                or GameFileType.Gsw)
             {
                 return args[index];
             }
