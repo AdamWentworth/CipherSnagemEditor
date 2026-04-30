@@ -61,6 +61,33 @@ public sealed class TreasureEditorResources
         return new TreasureEditorResources(BuildModelOptions(), roomOptions, itemOptions);
     }
 
+    public static TreasureEditorResources FromRows(
+        IReadOnlyList<ColosseumTreasure> treasures,
+        IReadOnlyList<ColosseumItem> itemRows)
+    {
+        var roomOptions = treasures
+            .Select(treasure => new PickerOptionViewModel(treasure.RoomId, treasure.RoomName))
+            .Prepend(new PickerOptionViewModel(0, "-"))
+            .GroupBy(option => option.Value)
+            .Select(group => group.First())
+            .OrderBy(option => option.Value == 0 ? string.Empty : option.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var itemOptions = itemRows.Count == 0
+            ? [new PickerOptionViewModel(0, "-")]
+            : itemRows
+                .Where(item => item.Index == 0 || !string.IsNullOrWhiteSpace(item.Name))
+                .SelectMany(item => BuildItemOptions(item.Index, item.Name))
+                .Concat(treasures.Select(treasure => new PickerOptionViewModel(
+                    treasure.ItemId,
+                    treasure.ItemId == 0 ? "-" : $"{treasure.ItemName} ({treasure.ItemId})")))
+                .GroupBy(option => option.Value)
+                .Select(group => group.First())
+                .OrderBy(option => option.Value == 0 ? string.Empty : option.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+        return new TreasureEditorResources(BuildModelOptions(), roomOptions, itemOptions);
+    }
+
     public PickerOptionViewModel ModelOption(int value)
         => _modelOptionsByValue.TryGetValue(value, out var option)
             ? option

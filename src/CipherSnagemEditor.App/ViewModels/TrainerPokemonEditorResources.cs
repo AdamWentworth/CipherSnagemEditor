@@ -115,6 +115,60 @@ public sealed class TrainerPokemonEditorResources
             shadowData);
     }
 
+    public static TrainerPokemonEditorResources FromRows(
+        IReadOnlyList<ColosseumPokemonStats> pokemonStatsRows,
+        IReadOnlyList<ColosseumMove> moveRows,
+        IReadOnlyList<ColosseumItem> itemRows,
+        IReadOnlyList<ColosseumShadowPokemonData> shadowRows)
+    {
+        var pokemonStats = pokemonStatsRows.ToDictionary(pokemon => pokemon.Index);
+        var moves = moveRows.ToDictionary(move => move.Index);
+        var shadowData = shadowRows.ToDictionary(shadow => shadow.Index);
+        var speciesOptions = pokemonStatsRows
+            .Select(pokemon => new PickerOptionViewModel(pokemon.Index, pokemon.Index == 0 ? "-" : pokemon.Name))
+            .ToArray();
+        var itemOptions = itemRows.Count == 0
+            ? [new PickerOptionViewModel(0, "-")]
+            : itemRows
+                .Select(item => new PickerOptionViewModel(item.Index, item.Index == 0 ? "-" : item.Name))
+                .ToArray();
+        var pokeballOptions = itemOptions.Where(IsPokeballOption).ToArray();
+        if (pokeballOptions.Length == 0)
+        {
+            pokeballOptions = itemOptions;
+        }
+
+        var moveOptions = moveRows
+            .Select(move => new PickerOptionViewModel(move.Index, move.Index == 0 ? "-" : move.Name))
+            .ToArray();
+        var shadowOptions = shadowRows.Count == 0
+            ? [new PickerOptionViewModel(0, "Shadow ID 0")]
+            : shadowRows
+                .Prepend(new ColosseumShadowPokemonData(0, 0, 0, 0, 0, 0))
+                .Select(shadow =>
+                {
+                    var name = shadow.Index == 0 ? "Shadow ID 0" : shadow.SpeciesId > 0
+                        ? $"Shadow {(pokemonStats.TryGetValue(shadow.SpeciesId, out var pokemon) ? pokemon.Name : shadow.SpeciesId)}"
+                        : $"Shadow ID {shadow.Index}";
+                    return new PickerOptionViewModel(shadow.Index, name);
+                })
+                .GroupBy(option => option.Value)
+                .Select(group => group.First())
+                .ToArray();
+
+        return new TrainerPokemonEditorResources(
+            speciesOptions,
+            itemOptions,
+            pokeballOptions,
+            moveOptions,
+            BuildNatureOptions(),
+            BuildGenderOptions(),
+            shadowOptions,
+            pokemonStats,
+            moves,
+            shadowData);
+    }
+
     public PickerOptionViewModel SpeciesOption(int value)
         => OptionFor(_speciesOptionsByValue, SpeciesOptions, value, value == 0 ? "-" : $"Pokemon {value}");
 

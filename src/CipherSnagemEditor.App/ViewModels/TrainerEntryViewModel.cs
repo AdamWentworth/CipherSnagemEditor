@@ -11,12 +11,34 @@ public sealed partial class TrainerEntryViewModel : ObservableObject
     private static readonly IBrush StoryBrush = SolidColorBrush.Parse("#8BB9FF");
     private static readonly IBrush ShadowBrush = SolidColorBrush.Parse("#A77AF4");
     private static readonly IBrush SelectedBrush = SolidColorBrush.Parse("#F6BC00");
+    private readonly string _imageFolder;
+    private readonly string _imageFileName;
+    private readonly IBrush _normalBrush;
     private Bitmap? _trainerImage;
     private bool _trainerImageLoaded;
 
     public TrainerEntryViewModel(ColosseumTrainer trainer)
+        : this(
+            trainer,
+            "ColoTrainers",
+            $"colo_trainer_{trainer.TrainerModelId}.png",
+            $"{trainer.Name}{Environment.NewLine}{trainer.Index}: {trainer.FullName}",
+            StoryBrush)
+    {
+    }
+
+    public TrainerEntryViewModel(
+        ColosseumTrainer trainer,
+        string imageFolder,
+        string imageFileName,
+        string rowText,
+        IBrush? normalBrush = null)
     {
         Trainer = trainer;
+        _imageFolder = imageFolder;
+        _imageFileName = imageFileName;
+        RowText = rowText;
+        _normalBrush = normalBrush ?? StoryBrush;
     }
 
     [ObservableProperty]
@@ -31,7 +53,7 @@ public sealed partial class TrainerEntryViewModel : ObservableObject
         {
             if (!_trainerImageLoaded)
             {
-                _trainerImage = RuntimeImageAssets.LoadImage("ColoTrainers", $"colo_trainer_{Trainer.TrainerModelId}.png");
+                _trainerImage = RuntimeImageAssets.LoadImage(_imageFolder, _imageFileName);
                 _trainerImageLoaded = true;
             }
 
@@ -39,10 +61,10 @@ public sealed partial class TrainerEntryViewModel : ObservableObject
         }
     }
 
-    public string RowText => $"{Trainer.Name}{Environment.NewLine}{Trainer.Index}: {Trainer.FullName}";
+    public string RowText { get; }
 
     public IBrush BackgroundBrush => IsSelected
         ? SelectedBrush
-        : Trainer.HasShadow ? ShadowBrush : StoryBrush;
+        : Trainer.HasShadow ? ShadowBrush : _normalBrush;
 
 }

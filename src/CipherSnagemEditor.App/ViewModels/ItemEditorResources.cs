@@ -34,6 +34,16 @@ public sealed class ItemEditorResources
         return new ItemEditorResources(BuildBagSlotOptions(), moveOptions);
     }
 
+    public static ItemEditorResources FromRows(IReadOnlyList<ColosseumMove> moveRows)
+    {
+        var moveOptions = moveRows.Count == 0
+            ? [new PickerOptionViewModel(0, "-")]
+            : moveRows
+                .Select(move => new PickerOptionViewModel(move.Index, move.Index == 0 ? "-" : move.Name))
+                .ToArray();
+        return new ItemEditorResources(BuildBagSlotOptions(), moveOptions);
+    }
+
     public PickerOptionViewModel BagSlotOption(int value)
         => OptionFor(_bagSlotOptionsByValue, value, $"Pocket {value}");
 

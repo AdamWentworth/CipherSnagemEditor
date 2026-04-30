@@ -48,10 +48,12 @@ public sealed class TrainerEditorUiContractTests
         var source = File.ReadAllText(MainWindowSourcePath);
 
         Assert.Contains("\"Trainer Editor\" => new Size(1420, 760)", source, StringComparison.Ordinal);
-        Assert.Contains("var minSize = ToolWindowMinSize(tool.Title)", source, StringComparison.Ordinal);
+        Assert.Contains("var minSize = ToolWindowMinSize(tool)", source, StringComparison.Ordinal);
         Assert.Contains("MinWidth = minSize.Width", source, StringComparison.Ordinal);
         Assert.Contains("MinHeight = minSize.Height", source, StringComparison.Ordinal);
+        Assert.Contains("private static Size ToolWindowMinSize(ToolEntryViewModel tool)", source, StringComparison.Ordinal);
         Assert.Contains("title == \"Trainer Editor\"", source, StringComparison.Ordinal);
+        Assert.Contains("tool.Title == \"Trainer Editor\"", source, StringComparison.Ordinal);
         Assert.Contains("? size", source, StringComparison.Ordinal);
     }
 

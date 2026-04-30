@@ -13,6 +13,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem trainers <iso>");
     Console.WriteLine("       ciphersnagem extract-iso <iso> <file-name> [output-path]");
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
+    Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -66,6 +67,18 @@ try
         }
 
         RunXdProbe(args[1]);
+        return 0;
+    }
+
+    if (args[0].Equals("xd-editors-probe", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem xd-editors-probe <iso>");
+            return 1;
+        }
+
+        RunXdEditorsProbe(args[1]);
         return 0;
     }
 
@@ -296,6 +309,47 @@ static IReadOnlyList<string> RequiredXdContentSections(string toolTitle)
         "Interaction Editor" => ["common.rel Table Map"],
         _ => []
     };
+
+static void RunXdEditorsProbe(string isoPath)
+{
+    var context = XdProjectContext.Open(isoPath);
+    var trainers = context.LoadTrainerRecords();
+    var shadows = context.LoadShadowPokemonRecords();
+    var stats = context.LoadPokemonStatsRecords();
+    var moves = context.LoadMoveRecords();
+    var items = context.LoadItemRecords();
+    var pokespots = context.LoadPokespotRecords();
+    var types = context.LoadTypeRecords();
+    var treasures = context.LoadTreasureRecords();
+
+    Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, items={items.Count}, pokespots={pokespots.Count}, types={types.Count}, treasures={treasures.Count}");
+    Console.WriteLine($"First trainer: {trainers.FirstOrDefault()?.Index}: {trainers.FirstOrDefault()?.ClassName} {trainers.FirstOrDefault()?.Name}");
+    Console.WriteLine($"First shadow: {shadows.FirstOrDefault()?.Index}: {shadows.FirstOrDefault()?.SpeciesName}");
+    Console.WriteLine($"First pokespot: {pokespots.FirstOrDefault()?.SpotName} {pokespots.FirstOrDefault()?.SpeciesName}");
+
+    var failures = new List<string>();
+    Expect(trainers.Count > 100, failures, $"Trainer parser is unexpectedly sparse: {trainers.Count}.");
+    Expect(shadows.Count > 40, failures, $"Shadow parser is unexpectedly sparse: {shadows.Count}.");
+    Expect(stats.Count > 300, failures, $"Pokemon stats parser is unexpectedly sparse: {stats.Count}.");
+    Expect(moves.Count > 350, failures, $"Move parser is unexpectedly sparse: {moves.Count}.");
+    Expect(items.Count > 300, failures, $"Item parser is unexpectedly sparse: {items.Count}.");
+    Expect(pokespots.Count > 0, failures, "Pokespot parser returned no encounters.");
+    Expect(types.Count >= 18, failures, $"Type parser is unexpectedly sparse: {types.Count}.");
+    Expect(treasures.Count > 0, failures, "Treasure parser returned no rows.");
+
+    if (failures.Count == 0)
+    {
+        Console.WriteLine("XD editor probe passed.");
+        return;
+    }
+
+    foreach (var failure in failures)
+    {
+        Console.Error.WriteLine($"XD editor probe failure: {failure}");
+    }
+
+    throw new InvalidDataException($"XD editor probe failed with {failures.Count} failure(s).");
+}
 
 static void RunParityProbe(string isoPath, int messageLimit, int assetLimit)
 {

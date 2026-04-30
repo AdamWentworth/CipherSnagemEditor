@@ -109,6 +109,45 @@ public sealed class PokemonStatsEditorResources
             commonRel.TmMoves);
     }
 
+    public static PokemonStatsEditorResources FromRows(
+        IReadOnlyList<ColosseumPokemonStats> pokemonStatsRows,
+        IReadOnlyList<ColosseumMove> moveRows,
+        IReadOnlyList<ColosseumItem> itemRows,
+        IReadOnlyList<ColosseumTypeData> typeRows)
+    {
+        var typeOptions = typeRows
+            .Select(type => new PickerOptionViewModel(type.Index, type.Name))
+            .ToArray();
+        var abilityIds = pokemonStatsRows
+            .SelectMany(pokemon => new[] { pokemon.Ability1, pokemon.Ability2 })
+            .Distinct()
+            .Order()
+            .Select(id => new PickerOptionViewModel(id, $"Ability {id}"))
+            .ToArray();
+        var itemOptions = itemRows.Count == 0
+            ? [new PickerOptionViewModel(0, "-")]
+            : itemRows
+                .Select(item => new PickerOptionViewModel(item.Index, item.Index == 0 ? "-" : item.Name))
+                .ToArray();
+        var speciesOptions = pokemonStatsRows
+            .Select(pokemon => new PickerOptionViewModel(pokemon.Index, pokemon.Index == 0 ? "-" : pokemon.Name))
+            .ToArray();
+        var moveOptions = moveRows
+            .Select(move => new PickerOptionViewModel(move.Index, move.Index == 0 ? "-" : move.Name))
+            .ToArray();
+
+        return new PokemonStatsEditorResources(
+            typeOptions,
+            abilityIds.Length == 0 ? [new PickerOptionViewModel(0, "Ability 0")] : abilityIds,
+            itemOptions,
+            BuildExpRateOptions(),
+            BuildGenderRatioOptions(),
+            speciesOptions,
+            moveOptions,
+            BuildEvolutionMethodOptions(),
+            []);
+    }
+
     public PickerOptionViewModel TypeOption(int value)
         => OptionFor(_typeOptionsByValue, value, $"Type {value}");
 

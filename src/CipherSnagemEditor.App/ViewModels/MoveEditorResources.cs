@@ -86,6 +86,28 @@ public sealed class MoveEditorResources
             commonRel.IsPhysicalSpecialSplitImplemented);
     }
 
+    public static MoveEditorResources FromRows(
+        IReadOnlyList<ColosseumMove> moveRows,
+        IReadOnlyList<ColosseumTypeData> typeRows)
+    {
+        var typeCategoryByValue = typeRows.ToDictionary(type => type.Index, type => type.CategoryId);
+        var typeOptions = typeRows
+            .Select(type => new PickerOptionViewModel(type.Index, $"{type.Name.ToUpperInvariant()} ({type.Index})"))
+            .ToArray();
+        var maxEffect = Math.Max(0, moveRows.Count == 0 ? 0 : moveRows.Max(move => move.EffectId));
+        var maxAnimation = Math.Max(0, moveRows.Count == 0 ? 0 : moveRows.Max(move => move.AnimationId));
+
+        return new MoveEditorResources(
+            typeOptions.Length == 0 ? [new PickerOptionViewModel(0, "Normal")] : typeOptions,
+            BuildCategoryOptions(),
+            BuildTargetOptions(),
+            BuildJsonBackedOptions("Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}", appendIndex: true),
+            BuildJsonBackedOptions("Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}", appendIndex: true),
+            BuildEffectTypeOptions(),
+            typeCategoryByValue,
+            true);
+    }
+
     public PickerOptionViewModel TypeOption(int value)
         => OptionFor(_typeOptionsByValue, value, $"TYPE ({value})");
 

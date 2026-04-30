@@ -192,8 +192,8 @@ public partial class MainWindow : Window
         content.DataContext = viewModel;
         ViewPerformanceDiagnostics.AttachFirstRenderLogs(content, $"{tool.Title} content");
 
-        var size = ToolWindowSize(tool.Title);
-        var minSize = ToolWindowMinSize(tool.Title);
+        var size = ToolWindowSize(tool);
+        var minSize = ToolWindowMinSize(tool);
         var windowBuildTimer = Stopwatch.StartNew();
         var window = new Window
         {
@@ -241,9 +241,21 @@ public partial class MainWindow : Window
 
     private static Control CreateToolContent(ToolEntryViewModel tool)
     {
-        if (tool.Game == GameCubeGame.PokemonXD && tool.Title != "ISO Explorer")
+        if (tool.Game == GameCubeGame.PokemonXD)
         {
-            return new XdToolView();
+            return tool.Title switch
+            {
+                "Trainer Editor" => new TrainerEditorView(),
+                "Shadow Pokemon Editor" => new XdShadowPokemonEditorView(),
+                "Pokemon Stats Editor" => new PokemonStatsEditorView(),
+                "Move Editor" => new MoveEditorView(),
+                "Item Editor" => new ItemEditorView(),
+                "Pokespot Editor" => new XdPokespotEditorView(),
+                "Type Editor" => new TypeEditorView(),
+                "Treasure Editor" => new TreasureEditorView(),
+                "ISO Explorer" => new IsoExplorerView(),
+                _ => new XdToolView()
+            };
         }
 
         return tool.Title switch
@@ -448,6 +460,24 @@ public partial class MainWindow : Window
         Close
     }
 
+    private static Size ToolWindowSize(ToolEntryViewModel tool)
+    {
+        if (tool.Game == GameCubeGame.PokemonXD)
+        {
+            return tool.Title switch
+            {
+                "Trainer Editor" => new Size(1280, 724),
+                "Shadow Pokemon Editor" => new Size(560, 354),
+                "Pokespot Editor" => new Size(480, 384),
+                "Gift Pokemon Editor" => new Size(560, 354),
+                "Script Compiler" => new Size(640, 504),
+                _ => ToolWindowSize(tool.Title)
+            };
+        }
+
+        return ToolWindowSize(tool.Title);
+    }
+
     private static Size ToolWindowSize(string title)
         => title switch
         {
@@ -468,6 +498,14 @@ public partial class MainWindow : Window
             "ISO Explorer" => new Size(570, 424),
             _ => new Size(620, 320)
         };
+
+    private static Size ToolWindowMinSize(ToolEntryViewModel tool)
+    {
+        var size = ToolWindowSize(tool);
+        return tool.Title == "Trainer Editor"
+            ? size
+            : new Size(Math.Min(size.Width, 900), Math.Min(size.Height, 560));
+    }
 
     private static Size ToolWindowMinSize(string title)
     {

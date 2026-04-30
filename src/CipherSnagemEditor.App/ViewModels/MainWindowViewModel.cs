@@ -34,6 +34,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly List<CollisionFileEntryViewModel> _allCollisionFiles = [];
     private readonly List<VertexFilterFileEntryViewModel> _allVertexFilterFiles = [];
     private readonly List<XdToolEntryViewModel> _allXdToolEntries = [];
+    private readonly List<XdShadowPokemonEntryViewModel> _allXdShadowPokemon = [];
+    private readonly List<XdPokespotEntryViewModel> _allXdPokespots = [];
     private TrainerPokemonEditorResources _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
     private PokemonStatsEditorResources _pokemonStatsResources = PokemonStatsEditorResources.Empty;
     private MoveEditorResources _moveEditorResources = MoveEditorResources.Empty;
@@ -76,6 +78,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private XdToolEntryViewModel? _selectedXdToolEntry;
+
+    [ObservableProperty]
+    private XdShadowPokemonEntryViewModel? _selectedXdShadowPokemon;
+
+    [ObservableProperty]
+    private XdPokespotEntryViewModel? _selectedXdPokespot;
 
     [ObservableProperty]
     private IsoFileEntryViewModel? _selectedIsoFile;
@@ -209,6 +217,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _xdToolSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _xdShadowPokemonSearchText = string.Empty;
+
+    [ObservableProperty]
+    private string _xdPokespotSearchText = string.Empty;
 
     [ObservableProperty]
     private bool _showIsoExplorer;
@@ -404,6 +418,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<XdToolEntryViewModel> XdToolEntries { get; } = [];
 
+    public ObservableCollection<XdShadowPokemonEntryViewModel> XdShadowPokemonEntries { get; } = [];
+
+    public ObservableCollection<XdPokespotEntryViewModel> XdPokespotEntries { get; } = [];
+
     public bool CanAddFileToSelectedIsoFile => CanExportSelectedIsoFile() && SelectedIsoFile?.IsFsys == true;
 
     public int SelectedCollisionInteractionValue => SelectedCollisionInteraction?.Value ?? -1;
@@ -535,6 +553,8 @@ public partial class MainWindowViewModel : ViewModelBase
             _allCollisionFiles.Clear();
             _allVertexFilterFiles.Clear();
             _allXdToolEntries.Clear();
+            _allXdShadowPokemon.Clear();
+            _allXdPokespots.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -550,6 +570,8 @@ public partial class MainWindowViewModel : ViewModelBase
             CollisionFiles.Clear();
             VertexFilterFiles.Clear();
             XdToolEntries.Clear();
+            XdShadowPokemonEntries.Clear();
+            XdPokespotEntries.Clear();
             CollisionInteractionOptions.Clear();
             CollisionSectionOptions.Clear();
             TrainerSearchText = string.Empty;
@@ -565,6 +587,8 @@ public partial class MainWindowViewModel : ViewModelBase
             CollisionSearchText = string.Empty;
             VertexFilterSearchText = string.Empty;
             XdToolSearchText = string.Empty;
+            XdShadowPokemonSearchText = string.Empty;
+            XdPokespotSearchText = string.Empty;
             SelectedXdToolContent = XdToolContent.Empty;
             SelectedTrainer = null;
             SelectedPokemonStats = null;
@@ -592,6 +616,8 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedVertexFilterFile = null;
             SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
             SelectedXdToolEntry = null;
+            SelectedXdShadowPokemon = null;
+            SelectedXdPokespot = null;
             PatchStatus = "Select a patch to apply it.";
             CollisionStatus = "Extract ISO files, then select a collision file.";
             VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
@@ -639,6 +665,8 @@ public partial class MainWindowViewModel : ViewModelBase
             _allCollisionFiles.Clear();
             _allVertexFilterFiles.Clear();
             _allXdToolEntries.Clear();
+            _allXdShadowPokemon.Clear();
+            _allXdPokespots.Clear();
             Trainers.Clear();
             PokemonStatsEntries.Clear();
             MoveEntries.Clear();
@@ -654,6 +682,8 @@ public partial class MainWindowViewModel : ViewModelBase
             CollisionFiles.Clear();
             VertexFilterFiles.Clear();
             XdToolEntries.Clear();
+            XdShadowPokemonEntries.Clear();
+            XdPokespotEntries.Clear();
             CollisionInteractionOptions.Clear();
             CollisionSectionOptions.Clear();
             TrainerSearchText = string.Empty;
@@ -669,6 +699,8 @@ public partial class MainWindowViewModel : ViewModelBase
             CollisionSearchText = string.Empty;
             VertexFilterSearchText = string.Empty;
             XdToolSearchText = string.Empty;
+            XdShadowPokemonSearchText = string.Empty;
+            XdPokespotSearchText = string.Empty;
             SelectedXdToolContent = XdToolContent.Empty;
             SelectedIsoFile = null;
             SelectedTrainer = null;
@@ -697,6 +729,8 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedVertexFilterFile = null;
             SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
             SelectedXdToolEntry = null;
+            SelectedXdShadowPokemon = null;
+            SelectedXdPokespot = null;
             PatchStatus = "Select a patch to apply it.";
             CollisionStatus = "Extract ISO files, then select a collision file.";
             VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
@@ -726,7 +760,11 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentXdProject = context;
         SelectedXdToolContent = XdToolContent.Empty;
         _allXdToolEntries.Clear();
+        _allXdShadowPokemon.Clear();
+        _allXdPokespots.Clear();
         XdToolEntries.Clear();
+        XdShadowPokemonEntries.Clear();
+        XdPokespotEntries.Clear();
         HasProject = true;
         ProjectTitle = BuildProjectTitle(context);
         WorkspaceStatus = BuildWorkspaceStatus(context);
@@ -752,6 +790,8 @@ public partial class MainWindowViewModel : ViewModelBase
         _allCollisionFiles.Clear();
         _allVertexFilterFiles.Clear();
         _allXdToolEntries.Clear();
+        _allXdShadowPokemon.Clear();
+        _allXdPokespots.Clear();
         Trainers.Clear();
         PokemonStatsEntries.Clear();
         MoveEntries.Clear();
@@ -767,6 +807,8 @@ public partial class MainWindowViewModel : ViewModelBase
         CollisionFiles.Clear();
         VertexFilterFiles.Clear();
         XdToolEntries.Clear();
+        XdShadowPokemonEntries.Clear();
+        XdPokespotEntries.Clear();
         CollisionInteractionOptions.Clear();
         CollisionSectionOptions.Clear();
         TrainerSearchText = string.Empty;
@@ -782,6 +824,8 @@ public partial class MainWindowViewModel : ViewModelBase
         CollisionSearchText = string.Empty;
         VertexFilterSearchText = string.Empty;
         XdToolSearchText = string.Empty;
+        XdShadowPokemonSearchText = string.Empty;
+        XdPokespotSearchText = string.Empty;
         SelectedIsoFile = null;
         SelectedTrainer = null;
         SelectedPokemonStats = null;
@@ -809,6 +853,8 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedVertexFilterFile = null;
         SelectedVertexFilter = VertexFilterOptions.FirstOrDefault();
         SelectedXdToolEntry = null;
+        SelectedXdShadowPokemon = null;
+        SelectedXdPokespot = null;
         PatchStatus = "Select a patch to apply it.";
         CollisionStatus = "Extract ISO files, then select a collision file.";
         VertexFilterStatus = "Extract and decode texture DAT files before using vertex filters.";
@@ -1616,9 +1662,37 @@ public partial class MainWindowViewModel : ViewModelBase
                 return false;
             }
 
-            if (tool.Title != "ISO Explorer")
+            switch (tool.Title)
             {
-                LoadXdToolContent(tool);
+                case "Trainer Editor":
+                    LoadXdTrainerRows();
+                    break;
+                case "Shadow Pokemon Editor":
+                    LoadXdShadowPokemonRows();
+                    break;
+                case "Pokemon Stats Editor":
+                    LoadXdPokemonStatsRows();
+                    break;
+                case "Move Editor":
+                    LoadXdMoveRows();
+                    break;
+                case "Item Editor":
+                    LoadXdItemRows();
+                    break;
+                case "Pokespot Editor":
+                    LoadXdPokespotRows();
+                    break;
+                case "Type Editor":
+                    LoadXdTypeRows();
+                    break;
+                case "Treasure Editor":
+                    LoadXdTreasureRows();
+                    break;
+                case "ISO Explorer":
+                    break;
+                default:
+                    LoadXdToolContent(tool);
+                    break;
             }
 
             return true;
@@ -1925,6 +1999,22 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    partial void OnSelectedXdShadowPokemonChanged(XdShadowPokemonEntryViewModel? value)
+    {
+        foreach (var entry in _allXdShadowPokemon)
+        {
+            entry.IsSelected = ReferenceEquals(entry, value);
+        }
+    }
+
+    partial void OnSelectedXdPokespotChanged(XdPokespotEntryViewModel? value)
+    {
+        foreach (var entry in _allXdPokespots)
+        {
+            entry.IsSelected = ReferenceEquals(entry, value);
+        }
+    }
+
     partial void OnSelectedMessageIdTextChanged(string value)
     {
         SaveMessageCommand.NotifyCanExecuteChanged();
@@ -1998,6 +2088,16 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnXdToolSearchTextChanged(string value)
     {
         ApplyXdToolFilter(value);
+    }
+
+    partial void OnXdShadowPokemonSearchTextChanged(string value)
+    {
+        ApplyXdShadowPokemonFilter(value);
+    }
+
+    partial void OnXdPokespotSearchTextChanged(string value)
+    {
+        ApplyXdPokespotFilter(value);
     }
 
     partial void OnIsBusyChanged(bool value)
@@ -2104,6 +2204,42 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         SelectedXdToolEntry = rows.FirstOrDefault(entry => ReferenceEquals(entry, current))
+            ?? rows.FirstOrDefault();
+    }
+
+    private void ApplyXdShadowPokemonFilter(string? filterText)
+    {
+        var current = SelectedXdShadowPokemon;
+        var filter = SimplifySearchText(filterText);
+        var rows = string.IsNullOrEmpty(filter)
+            ? _allXdShadowPokemon
+            : _allXdShadowPokemon.Where(entry => Contains(entry.SearchText, filter)).ToList();
+
+        XdShadowPokemonEntries.Clear();
+        foreach (var row in rows)
+        {
+            XdShadowPokemonEntries.Add(row);
+        }
+
+        SelectedXdShadowPokemon = rows.FirstOrDefault(entry => ReferenceEquals(entry, current))
+            ?? rows.FirstOrDefault();
+    }
+
+    private void ApplyXdPokespotFilter(string? filterText)
+    {
+        var current = SelectedXdPokespot;
+        var filter = SimplifySearchText(filterText);
+        var rows = string.IsNullOrEmpty(filter)
+            ? _allXdPokespots
+            : _allXdPokespots.Where(entry => Contains(entry.SearchText, filter)).ToList();
+
+        XdPokespotEntries.Clear();
+        foreach (var row in rows)
+        {
+            XdPokespotEntries.Add(row);
+        }
+
+        SelectedXdPokespot = rows.FirstOrDefault(entry => ReferenceEquals(entry, current))
             ?? rows.FirstOrDefault();
     }
 
@@ -2527,6 +2663,308 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTreasureDetail = null;
             SelectedToolDetail = $"Treasure Editor\n{ex.Message}";
             Logs.Add($"Treasure load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdTrainerRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allTrainers.Clear();
+            _trainerPokemonResources = TrainerPokemonEditorResources.Empty;
+            Trainers.Clear();
+            SelectedTrainer = null;
+            return;
+        }
+
+        try
+        {
+            var dataTimer = Stopwatch.StartNew();
+            var pokemonStats = MapXdPokemonStats(CurrentXdProject.LoadPokemonStatsRecords());
+            var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
+            var items = MapXdItems(CurrentXdProject.LoadItemRecords());
+            var shadows = CurrentXdProject.LoadShadowPokemonRecords()
+                .Select(shadow => new ColosseumShadowPokemonData(shadow.Index, shadow.CatchRate, shadow.SpeciesId, 0, 0, shadow.HeartGauge))
+                .ToArray();
+            var trainers = CurrentXdProject.LoadTrainerRecords();
+            LogPerformance("XD Trainer Editor load source data", dataTimer, trainers.Count);
+
+            _trainerPokemonResources = TrainerPokemonEditorResources.FromRows(pokemonStats, moves, items, shadows);
+            _allTrainers.Clear();
+            foreach (var trainer in trainers)
+            {
+                var mapped = MapXdTrainer(trainer);
+                _allTrainers.Add(new TrainerEntryViewModel(
+                    mapped,
+                    "Trainers",
+                    $"trainer_{trainer.ModelId}.png",
+                    $"{trainer.Index}: {trainer.ClassName} {trainer.Name}{Environment.NewLine}{trainer.Location}",
+                    BrushForXdTrainerDeck(trainer.DeckName)));
+            }
+
+            ApplyTrainerFilter(TrainerSearchText, selectFirstWhenMissing: false);
+            Logs.Add($"XD Trainer Editor loaded: {_allTrainers.Count} trainers across all decks.");
+            LogPerformance("XD Trainer Editor load total", totalTimer, _allTrainers.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedTrainer = null;
+            SelectedToolDetail = $"Trainer Editor\n{ex.Message}";
+            Logs.Add($"XD Trainer load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdPokemonStatsRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allPokemonStats.Clear();
+            _pokemonStatsResources = PokemonStatsEditorResources.Empty;
+            PokemonStatsEntries.Clear();
+            SelectedPokemonStats = null;
+            SelectedPokemonStatsDetail = null;
+            return;
+        }
+
+        try
+        {
+            var stats = MapXdPokemonStats(CurrentXdProject.LoadPokemonStatsRecords());
+            var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
+            var items = MapXdItems(CurrentXdProject.LoadItemRecords());
+            var types = MapXdTypes(CurrentXdProject.LoadTypeRecords());
+            _pokemonStatsResources = PokemonStatsEditorResources.FromRows(stats, moves, items, types);
+            _allPokemonStats.Clear();
+            foreach (var pokemon in stats)
+            {
+                _allPokemonStats.Add(new PokemonStatsEntryViewModel(pokemon));
+            }
+
+            ApplyPokemonStatsFilter(PokemonStatsSearchText);
+            SelectedPokemonStats = PokemonStatsEntries.FirstOrDefault();
+            Logs.Add($"XD Pokemon Stats Editor loaded: {_allPokemonStats.Count} Pokemon.");
+            LogPerformance("XD Pokemon Stats Editor load total", totalTimer, _allPokemonStats.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedPokemonStats = null;
+            SelectedPokemonStatsDetail = null;
+            SelectedToolDetail = $"Pokemon Stats Editor\n{ex.Message}";
+            Logs.Add($"XD Pokemon stats load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdShadowPokemonRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allXdShadowPokemon.Clear();
+            XdShadowPokemonEntries.Clear();
+            SelectedXdShadowPokemon = null;
+            return;
+        }
+
+        try
+        {
+            _allXdShadowPokemon.Clear();
+            foreach (var shadow in CurrentXdProject.LoadShadowPokemonRecords())
+            {
+                _allXdShadowPokemon.Add(new XdShadowPokemonEntryViewModel(shadow));
+            }
+
+            ApplyXdShadowPokemonFilter(XdShadowPokemonSearchText);
+            SelectedXdShadowPokemon = XdShadowPokemonEntries.FirstOrDefault();
+            Logs.Add($"XD Shadow Pokemon Editor loaded: {_allXdShadowPokemon.Count} shadow Pokemon.");
+            LogPerformance("XD Shadow Pokemon Editor load total", totalTimer, _allXdShadowPokemon.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedXdShadowPokemon = null;
+            SelectedToolDetail = $"Shadow Pokemon Editor\n{ex.Message}";
+            Logs.Add($"XD Shadow Pokemon load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdMoveRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allMoves.Clear();
+            _moveEditorResources = MoveEditorResources.Empty;
+            MoveEntries.Clear();
+            SelectedMove = null;
+            SelectedMoveDetail = null;
+            return;
+        }
+
+        try
+        {
+            var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
+            var types = MapXdTypes(CurrentXdProject.LoadTypeRecords());
+            _moveEditorResources = MoveEditorResources.FromRows(moves, types);
+            _allMoves.Clear();
+            foreach (var move in moves)
+            {
+                _allMoves.Add(new MoveEntryViewModel(move));
+            }
+
+            ApplyMoveFilter(MoveSearchText);
+            SelectedMove = MoveEntries.FirstOrDefault();
+            Logs.Add($"XD Move Editor loaded: {_allMoves.Count} moves.");
+            LogPerformance("XD Move Editor load total", totalTimer, _allMoves.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedMove = null;
+            SelectedMoveDetail = null;
+            SelectedToolDetail = $"Move Editor\n{ex.Message}";
+            Logs.Add($"XD Move load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdItemRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allItems.Clear();
+            _itemEditorResources = ItemEditorResources.Empty;
+            ItemEntries.Clear();
+            SelectedItem = null;
+            SelectedItemDetail = null;
+            return;
+        }
+
+        try
+        {
+            var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
+            var items = MapXdItems(CurrentXdProject.LoadItemRecords());
+            _itemEditorResources = ItemEditorResources.FromRows(moves);
+            _allItems.Clear();
+            foreach (var item in items)
+            {
+                _allItems.Add(new ItemEntryViewModel(item));
+            }
+
+            ApplyItemFilter(ItemSearchText);
+            SelectedItem = ItemEntries.FirstOrDefault();
+            Logs.Add($"XD Item Editor loaded: {_allItems.Count} items.");
+            LogPerformance("XD Item Editor load total", totalTimer, _allItems.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedItem = null;
+            SelectedItemDetail = null;
+            SelectedToolDetail = $"Item Editor\n{ex.Message}";
+            Logs.Add($"XD Item load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdPokespotRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allXdPokespots.Clear();
+            XdPokespotEntries.Clear();
+            SelectedXdPokespot = null;
+            return;
+        }
+
+        try
+        {
+            _allXdPokespots.Clear();
+            foreach (var encounter in CurrentXdProject.LoadPokespotRecords())
+            {
+                _allXdPokespots.Add(new XdPokespotEntryViewModel(encounter));
+            }
+
+            ApplyXdPokespotFilter(XdPokespotSearchText);
+            SelectedXdPokespot = XdPokespotEntries.FirstOrDefault();
+            Logs.Add($"XD Pokespot Editor loaded: {_allXdPokespots.Count} encounters.");
+            LogPerformance("XD Pokespot Editor load total", totalTimer, _allXdPokespots.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedXdPokespot = null;
+            SelectedToolDetail = $"Pokespot Editor\n{ex.Message}";
+            Logs.Add($"XD Pokespot load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdTypeRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allTypes.Clear();
+            TypeEntries.Clear();
+            SelectedType = null;
+            SelectedTypeDetail = null;
+            return;
+        }
+
+        try
+        {
+            var types = MapXdTypes(CurrentXdProject.LoadTypeRecords());
+            _allTypes.Clear();
+            foreach (var type in types)
+            {
+                _allTypes.Add(new TypeEntryViewModel(type));
+            }
+
+            ApplyTypeFilter(TypeSearchText);
+            SelectedType = TypeEntries.FirstOrDefault();
+            Logs.Add($"XD Type Editor loaded: {_allTypes.Count} types.");
+            LogPerformance("XD Type Editor load total", totalTimer, _allTypes.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedType = null;
+            SelectedTypeDetail = null;
+            SelectedToolDetail = $"Type Editor\n{ex.Message}";
+            Logs.Add($"XD Type load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdTreasureRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allTreasures.Clear();
+            _treasureEditorResources = TreasureEditorResources.Empty;
+            TreasureEntries.Clear();
+            SelectedTreasure = null;
+            SelectedTreasureDetail = null;
+            return;
+        }
+
+        try
+        {
+            var treasures = MapXdTreasures(CurrentXdProject.LoadTreasureRecords());
+            var items = MapXdItems(CurrentXdProject.LoadItemRecords());
+            _treasureEditorResources = TreasureEditorResources.FromRows(treasures, items);
+            _allTreasures.Clear();
+            foreach (var treasure in treasures)
+            {
+                _allTreasures.Add(new TreasureEntryViewModel(treasure));
+            }
+
+            ApplyTreasureFilter(TreasureSearchText);
+            SelectedTreasure = TreasureEntries.FirstOrDefault();
+            Logs.Add($"XD Treasure Editor loaded: {_allTreasures.Count} treasures.");
+            LogPerformance("XD Treasure Editor load total", totalTimer, _allTreasures.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedTreasure = null;
+            SelectedTreasureDetail = null;
+            SelectedToolDetail = $"Treasure Editor\n{ex.Message}";
+            Logs.Add($"XD Treasure load failed: {ex.Message}");
         }
     }
 
@@ -3437,7 +3875,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return true;
         }
 
-        var visibleTokens = SimplifySearchTokens($"{trainer.Name} {trainer.TrainerClassName}");
+        var visibleTokens = SimplifySearchTokens($"{trainer.Name} {trainer.TrainerClassName} {entry.RowText}");
         return filterTokens.All(filter =>
             visibleTokens.Any(token => token.StartsWith(filter, StringComparison.Ordinal)));
     }
@@ -3495,6 +3933,378 @@ public partial class MainWindowViewModel : ViewModelBase
 
         return Contains(entry.SearchText, filter);
     }
+
+    private static ColosseumTrainer MapXdTrainer(XdTrainerRecord trainer)
+        => new(
+            trainer.Index,
+            trainer.ClassId,
+            trainer.ClassName,
+            trainer.ModelId,
+            $"trainer_{trainer.ModelId}",
+            trainer.Ai,
+            trainer.NameId,
+            trainer.Name,
+            trainer.FirstPokemonIndex,
+            trainer.Pokemon.Select(MapXdTrainerPokemon).ToArray(),
+            [],
+            trainer.PreBattleTextId,
+            trainer.VictoryTextId,
+            trainer.DefeatTextId,
+            null);
+
+    private static ColosseumTrainerPokemon MapXdTrainerPokemon(XdTrainerPokemonRecord pokemon)
+        => new(
+            pokemon.Slot,
+            pokemon.DeckIndex,
+            pokemon.SpeciesId,
+            pokemon.SpeciesName,
+            pokemon.Level,
+            pokemon.ShadowId,
+            pokemon.ItemId,
+            pokemon.ItemName,
+            0,
+            "-",
+            pokemon.Ability,
+            $"Ability {pokemon.Ability}",
+            pokemon.Nature,
+            NatureName(pokemon.Nature),
+            pokemon.Gender,
+            GenderName(pokemon.Gender),
+            pokemon.Happiness,
+            pokemon.Iv,
+            pokemon.Evs,
+            pokemon.MoveIds
+                .Select((move, index) => new ColosseumMove(
+                    move,
+                    0,
+                    index < pokemon.MoveNames.Count ? pokemon.MoveNames[index] : $"Move {move}",
+                    0,
+                    string.Empty,
+                    0,
+                    0,
+                    "-",
+                    0,
+                    "-",
+                    0,
+                    "-",
+                    0,
+                    0,
+                    0,
+                    "-",
+                    0,
+                    "-",
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false))
+                .ToArray(),
+            pokemon.ShadowData is null
+                ? null
+                : new ColosseumShadowPokemonData(
+                    pokemon.ShadowData.Index,
+                    pokemon.ShadowData.CatchRate,
+                    pokemon.ShadowData.SpeciesId,
+                    0,
+                    0,
+                    pokemon.ShadowData.HeartGauge));
+
+    private static IReadOnlyList<ColosseumPokemonStats> MapXdPokemonStats(IReadOnlyList<XdPokemonStatsRecord> rows)
+        => rows.Select(row => new ColosseumPokemonStats(
+            row.Index,
+            row.StartOffset,
+            row.Name,
+            row.NameId,
+            row.NationalIndex,
+            row.ExpRate,
+            ExpRateName(row.ExpRate),
+            row.GenderRatio,
+            GenderRatioName(row.GenderRatio),
+            row.BaseExp,
+            row.BaseHappiness,
+            row.Height,
+            row.Weight,
+            row.Type1,
+            row.Type1Name,
+            row.Type2,
+            row.Type2Name,
+            row.Ability1,
+            $"Ability {row.Ability1}",
+            row.Ability2,
+            $"Ability {row.Ability2}",
+            row.HeldItem1,
+            row.HeldItem1Name,
+            row.HeldItem2,
+            row.HeldItem2Name,
+            row.CatchRate,
+            row.Hp,
+            row.Attack,
+            row.Defense,
+            row.SpecialAttack,
+            row.SpecialDefense,
+            row.Speed,
+            row.HpYield,
+            row.AttackYield,
+            row.DefenseYield,
+            row.SpecialAttackYield,
+            row.SpecialDefenseYield,
+            row.SpeedYield,
+            row.LearnableTms,
+            row.LevelUpMoves.Select((move, index) => new ColosseumPokemonLevelUpMove(index, move.Level, move.MoveId, move.MoveName)).ToArray(),
+            row.Evolutions.Select((evolution, index) => new ColosseumPokemonEvolution(
+                index,
+                evolution.Method,
+                EvolutionMethodName(evolution.Method),
+                evolution.Condition,
+                evolution.Condition.ToString(CultureInfo.InvariantCulture),
+                evolution.EvolvedSpeciesId,
+                evolution.EvolvedSpeciesName)).ToArray())).ToArray();
+
+    private static IReadOnlyList<ColosseumMove> MapXdMoves(IReadOnlyList<XdMoveRecord> rows)
+        => rows.Select(row => new ColosseumMove(
+            row.Index,
+            row.StartOffset,
+            row.Name,
+            row.NameId,
+            row.Description,
+            row.DescriptionId,
+            row.TypeId,
+            row.TypeName,
+            row.TargetId,
+            MoveTargetName(row.TargetId),
+            row.CategoryId,
+            MoveCategoryName(row.CategoryId),
+            row.AnimationId,
+            row.Animation2Id,
+            row.EffectId,
+            row.EffectId == 0 ? "-" : $"Effect {row.EffectId}",
+            row.EffectTypeId,
+            MoveEffectTypeName(row.EffectTypeId),
+            row.Power,
+            row.Accuracy,
+            row.Pp,
+            row.Priority,
+            row.EffectAccuracy,
+            row.HmFlag,
+            row.SoundBasedFlag,
+            row.ContactFlag,
+            row.KingsRockFlag,
+            row.ProtectFlag,
+            row.SnatchFlag,
+            row.MagicCoatFlag,
+            row.MirrorMoveFlag,
+            row.IsShadow)).ToArray();
+
+    private static IReadOnlyList<ColosseumItem> MapXdItems(IReadOnlyList<XdItemRecord> rows)
+        => rows.Select(row => new ColosseumItem(
+            row.Index,
+            row.StartOffset,
+            row.Name,
+            row.NameId,
+            row.Description,
+            row.DescriptionId,
+            row.BagSlotId,
+            BagSlotName(row.BagSlotId),
+            row.CanBeHeld,
+            row.Price,
+            row.CouponPrice,
+            row.Parameter,
+            row.HoldItemId,
+            row.InBattleUseId,
+            row.FriendshipEffects,
+            0,
+            0,
+            "-")).ToArray();
+
+    private static IReadOnlyList<ColosseumTypeData> MapXdTypes(IReadOnlyList<XdTypeRecord> rows)
+        => rows.Select(row => new ColosseumTypeData(
+            row.Index,
+            row.StartOffset,
+            row.Name,
+            row.NameId,
+            row.CategoryId,
+            row.CategoryId switch
+            {
+                1 => "Physical",
+                2 => "Special",
+                _ => "Neither"
+            },
+            row.Effectiveness)).ToArray();
+
+    private static IReadOnlyList<ColosseumTreasure> MapXdTreasures(IReadOnlyList<XdTreasureRecord> rows)
+        => rows.Select(row => new ColosseumTreasure(
+            row.Index,
+            row.StartOffset,
+            row.ModelId,
+            row.ModelId switch
+            {
+                0x24 => "Chest",
+                0x44 => "Sparkle",
+                _ => $"Model {row.ModelId}"
+            },
+            row.Quantity,
+            row.Angle,
+            row.RoomId,
+            row.RoomName,
+            row.Flag,
+            row.ItemId,
+            row.ItemName,
+            row.X,
+            row.Y,
+            row.Z)).ToArray();
+
+    private static IBrush BrushForXdTrainerDeck(string deckName)
+        => SolidColorBrush.Parse(deckName switch
+        {
+            "Story" => "#8BB9FF",
+            "Hundred" => "#FC6848",
+            "Colosseum" => "#F6BC00",
+            "Virtual" => "#20F020",
+            "Imasugu" => "#FC80F6",
+            _ => "#FFFFFF"
+        });
+
+    private static string NatureName(int value)
+        => value switch
+        {
+            0x00 => "Hardy",
+            0x01 => "Lonely",
+            0x02 => "Brave",
+            0x03 => "Adamant",
+            0x04 => "Naughty",
+            0x05 => "Bold",
+            0x06 => "Docile",
+            0x07 => "Relaxed",
+            0x08 => "Impish",
+            0x09 => "Lax",
+            0x0a => "Timid",
+            0x0b => "Hasty",
+            0x0c => "Serious",
+            0x0d => "Jolly",
+            0x0e => "Naive",
+            0x0f => "Modest",
+            0x10 => "Mild",
+            0x11 => "Quiet",
+            0x12 => "Bashful",
+            0x13 => "Rash",
+            0x14 => "Calm",
+            0x15 => "Gentle",
+            0x16 => "Sassy",
+            0x17 => "Careful",
+            0x18 => "Quirky",
+            0xff => "Random",
+            _ => $"Nature {value}"
+        };
+
+    private static string GenderName(int value)
+        => value switch
+        {
+            0 => "Male",
+            1 => "Female",
+            2 => "Genderless",
+            0xff => "Random",
+            _ => $"Gender {value}"
+        };
+
+    private static string ExpRateName(int value)
+        => value switch
+        {
+            0 => "Standard",
+            1 => "Very Fast",
+            2 => "Slowest",
+            3 => "Slow",
+            4 => "Fast",
+            5 => "Very Slow",
+            _ => $"Exp Rate {value}"
+        };
+
+    private static string GenderRatioName(int value)
+        => value switch
+        {
+            0x00 => "Male Only",
+            0x1f => "87.5% Male",
+            0x3f => "75% Male",
+            0x7f => "50% Male",
+            0xbf => "75% Female",
+            0xdf => "87.5% Female",
+            0xfe => "Female Only",
+            0xff => "Genderless",
+            _ => $"Gender Ratio {value}"
+        };
+
+    private static string MoveTargetName(int value)
+        => value switch
+        {
+            0 => "Selected Target",
+            1 => "Depends On Move",
+            2 => "All Pokemon",
+            3 => "Random",
+            4 => "Both Foes",
+            5 => "User",
+            6 => "Both Foes and Ally",
+            7 => "Opponent's Feet",
+            _ => $"Target {value}"
+        };
+
+    private static string MoveCategoryName(int value)
+        => value switch
+        {
+            1 => "Physical",
+            2 => "Special",
+            _ => "Neither"
+        };
+
+    private static string MoveEffectTypeName(int value)
+        => value switch
+        {
+            0x00 => "None",
+            0x01 => "Attack",
+            0x02 => "Healing",
+            0x03 => "Stat Nerf",
+            0x04 => "Stat Buff",
+            0x05 => "Status Effect",
+            0x06 => "Field Effect",
+            0x07 => "Affects Incoming Move",
+            0x08 => "OHKO",
+            0x09 => "Multi-Turn",
+            _ => $"Effect Type {value}"
+        };
+
+    private static string EvolutionMethodName(int value)
+        => value switch
+        {
+            0x00 => "None",
+            0x01 => "Max Happiness",
+            0x02 => "Happiness (Day)",
+            0x03 => "Happiness (Night)",
+            0x04 => "Level Up",
+            0x05 => "Trade",
+            0x06 => "Trade With Item",
+            0x07 => "Evolution Stone",
+            _ => $"Evolution Method {value}"
+        };
+
+    private static string BagSlotName(int value)
+        => value switch
+        {
+            0 => "None",
+            1 => "Pokeballs",
+            2 => "Items",
+            3 => "Berries",
+            4 => "TMs",
+            5 => "Key Items",
+            6 => "Colognes",
+            _ => $"Pocket {value}"
+        };
 
     private static bool Contains(string value, string filter)
         => SimplifySearchText(value).Contains(filter, StringComparison.Ordinal);

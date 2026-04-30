@@ -44,6 +44,88 @@ public sealed partial class XdProjectContext
     private const int XdShadowAggressionOffset = 0x14;
     private const int XdShadowAlwaysFleeOffset = 0x15;
     private const int XdPokespotEntrySize = 0x0c;
+    private const int XdTypeSize = 0x30;
+    private const int XdTypeNameIdOffset = 0x08;
+    private const int XdTypeCategoryOffset = 0x00;
+    private const int XdTypeFirstEffectivenessOffset = 0x0d;
+    private const int XdMovePriorityOffset = 0x00;
+    private const int XdMovePpOffset = 0x01;
+    private const int XdMoveTypeOffset = 0x02;
+    private const int XdMoveTargetsOffset = 0x03;
+    private const int XdMoveAccuracyOffset = 0x04;
+    private const int XdMoveEffectAccuracyOffset = 0x05;
+    private const int XdMoveContactFlagOffset = 0x06;
+    private const int XdMoveProtectFlagOffset = 0x07;
+    private const int XdMoveMagicCoatFlagOffset = 0x08;
+    private const int XdMoveSnatchFlagOffset = 0x09;
+    private const int XdMoveMirrorMoveFlagOffset = 0x0a;
+    private const int XdMoveKingsRockFlagOffset = 0x0b;
+    private const int XdMoveSoundBasedFlagOffset = 0x10;
+    private const int XdMoveHmFlagOffset = 0x12;
+    private const int XdMoveCategoryOffset = 0x13;
+    private const int XdMoveBasePowerOffset = 0x19;
+    private const int XdMoveEffectOffset = 0x1c;
+    private const int XdMoveAnimationOffset = 0x1e;
+    private const int XdMoveDescriptionIdOffset = 0x2c;
+    private const int XdMoveAnimation2Offset = 0x32;
+    private const int XdMoveEffectTypeOffset = 0x34;
+    private const int XdTypeIndex = 130;
+    private const int XdNumberOfTypesIndex = 131;
+    private const int XdItemsIndex = 70;
+    private const int XdNumberOfItemsIndex = 71;
+    private const int XdMovesIndex = 124;
+    private const int XdNumberOfMovesIndex = 125;
+    private const int XdTreasureIndex = 66;
+    private const int XdNumberOfTreasuresIndex = 67;
+    private const int XdRoomsIndex = 58;
+    private const int XdNumberOfRoomsIndex = 59;
+    private const int XdPokemonLevelUpMoveCount = 0x13;
+    private const int XdPokemonEvolutionCount = 0x05;
+    private const int XdPokemonTmCount = 0x3a;
+    private const int XdPokemonExpRateOffset = 0x00;
+    private const int XdPokemonCatchRateOffset = 0x01;
+    private const int XdPokemonGenderRatioOffset = 0x02;
+    private const int XdPokemonBaseExpOffset = 0x05;
+    private const int XdPokemonBaseHappinessOffset = 0x07;
+    private const int XdPokemonHeightOffset = 0x08;
+    private const int XdPokemonWeightOffset = 0x0a;
+    private const int XdPokemonNationalIndexOffset = 0x0e;
+    private const int XdPokemonType1Offset = 0x30;
+    private const int XdPokemonType2Offset = 0x31;
+    private const int XdPokemonAbility1Offset = 0x32;
+    private const int XdPokemonAbility2Offset = 0x33;
+    private const int XdPokemonFirstTmOffset = 0x34;
+    private const int XdPokemonHeldItem1Offset = 0x7a;
+    private const int XdPokemonHeldItem2Offset = 0x7c;
+    private const int XdPokemonHpOffset = 0x8f;
+    private const int XdPokemonAttackOffset = 0x91;
+    private const int XdPokemonDefenseOffset = 0x93;
+    private const int XdPokemonSpecialAttackOffset = 0x95;
+    private const int XdPokemonSpecialDefenseOffset = 0x97;
+    private const int XdPokemonSpeedOffset = 0x99;
+    private const int XdPokemonEvYieldOffset = 0x9a;
+    private const int XdPokemonFirstEvolutionOffset = 0xa6;
+    private const int XdPokemonFirstLevelUpMoveOffset = 0xc4;
+    private const int XdItemBagSlotOffset = 0x00;
+    private const int XdItemCantBeHeldOffset = 0x01;
+    private const int XdItemInBattleUseOffset = 0x04;
+    private const int XdItemPriceOffset = 0x06;
+    private const int XdItemCouponOffset = 0x08;
+    private const int XdItemBattleHoldOffset = 0x0b;
+    private const int XdItemDescriptionIdOffset = 0x14;
+    private const int XdItemParameterOffset = 0x1b;
+    private const int XdItemFriendshipOffset = 0x24;
+    private const int XdTreasureSize = 0x1c;
+    private const int XdTreasureModelOffset = 0x00;
+    private const int XdTreasureQuantityOffset = 0x01;
+    private const int XdTreasureAngleOffset = 0x02;
+    private const int XdTreasureRoomOffset = 0x04;
+    private const int XdTreasureFlagOffset = 0x06;
+    private const int XdTreasureItemOffset = 0x0e;
+    private const int XdTreasureXOffset = 0x10;
+    private const int XdTreasureYOffset = 0x14;
+    private const int XdTreasureZOffset = 0x18;
+    private const int XdRoomSize = 0x44;
 
     private static readonly IReadOnlyList<string> XdTrainerDecks =
     [
@@ -191,6 +273,417 @@ public sealed partial class XdProjectContext
         }
 
         return new XdToolSection("Pokespot Encounters", rows);
+    }
+
+    public IReadOnlyList<XdTrainerRecord> LoadTrainerRecords()
+    {
+        var archive = TryReadFsys("deck_archive.fsys", out var error)
+            ?? throw new InvalidDataException(error ?? "deck_archive.fsys was not found.");
+        var common = ReadCommonRelOrThrow();
+        var strings = common.Strings;
+        var names = BuildCommonNameLookup();
+        var shadows = LoadShadowPokemonRecords().ToDictionary(shadow => shadow.Index);
+        var storyEntry = FindDeckEntry(archive, "DeckData_Story");
+        var storyBytes = storyEntry is null ? null : archive.Extract(storyEntry);
+        XdDeckLayout? storyLayout = null;
+        if (storyBytes is not null && TryReadDeckLayout(storyBytes, out var parsedStoryLayout, out _))
+        {
+            storyLayout = parsedStoryLayout;
+        }
+
+        var trainers = new List<XdTrainerRecord>();
+        foreach (var deckName in XdTrainerDecks)
+        {
+            var entry = FindDeckEntry(archive, deckName);
+            if (entry is null)
+            {
+                continue;
+            }
+
+            var bytes = archive.Extract(entry);
+            if (!TryReadDeckLayout(bytes, out var layout, out _))
+            {
+                continue;
+            }
+
+            for (var index = 0; index < layout.TrainerEntries; index++)
+            {
+                var start = layout.TrainerDataOffset + (index * XdTrainerSize);
+                if (start + XdTrainerSize > bytes.Length)
+                {
+                    break;
+                }
+
+                var pokemonIds = Enumerable.Range(0, 6)
+                    .Select(slot => ReadU16(bytes, start + XdTrainerFirstPokemonOffset + (slot * 2)))
+                    .ToArray();
+                var trainerStringOffset = ReadU16(bytes, start + XdTrainerStringOffset);
+                var nameId = ReadU16(bytes, start + XdTrainerNameIdOffset);
+                var classId = bytes[start + XdTrainerClassOffset];
+                if (pokemonIds.All(id => id == 0) && classId == 0 && nameId == 0 && trainerStringOffset == 0)
+                {
+                    continue;
+                }
+
+                var shadowMask = bytes[start + XdTrainerShadowMaskOffset];
+                var modelId = bytes[start + XdTrainerModelOffset];
+                var trainerString = ReadDeckStringRaw(bytes, layout.StringDataOffset, trainerStringOffset);
+                var trainerName = CleanName(strings?.StringWithId(nameId), index, "Trainer");
+                var className = $"Class {classId}";
+                var location = NormalizeXdLocation(trainerString);
+                var pokemon = new List<XdTrainerPokemonRecord>();
+                for (var slot = 0; slot < 6; slot++)
+                {
+                    var pokemonId = pokemonIds[slot];
+                    var isShadow = ((shadowMask >> slot) & 1) == 1;
+                    pokemon.Add(ReadTrainerPokemonRecord(
+                        slot,
+                        pokemonId,
+                        isShadow,
+                        bytes,
+                        layout,
+                        storyBytes,
+                        storyLayout,
+                        names,
+                        shadows));
+                }
+
+                trainers.Add(new XdTrainerRecord(
+                    index,
+                    deckName.Replace("DeckData_", string.Empty, StringComparison.Ordinal),
+                    trainerName,
+                    className,
+                    classId,
+                    modelId,
+                    ReadU16(bytes, start + XdTrainerAiOffset),
+                    nameId,
+                    pokemonIds.FirstOrDefault(),
+                    ReadU16(bytes, start + XdTrainerPreBattleTextOffset),
+                    ReadU16(bytes, start + XdTrainerVictoryTextOffset),
+                    ReadU16(bytes, start + XdTrainerDefeatTextOffset),
+                    ReadU16(bytes, start + XdTrainerCameraOffset),
+                    location,
+                    shadowMask > 0,
+                    pokemon));
+            }
+        }
+
+        return trainers;
+    }
+
+    public IReadOnlyList<XdShadowPokemonRecord> LoadShadowPokemonRecords()
+    {
+        var archive = TryReadFsys("deck_archive.fsys", out var error)
+            ?? throw new InvalidDataException(error ?? "deck_archive.fsys was not found.");
+        var darkEntry = FindDeckEntry(archive, "DeckData_DarkPokemon")
+            ?? throw new InvalidDataException("DeckData_DarkPokemon was not found in deck_archive.fsys.");
+        var storyEntry = FindDeckEntry(archive, "DeckData_Story")
+            ?? throw new InvalidDataException("DeckData_Story was not found in deck_archive.fsys.");
+        var darkBytes = archive.Extract(darkEntry);
+        var storyBytes = archive.Extract(storyEntry);
+        if (!TryReadDeckLayout(storyBytes, out var storyLayout, out var storyError))
+        {
+            throw new InvalidDataException(storyError);
+        }
+
+        var names = BuildCommonNameLookup();
+        var rows = new List<XdShadowPokemonRecord>();
+        if (darkBytes.Length < 0x20)
+        {
+            return rows;
+        }
+
+        var entries = checked((int)BigEndian.ReadUInt32(darkBytes, 0x18));
+        for (var index = 0; index < entries; index++)
+        {
+            var start = 0x20 + (index * XdShadowPokemonSize);
+            if (start + XdShadowPokemonSize > darkBytes.Length)
+            {
+                break;
+            }
+
+            var storyIndex = ReadU16(darkBytes, start + XdShadowStoryIndexOffset);
+            var level = darkBytes[start + XdShadowLevelOffset];
+            var catchRate = darkBytes[start + XdShadowCatchRateOffset];
+            var heartGauge = ReadU16(darkBytes, start + XdShadowHeartGaugeOffset);
+            if (storyIndex == 0 && level == 0 && catchRate == 0 && heartGauge == 0)
+            {
+                continue;
+            }
+
+            var species = ReadDeckPokemonSpecies(storyBytes, storyLayout, storyIndex);
+            var moveIds = Enumerable.Range(0, 4)
+                .Select(slot => ReadU16(darkBytes, start + XdShadowFirstMoveOffset + (slot * 2)))
+                .ToArray();
+
+            rows.Add(new XdShadowPokemonRecord(
+                index,
+                storyIndex,
+                species,
+                PokemonName(names, species),
+                level,
+                catchRate,
+                heartGauge,
+                darkBytes[start + XdShadowInUseOffset],
+                darkBytes[start + XdShadowFleeOffset],
+                darkBytes[start + XdShadowAggressionOffset],
+                darkBytes[start + XdShadowAlwaysFleeOffset],
+                moveIds,
+                moveIds.Select(move => MoveName(names, move)).ToArray()));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<XdPokemonStatsRecord> LoadPokemonStatsRecords()
+    {
+        var (data, table, strings) = ReadCommonRelOrThrow();
+        var pokemonNames = BuildPokemonNameMap(data, table, strings);
+        var itemNames = BuildItemNameMap(data, table, strings);
+        var moveNames = BuildMoveNameMap(data, table, strings);
+        var typeNames = BuildTypeNameMap(data, table, strings);
+        var start = table.GetPointer(XdPokemonStatsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfPokemonIndex);
+        if (!IsSafeTableRange(data, start, count, XdPokemonStatsSize, maxCount: 1000))
+        {
+            throw new InvalidDataException("Pokemon stats table is outside common.rel.");
+        }
+
+        var rows = new List<XdPokemonStatsRecord>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdPokemonStatsSize);
+            var nameId = checked((int)data.ReadUInt32(offset + XdPokemonStatsNameIdOffset));
+            var levelMoves = Enumerable.Range(0, XdPokemonLevelUpMoveCount)
+                .Select(row =>
+                {
+                    var moveOffset = offset + XdPokemonFirstLevelUpMoveOffset + (row * 4);
+                    var moveId = data.ReadUInt16(moveOffset + 2);
+                    return new XdLevelUpMoveRecord(data.ReadByte(moveOffset), moveId, MoveNameById(moveNames, moveId));
+                })
+                .ToArray();
+            var evolutions = Enumerable.Range(0, XdPokemonEvolutionCount)
+                .Select(row =>
+                {
+                    var evolutionOffset = offset + XdPokemonFirstEvolutionOffset + (row * 6);
+                    var evolvedSpecies = data.ReadUInt16(evolutionOffset + 4);
+                    return new XdEvolutionRecord(
+                        data.ReadByte(evolutionOffset),
+                        data.ReadUInt16(evolutionOffset + 2),
+                        evolvedSpecies,
+                        PokemonName(pokemonNames, evolvedSpecies));
+                })
+                .ToArray();
+
+            rows.Add(new XdPokemonStatsRecord(
+                index,
+                offset,
+                CleanName(strings?.StringWithId(nameId), index, "Pokemon"),
+                nameId,
+                data.ReadUInt16(offset + XdPokemonNationalIndexOffset),
+                data.ReadByte(offset + XdPokemonExpRateOffset),
+                data.ReadByte(offset + XdPokemonGenderRatioOffset),
+                data.ReadByte(offset + XdPokemonBaseExpOffset),
+                data.ReadByte(offset + XdPokemonBaseHappinessOffset),
+                data.ReadUInt16(offset + XdPokemonHeightOffset) / 10.0,
+                data.ReadUInt16(offset + XdPokemonWeightOffset) / 10.0,
+                data.ReadByte(offset + XdPokemonType1Offset),
+                TypeName(typeNames, data.ReadByte(offset + XdPokemonType1Offset)),
+                data.ReadByte(offset + XdPokemonType2Offset),
+                TypeName(typeNames, data.ReadByte(offset + XdPokemonType2Offset)),
+                data.ReadByte(offset + XdPokemonAbility1Offset),
+                data.ReadByte(offset + XdPokemonAbility2Offset),
+                data.ReadUInt16(offset + XdPokemonHeldItem1Offset),
+                ItemNameById(itemNames, data.ReadUInt16(offset + XdPokemonHeldItem1Offset)),
+                data.ReadUInt16(offset + XdPokemonHeldItem2Offset),
+                ItemNameById(itemNames, data.ReadUInt16(offset + XdPokemonHeldItem2Offset)),
+                data.ReadByte(offset + XdPokemonCatchRateOffset),
+                data.ReadByte(offset + XdPokemonHpOffset),
+                data.ReadByte(offset + XdPokemonAttackOffset),
+                data.ReadByte(offset + XdPokemonDefenseOffset),
+                data.ReadByte(offset + XdPokemonSpecialAttackOffset),
+                data.ReadByte(offset + XdPokemonSpecialDefenseOffset),
+                data.ReadByte(offset + XdPokemonSpeedOffset),
+                data.ReadUInt16(offset + XdPokemonEvYieldOffset),
+                data.ReadUInt16(offset + XdPokemonEvYieldOffset + 2),
+                data.ReadUInt16(offset + XdPokemonEvYieldOffset + 4),
+                data.ReadUInt16(offset + XdPokemonEvYieldOffset + 6),
+                data.ReadUInt16(offset + XdPokemonEvYieldOffset + 8),
+                data.ReadUInt16(offset + XdPokemonEvYieldOffset + 10),
+                Enumerable.Range(0, XdPokemonTmCount).Select(tm => data.ReadByte(offset + XdPokemonFirstTmOffset + tm) == 1).ToArray(),
+                levelMoves,
+                evolutions));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<XdMoveRecord> LoadMoveRecords()
+    {
+        var (data, table, strings) = ReadCommonRelOrThrow();
+        var moveNames = BuildMoveNameMap(data, table, strings);
+        var typeNames = BuildTypeNameMap(data, table, strings);
+        var start = table.GetPointer(XdMovesIndex);
+        var count = table.GetValueAtPointer(XdNumberOfMovesIndex);
+        if (!IsSafeTableRange(data, start, count, XdMoveSize, maxCount: 1000))
+        {
+            throw new InvalidDataException("Move table is outside common.rel.");
+        }
+
+        var rows = new List<XdMoveRecord>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdMoveSize);
+            var nameId = checked((int)data.ReadUInt32(offset + XdMoveNameIdOffset));
+            var descriptionId = checked((int)data.ReadUInt32(offset + XdMoveDescriptionIdOffset));
+            var typeId = data.ReadByte(offset + XdMoveTypeOffset);
+            var priorityByte = data.ReadByte(offset + XdMovePriorityOffset);
+            rows.Add(new XdMoveRecord(
+                index,
+                offset,
+                CleanName(strings?.StringWithId(nameId), index, "Move"),
+                nameId,
+                $"String {descriptionId}",
+                descriptionId,
+                typeId,
+                TypeName(typeNames, typeId),
+                data.ReadByte(offset + XdMoveTargetsOffset),
+                data.ReadByte(offset + XdMoveCategoryOffset),
+                data.ReadUInt16(offset + XdMoveAnimationOffset),
+                data.ReadUInt16(offset + XdMoveAnimation2Offset),
+                data.ReadUInt16(offset + XdMoveEffectOffset),
+                data.ReadByte(offset + XdMoveEffectTypeOffset),
+                data.ReadByte(offset + XdMoveBasePowerOffset),
+                data.ReadByte(offset + XdMoveAccuracyOffset),
+                data.ReadByte(offset + XdMovePpOffset),
+                priorityByte > 128 ? priorityByte - 256 : priorityByte,
+                data.ReadByte(offset + XdMoveEffectAccuracyOffset),
+                data.ReadByte(offset + XdMoveHmFlagOffset) == 1,
+                data.ReadByte(offset + XdMoveSoundBasedFlagOffset) == 1,
+                data.ReadByte(offset + XdMoveContactFlagOffset) == 1,
+                data.ReadByte(offset + XdMoveKingsRockFlagOffset) == 1,
+                data.ReadByte(offset + XdMoveProtectFlagOffset) == 1,
+                data.ReadByte(offset + XdMoveSnatchFlagOffset) == 1,
+                data.ReadByte(offset + XdMoveMagicCoatFlagOffset) == 1,
+                data.ReadByte(offset + XdMoveMirrorMoveFlagOffset) == 1,
+                index >= 355 || MoveNameById(moveNames, index).Contains("SHADOW", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<XdItemRecord> LoadItemRecords()
+    {
+        var (data, table, strings) = ReadCommonRelOrThrow();
+        var itemNames = BuildItemNameMap(data, table, strings);
+        var start = table.GetPointer(XdItemsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfItemsIndex);
+        if (!IsSafeTableRange(data, start, count, XdItemSize, maxCount: 2000))
+        {
+            throw new InvalidDataException("Item table is outside common.rel.");
+        }
+
+        var rows = new List<XdItemRecord>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdItemSize);
+            var nameId = checked((int)data.ReadUInt32(offset + XdItemNameIdOffset));
+            var descriptionId = checked((int)data.ReadUInt32(offset + XdItemDescriptionIdOffset));
+            rows.Add(new XdItemRecord(
+                index,
+                offset,
+                CleanName(strings?.StringWithId(nameId), index, "Item"),
+                nameId,
+                $"String {descriptionId}",
+                descriptionId,
+                data.ReadByte(offset + XdItemBagSlotOffset),
+                data.ReadByte(offset + XdItemCantBeHeldOffset) == 0,
+                data.ReadUInt16(offset + XdItemPriceOffset),
+                data.ReadUInt16(offset + XdItemCouponOffset),
+                data.ReadByte(offset + XdItemParameterOffset),
+                data.ReadByte(offset + XdItemBattleHoldOffset),
+                data.ReadByte(offset + XdItemInBattleUseOffset),
+                Enumerable.Range(0, 3).Select(i => SignedByte(data.ReadByte(offset + XdItemFriendshipOffset + i))).ToArray()));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<XdTypeRecord> LoadTypeRecords()
+    {
+        var (data, table, strings) = ReadCommonRelOrThrow();
+        return LoadTypeRecords(data, table, strings);
+    }
+
+    public IReadOnlyList<XdTreasureRecord> LoadTreasureRecords()
+    {
+        var (data, table, strings) = ReadCommonRelOrThrow();
+        var itemNames = BuildItemNameMap(data, table, strings);
+        var rooms = BuildRoomNameMap(data, table);
+        var start = table.GetPointer(XdTreasureIndex);
+        var count = table.GetValueAtPointer(XdNumberOfTreasuresIndex);
+        if (!IsSafeTableRange(data, start, count, XdTreasureSize, maxCount: 1000))
+        {
+            throw new InvalidDataException("Treasure table is outside common.rel.");
+        }
+
+        var rows = new List<XdTreasureRecord>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdTreasureSize);
+            var room = data.ReadUInt16(offset + XdTreasureRoomOffset);
+            var item = data.ReadUInt16(offset + XdTreasureItemOffset);
+            rows.Add(new XdTreasureRecord(
+                index,
+                offset,
+                data.ReadByte(offset + XdTreasureModelOffset),
+                data.ReadByte(offset + XdTreasureQuantityOffset),
+                data.ReadUInt16(offset + XdTreasureAngleOffset),
+                room,
+                rooms.TryGetValue(room, out var roomName) ? roomName : $"Room 0x{room:x4}",
+                data.ReadUInt16(offset + XdTreasureFlagOffset),
+                item,
+                ItemNameById(itemNames, item),
+                ReadSingle(data, offset + XdTreasureXOffset),
+                ReadSingle(data, offset + XdTreasureYOffset),
+                ReadSingle(data, offset + XdTreasureZOffset)));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<XdPokespotRecord> LoadPokespotRecords()
+    {
+        var (data, table, strings) = ReadCommonRelOrThrow();
+        var names = BuildPokemonNameMap(data, table, strings);
+        var rows = new List<XdPokespotRecord>();
+        foreach (var spot in XdPokespotTargets)
+        {
+            var offset = table.GetPointer(spot.PointerIndex);
+            var count = table.GetValueAtPointer(spot.CountIndex);
+            if (!IsSafeTableRange(data, offset, count, XdPokespotEntrySize, maxCount: 64))
+            {
+                continue;
+            }
+
+            for (var index = 0; index < count; index++)
+            {
+                var start = offset + (index * XdPokespotEntrySize);
+                var species = data.ReadUInt16(start + 2);
+                rows.Add(new XdPokespotRecord(
+                    index,
+                    spot.Name,
+                    species,
+                    PokemonName(names, species),
+                    data.ReadByte(start),
+                    data.ReadByte(start + 1),
+                    data.ReadByte(start + 7),
+                    data.ReadUInt16(start + 0x0a),
+                    start));
+            }
+        }
+
+        return rows;
     }
 
     private bool TryReadCommonRel(
@@ -463,6 +956,255 @@ public sealed partial class XdProjectContext
         }
 
         return slots.Count == 0 ? "no Pokemon refs" : string.Join("; ", slots);
+    }
+
+    private XdTrainerPokemonRecord ReadTrainerPokemonRecord(
+        int slot,
+        int deckIndex,
+        bool isShadow,
+        byte[] deckBytes,
+        XdDeckLayout deckLayout,
+        byte[]? storyBytes,
+        XdDeckLayout? storyLayout,
+        IReadOnlyDictionary<int, string> names,
+        IReadOnlyDictionary<int, XdShadowPokemonRecord> shadows)
+    {
+        if (deckIndex <= 0)
+        {
+            return EmptyTrainerPokemonRecord(slot);
+        }
+
+        XdShadowPokemonRecord? shadow = null;
+        var pokemonIndex = deckIndex;
+        var pokemonBytes = deckBytes;
+        var pokemonLayout = deckLayout;
+        if (isShadow)
+        {
+            shadows.TryGetValue(deckIndex, out shadow);
+            if (shadow is not null && storyBytes is not null && storyLayout is not null)
+            {
+                pokemonIndex = shadow.StoryPokemonIndex;
+                pokemonBytes = storyBytes;
+                pokemonLayout = storyLayout;
+            }
+        }
+
+        var start = pokemonLayout.PokemonDataOffset + (pokemonIndex * XdDeckPokemonSize);
+        if (start < 0 || start + XdDeckPokemonSize > pokemonBytes.Length)
+        {
+            return EmptyTrainerPokemonRecord(slot) with { DeckIndex = deckIndex, ShadowId = isShadow ? deckIndex : 0, ShadowData = shadow };
+        }
+
+        var species = ReadU16(pokemonBytes, start + XdDeckPokemonSpeciesOffset);
+        var item = ReadU16(pokemonBytes, start + XdDeckPokemonItemOffset);
+        var pid = pokemonBytes[start + 0x1e];
+        var moveIds = Enumerable.Range(0, 4)
+            .Select(move => ReadU16(pokemonBytes, start + XdDeckPokemonFirstMoveOffset + (move * 2)))
+            .ToArray();
+        if (shadow is not null)
+        {
+            moveIds = shadow.MoveIds.ToArray();
+        }
+
+        return new XdTrainerPokemonRecord(
+            slot,
+            deckIndex,
+            shadow?.SpeciesId ?? species,
+            shadow?.SpeciesName ?? PokemonName(names, species),
+            shadow?.Level ?? pokemonBytes[start + XdDeckPokemonLevelOffset],
+            isShadow ? deckIndex : 0,
+            item,
+            ItemName(names, item),
+            pid % 2,
+            pid / 8,
+            (pid / 2) % 4,
+            pokemonBytes[start + 0x03],
+            pokemonBytes[start + 0x08],
+            Enumerable.Range(0, 6).Select(ev => (int)pokemonBytes[start + 0x0e + ev]).ToArray(),
+            moveIds,
+            moveIds.Select(move => MoveName(names, move)).ToArray(),
+            shadow);
+    }
+
+    private static XdTrainerPokemonRecord EmptyTrainerPokemonRecord(int slot)
+        => new(
+            slot,
+            0,
+            0,
+            "-",
+            0,
+            0,
+            0,
+            "-",
+            0,
+            0,
+            0,
+            0,
+            0,
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0],
+            ["-", "-", "-", "-"],
+            null);
+
+    private (BinaryData Data, RelocationTable Table, GameStringTable? Strings) ReadCommonRelOrThrow()
+    {
+        if (!TryReadCommonRel(out var data, out var table, out var strings, out var error) || data is null || table is null)
+        {
+            throw new InvalidDataException(error ?? "Could not parse common.rel.");
+        }
+
+        return (data, table, strings);
+    }
+
+    private static IReadOnlyDictionary<int, string> BuildTypeNameMap(BinaryData data, RelocationTable table, GameStringTable? strings)
+    {
+        var start = table.GetPointer(XdTypeIndex);
+        var count = table.GetValueAtPointer(XdNumberOfTypesIndex);
+        if (!IsSafeTableRange(data, start, count, XdTypeSize, maxCount: 64))
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var names = new Dictionary<int, string>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdTypeSize);
+            var nameId = checked((int)data.ReadUInt32(offset + XdTypeNameIdOffset));
+            names[index] = CleanName(strings?.StringWithId(nameId), index, "Type");
+        }
+
+        return names;
+    }
+
+    private static IReadOnlyList<XdTypeRecord> LoadTypeRecords(BinaryData data, RelocationTable table, GameStringTable? strings)
+    {
+        var start = table.GetPointer(XdTypeIndex);
+        var count = table.GetValueAtPointer(XdNumberOfTypesIndex);
+        if (!IsSafeTableRange(data, start, count, XdTypeSize, maxCount: 64))
+        {
+            throw new InvalidDataException("Type table is outside common.rel.");
+        }
+
+        var rows = new List<XdTypeRecord>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdTypeSize);
+            var nameId = checked((int)data.ReadUInt32(offset + XdTypeNameIdOffset));
+            rows.Add(new XdTypeRecord(
+                index,
+                offset,
+                CleanName(strings?.StringWithId(nameId), index, "Type"),
+                nameId,
+                data.ReadByte(offset + XdTypeCategoryOffset),
+                Enumerable.Range(0, count)
+                    .Select(typeIndex => (int)data.ReadByte(offset + XdTypeFirstEffectivenessOffset + typeIndex))
+                    .ToArray()));
+        }
+
+        return rows;
+    }
+
+    private static IReadOnlyDictionary<int, string> BuildRoomNameMap(BinaryData data, RelocationTable table)
+    {
+        var start = table.GetPointer(XdRoomsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfRoomsIndex);
+        if (!IsSafeTableRange(data, start, count, XdRoomSize, maxCount: 1000))
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var rooms = new Dictionary<int, string>();
+        for (var index = 0; index < count; index++)
+        {
+            rooms[index] = $"Room 0x{index:x4}";
+        }
+
+        return rooms;
+    }
+
+    private static string ReadDeckStringRaw(byte[] bytes, int stringDataOffset, int offset)
+    {
+        var start = stringDataOffset + offset;
+        if (start < 0 || start >= bytes.Length)
+        {
+            return "-";
+        }
+
+        var end = start;
+        while (end < bytes.Length && bytes[end] != 0)
+        {
+            end++;
+        }
+
+        return end == start ? "-" : System.Text.Encoding.ASCII.GetString(bytes, start, end - start);
+    }
+
+    private static string NormalizeXdLocation(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value == "NULL")
+        {
+            return "-";
+        }
+
+        var text = value
+            .Replace("_col_", " Colosseum ", StringComparison.Ordinal)
+            .Replace("555_", "Battle ", StringComparison.Ordinal)
+            .Replace("Esaba", "Pokespot", StringComparison.Ordinal)
+            .Replace("Mirabo", "Miror B.", StringComparison.Ordinal)
+            .Replace("mirabo", "Miror B.", StringComparison.Ordinal)
+            .Replace("haihu", "Gift", StringComparison.Ordinal)
+            .Replace('_', ' ')
+            .Trim();
+
+        if (text.StartsWith('N'))
+        {
+            return "Mt.Battle Zone " + text[1..];
+        }
+
+        if (text.StartsWith('P'))
+        {
+            return "Pyrite Colosseum " + text[1..];
+        }
+
+        if (text.StartsWith('O'))
+        {
+            return "Orre Colosseum " + text[1..];
+        }
+
+        if (text.StartsWith('T'))
+        {
+            return "Tower Colosseum " + text[1..];
+        }
+
+        return text;
+    }
+
+    private static string CleanNameById(IReadOnlyDictionary<int, string> names, int id, string fallback)
+        => names.TryGetValue(id, out var name) && !string.IsNullOrWhiteSpace(name)
+            ? name
+            : fallback;
+
+    private static string TypeName(IReadOnlyDictionary<int, string> names, int type)
+        => names.TryGetValue(type, out var name) ? name : $"Type {type}";
+
+    private static string MoveNameById(IReadOnlyDictionary<int, string> names, int move)
+        => names.TryGetValue(move, out var name) ? name : $"Move {move}";
+
+    private static string ItemNameById(IReadOnlyDictionary<int, string> names, int item)
+        => names.TryGetValue(item, out var name) ? name : $"Item {item}";
+
+    private static int SignedByte(byte value)
+        => value > 127 ? value - 256 : value;
+
+    private static float ReadSingle(BinaryData data, int offset)
+    {
+        var bytes = data.ReadBytes(offset, 4);
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(bytes);
+        }
+
+        return BitConverter.ToSingle(bytes, 0);
     }
 
     private static bool TryReadDeckLayout(byte[] bytes, out XdDeckLayout layout, out string error)
