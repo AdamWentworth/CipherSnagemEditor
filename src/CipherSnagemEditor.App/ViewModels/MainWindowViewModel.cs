@@ -36,6 +36,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private GiftPokemonEditorResources _giftPokemonResources = GiftPokemonEditorResources.Empty;
     private TreasureEditorResources _treasureEditorResources = TreasureEditorResources.Empty;
     private InteractionEditorResources _interactionEditorResources = InteractionEditorResources.Empty;
+    private TrainerEntryViewModel? _lastSelectedTrainer;
 
     [ObservableProperty]
     private ToolEntryViewModel? _selectedTool;
@@ -1468,9 +1469,19 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedTrainerChanged(TrainerEntryViewModel? value)
     {
         var timer = Stopwatch.StartNew();
-        foreach (var trainer in _allTrainers)
+        if (!ReferenceEquals(_lastSelectedTrainer, value))
         {
-            trainer.IsSelected = ReferenceEquals(trainer, value);
+            if (_lastSelectedTrainer is not null)
+            {
+                _lastSelectedTrainer.IsSelected = false;
+            }
+
+            if (value is not null)
+            {
+                value.IsSelected = true;
+            }
+
+            _lastSelectedTrainer = value;
         }
 
         RefreshSelectedTrainerDetails(value);
@@ -1857,7 +1868,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_allTrainers.Count > 0)
         {
             var cachedFilterTimer = Stopwatch.StartNew();
-            ApplyTrainerFilter(TrainerSearchText);
+            ApplyTrainerFilter(TrainerSearchText, selectFirstWhenMissing: false);
             LogPerformance("Trainer Editor cached filter", cachedFilterTimer, Trainers.Count);
             LogPerformance("Trainer Editor cached total", totalTimer, _allTrainers.Count);
             return;
@@ -1882,9 +1893,8 @@ public partial class MainWindowViewModel : ViewModelBase
             LogPerformance("Trainer Editor build row cache", rowTimer, _allTrainers.Count);
 
             var filterTimer = Stopwatch.StartNew();
-            ApplyTrainerFilter(TrainerSearchText);
+            ApplyTrainerFilter(TrainerSearchText, selectFirstWhenMissing: false);
             LogPerformance("Trainer Editor apply filter", filterTimer, Trainers.Count);
-            SelectedTrainer = Trainers.FirstOrDefault();
             Logs.Add($"Trainer Editor loaded: {_allTrainers.Count} story trainers.");
             LogPerformance("Trainer Editor load total", totalTimer, _allTrainers.Count);
         }
@@ -2514,11 +2524,12 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private void ApplyTrainerFilter(string? filterText)
+    private void ApplyTrainerFilter(string? filterText, bool selectFirstWhenMissing = true)
     {
         if (_allTrainers.Count == 0)
         {
             Trainers.Clear();
+            SelectedTrainer = null;
             return;
         }
 
@@ -2526,6 +2537,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var filtered = filterTokens.Count == 0
             ? _allTrainers
             : _allTrainers.Where(trainer => TrainerMatchesFilter(trainer, filterTokens)).ToList();
+        var selectedTrainer = SelectedTrainer;
+        var keepsSelectedTrainer = selectedTrainer is not null && filtered.Contains(selectedTrainer);
 
         Trainers.Clear();
         foreach (var trainer in filtered)
@@ -2533,16 +2546,15 @@ public partial class MainWindowViewModel : ViewModelBase
             Trainers.Add(trainer);
         }
 
-        if (SelectedTrainer is null || !Trainers.Contains(SelectedTrainer))
+        if (!keepsSelectedTrainer)
         {
-            SelectedTrainer = Trainers.FirstOrDefault();
+            SelectedTrainer = selectFirstWhenMissing
+                ? Trainers.FirstOrDefault()
+                : null;
         }
-        else
+        else if (selectedTrainer is not null)
         {
-            foreach (var trainer in _allTrainers)
-            {
-                trainer.IsSelected = ReferenceEquals(trainer, SelectedTrainer);
-            }
+            selectedTrainer.IsSelected = true;
         }
     }
 

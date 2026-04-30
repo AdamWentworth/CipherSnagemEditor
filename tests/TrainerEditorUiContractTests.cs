@@ -67,11 +67,24 @@ public sealed class TrainerEditorUiContractTests
         Assert.Contains("<VirtualizingStackPanel", xaml, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainerEditorDefersPokemonCardUiUntilTrainerSelection()
+    {
+        var source = File.ReadAllText(MainWindowViewModelSourcePath).ReplaceLineEndings("\n");
+
+        Assert.Contains("ApplyTrainerFilter(TrainerSearchText, selectFirstWhenMissing: false)", source, StringComparison.Ordinal);
+        Assert.Contains("private TrainerEntryViewModel? _lastSelectedTrainer", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var trainer in _allTrainers)\n        {\n            trainer.IsSelected = ReferenceEquals(trainer, value);\n        }", source, StringComparison.Ordinal);
+    }
+
     private static string TrainerEditorViewPath
         => Path.Combine(RepoRoot, "src", "CipherSnagemEditor.App", "Views", "TrainerEditorView.axaml");
 
     private static string MainWindowSourcePath
         => Path.Combine(RepoRoot, "src", "CipherSnagemEditor.App", "Views", "MainWindow.axaml.cs");
+
+    private static string MainWindowViewModelSourcePath
+        => Path.Combine(RepoRoot, "src", "CipherSnagemEditor.App", "ViewModels", "MainWindowViewModel.cs");
 
     private static string RepoRoot
     {

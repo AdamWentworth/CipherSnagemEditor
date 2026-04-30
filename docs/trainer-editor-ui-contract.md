@@ -16,6 +16,9 @@ Contract rules:
 - Keep the trainer sidebar virtualized. The sidebar may contain 800+ trainer
   rows, so it must remain a `ListBox` with a `VirtualizingStackPanel`, not an
   `ItemsControl` inside a `ScrollViewer`.
+- Keep the six-card Pokemon editor deferred until a trainer is selected. The
+  sidebar may load immediately, but opening the Trainer Editor should not
+  eagerly render row 0's Pokemon cards.
 - If the card template must change, update the contract test only after visual
   review on a current Windows build and a current Linux build from the same
   commit.
