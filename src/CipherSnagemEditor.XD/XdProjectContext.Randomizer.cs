@@ -127,7 +127,15 @@ public sealed partial class XdProjectContext
 
         if (options.ShinyHues)
         {
-            messages.Add("XD shiny hue randomization is pending Start.dol assembly parity.");
+            var shinyHuePath = RandomizeShinyHues();
+            if (!string.IsNullOrWhiteSpace(shinyHuePath))
+            {
+                writtenFiles.Add(shinyHuePath);
+            }
+
+            messages.Add(string.IsNullOrWhiteSpace(shinyHuePath)
+                ? "XD shiny hue randomization ASM was already applied."
+                : "Applied XD shiny hue randomization ASM.");
         }
 
         if (commonChanged)

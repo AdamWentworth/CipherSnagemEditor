@@ -15,7 +15,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
-    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data|randomizer-species|randomizer-bingo>");
+    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -1182,6 +1182,33 @@ static void ApplyXdSmokeOperation(string isoPath, string operation)
             RemoveItemOrTradeEvolutions: false));
         writtenFiles.AddRange(result.WrittenFiles);
         Console.WriteLine("Applied XD randomizer: Battle Bingo smoke");
+        foreach (var message in result.Messages)
+        {
+            Console.WriteLine(message);
+        }
+    }
+    else if (operation.Equals("randomizer-shiny-hues", StringComparison.OrdinalIgnoreCase))
+    {
+        var result = context.Randomize(new XdRandomizerOptions(
+            StarterPokemon: false,
+            ObtainablePokemon: false,
+            UnobtainablePokemon: false,
+            PokemonMoves: false,
+            PokemonTypes: false,
+            PokemonAbilities: false,
+            PokemonStats: false,
+            PokemonEvolutions: false,
+            MoveTypes: false,
+            TypeMatchups: false,
+            TmMoves: false,
+            ItemBoxes: false,
+            ShopItems: false,
+            BattleBingo: false,
+            ShinyHues: true,
+            SimilarBaseStatTotal: false,
+            RemoveItemOrTradeEvolutions: false));
+        writtenFiles.AddRange(result.WrittenFiles);
+        Console.WriteLine("Applied XD randomizer: shiny hue ASM smoke");
         foreach (var message in result.Messages)
         {
             Console.WriteLine(message);

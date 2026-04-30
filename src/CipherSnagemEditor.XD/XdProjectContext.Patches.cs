@@ -24,6 +24,11 @@ public sealed partial class XdProjectContext
     private const int BattleStyleDouble = 0x02;
     private const int DeckVirtualId = 0x04;
     private const int DeckBingoId = 0x05;
+    private const long XdShinyHueForceModelRamOffset = 0x801d8e3cL;
+    private const long XdShinyHueBranchRamOffset = 0x801d9104L;
+    private const long XdShinyHueGetTrainerDataRamOffset = 0x801cefb4L;
+    private const long XdShinyHueGetTrainerIdRamOffset = 0x8014e118L;
+    private const int XdShinyHueRoutineMaxBytes = 768;
 
     public XdPatchApplyResult ApplyPatch(XdPatchKind kind)
     {
@@ -236,6 +241,227 @@ public sealed partial class XdProjectContext
         }
 
         messages.Add(changed ? message : $"{message} Already applied.");
+    }
+
+    private string RandomizeShinyHues()
+    {
+        RequireUsXdPatch("Shiny hue randomization");
+
+        var dolEntry = FindIsoFile("Start.dol")
+            ?? throw new FileNotFoundException("Start.dol was not found in the ISO.");
+        var dol = ReadStartDolOrThrow();
+        var original = dol.ToArray();
+        PatchRandomizeShinyHues(dol);
+        return original.SequenceEqual(dol.ToArray())
+            ? string.Empty
+            : WriteStartDol(dol, dolEntry);
+    }
+
+    private void PatchRandomizeShinyHues(BinaryData dol)
+    {
+        WriteRamAsm(dol, XdShinyHueForceModelRamOffset, Li(29, 1));
+
+        var routineRamOffset = ExistingShinyHueRoutineRamOffset(dol)
+            ?? AllocateDolFreeSpace(dol, XdShinyHueRoutineMaxBytes);
+        var routine = BuildXdShinyHueRoutine(routineRamOffset);
+        if (routine.Length * 4 > XdShinyHueRoutineMaxBytes)
+        {
+            throw new InvalidOperationException("XD shiny hue routine outgrew its reserved Start.dol space.");
+        }
+
+        WriteRamAsm(dol, XdShinyHueBranchRamOffset, Branch(XdShinyHueBranchRamOffset, routineRamOffset));
+        WriteRamAsm(dol, routineRamOffset, routine);
+    }
+
+    private int? ExistingShinyHueRoutineRamOffset(BinaryData dol)
+    {
+        var branchOffset = RamToDolOffset(XdShinyHueBranchRamOffset);
+        if (branchOffset < 0 || branchOffset + 4 > dol.Length)
+        {
+            return null;
+        }
+
+        var target = TryDecodeBranchTarget(XdShinyHueBranchRamOffset, dol.ReadUInt32(branchOffset));
+        if (target is null)
+        {
+            return null;
+        }
+
+        var targetDolOffset = RamToDolOffset(target.Value);
+        if (targetDolOffset < XdDolFreeSpaceStart() + 16 || targetDolOffset + 8 > XdDolFreeSpaceEnd())
+        {
+            return null;
+        }
+
+        return dol.ReadUInt32(targetDolOffset) == Li(3, 0)
+            && dol.ReadUInt32(targetDolOffset + 4) == Li(4, 2)
+                ? target.Value
+                : null;
+    }
+
+    private static uint[] BuildXdShinyHueRoutine(long routineRamOffset)
+    {
+        var asm = new XdAsmBuilder();
+
+        void Ins(uint instruction) => asm.Emit(instruction);
+        void Deferred(Func<long, IReadOnlyDictionary<string, long>, uint> instruction) => asm.Emit(instruction);
+        void Label(string label) => asm.Label(label);
+        void BranchLabel(string label) => Deferred((current, labels) => Branch(current, labels[label]));
+        void BeqLabel(string label) => Deferred((current, labels) => Beq(current, labels[label]));
+        void BneLabel(string label) => Deferred((current, labels) => Bne(current, labels[label]));
+        void BleLabel(string label) => Deferred((current, labels) => Ble(current, labels[label]));
+        void BgtLabel(string label) => Deferred((current, labels) => Bgt(current, labels[label]));
+
+        Ins(Li(3, 0));
+        Ins(Li(4, 2));
+        Deferred((current, _) => BranchLink(current, XdShinyHueGetTrainerDataRamOffset));
+        Deferred((current, _) => BranchLink(current, XdShinyHueGetTrainerIdRamOffset));
+        Ins(Mullw(3, 27, 3));
+
+        Ins(Mr(4, 3));
+        Ins(Srawi(4, 4, 0));
+        Ins(Mr(5, 3));
+        Ins(Srawi(5, 5, 4));
+        Ins(Mr(6, 3));
+        Ins(Srawi(6, 6, 8));
+        Ins(Mr(7, 3));
+        Ins(Srawi(7, 7, 8));
+        Ins(Mr(8, 3));
+        Ins(Srawi(8, 8, 16));
+        Ins(Mr(9, 3));
+        Ins(Srawi(9, 9, 24));
+
+        Ins(Li(3, 9));
+        Ins(Divw(3, 4, 3));
+        Ins(Mulli(3, 3, 9));
+        Ins(Sub(4, 4, 3));
+        Ins(Li(3, 9));
+        Ins(Divw(3, 5, 3));
+        Ins(Mulli(3, 3, 9));
+        Ins(Sub(5, 5, 3));
+        Ins(Li(3, 9));
+        Ins(Divw(3, 6, 3));
+        Ins(Mulli(3, 3, 9));
+        Ins(Sub(6, 6, 3));
+
+        Ins(Cmpwi(4, 0));
+        BeqLabel("r3");
+        Ins(Cmpwi(4, 2));
+        BleLabel("r0");
+        Ins(Cmpwi(4, 5));
+        BleLabel("r1");
+        BranchLabel("r2");
+        Label("r0");
+        Ins(Li(3, 0));
+        BranchLabel("r_end");
+        Label("r1");
+        Ins(Li(3, 1));
+        BranchLabel("r_end");
+        Label("r2");
+        Ins(Li(3, 2));
+        BranchLabel("r_end");
+        Label("r3");
+        Ins(Li(3, 3));
+        Label("r_end");
+        Ins(Stw(3, 29, 0));
+
+        Ins(Cmpwi(5, 0));
+        BeqLabel("g3");
+        Ins(Cmpwi(5, 2));
+        BleLabel("g0");
+        Ins(Cmpwi(5, 5));
+        BleLabel("g1");
+        BranchLabel("g2");
+        Label("g0");
+        Ins(Li(3, 0));
+        BranchLabel("g_end");
+        Label("g1");
+        Ins(Li(3, 1));
+        BranchLabel("g_end");
+        Label("g2");
+        Ins(Li(3, 2));
+        BranchLabel("g_end");
+        Label("g3");
+        Ins(Li(3, 3));
+        Label("g_end");
+        Ins(Stw(3, 29, 4));
+
+        Ins(Cmpwi(6, 0));
+        BeqLabel("b3");
+        Ins(Cmpwi(6, 2));
+        BleLabel("b0");
+        Ins(Cmpwi(6, 5));
+        BleLabel("b1");
+        BranchLabel("b2");
+        Label("b0");
+        Ins(Li(3, 0));
+        BranchLabel("b_end");
+        Label("b1");
+        Ins(Li(3, 1));
+        BranchLabel("b_end");
+        Label("b2");
+        Ins(Li(3, 2));
+        BranchLabel("b_end");
+        Label("b3");
+        Ins(Li(3, 3));
+        Label("b_end");
+        Ins(Stw(3, 29, 8));
+
+        Ins(Andi(7, 7, 1));
+        Ins(Andi(8, 8, 1));
+        Ins(Andi(9, 9, 1));
+        Ins(Cmpw(7, 8));
+        BneLabel("create_secondaries");
+        Ins(Cmpw(7, 9));
+        BneLabel("create_secondaries");
+        Ins(Cmpwi(6, 4));
+        BgtLabel("create_secondaries");
+        Ins(Li(3, 3));
+        Ins(Divw(3, 6, 3));
+        Ins(Mulli(3, 3, 3));
+        Ins(Sub(6, 6, 3));
+        Ins(Li(3, 1));
+        Ins(Cmpwi(6, 0));
+        BneLabel("check_1");
+        Ins(Sub(7, 3, 7));
+        BranchLabel("create_secondaries");
+        Label("check_1");
+        Ins(Cmpwi(6, 1));
+        BneLabel("check_2");
+        Ins(Sub(8, 3, 8));
+        BranchLabel("create_secondaries");
+        Label("check_2");
+        Ins(Sub(9, 3, 9));
+
+        Label("create_secondaries");
+        Ins(Cmpwi(7, 0));
+        BneLabel("r_h");
+        Ins(Li(7, 0x80));
+        BranchLabel("g_set");
+        Label("r_h");
+        Ins(Li(7, 0xd0));
+        Label("g_set");
+        Ins(Cmpwi(8, 0));
+        BneLabel("g_h");
+        Ins(Li(8, 0x80));
+        BranchLabel("b_set");
+        Label("g_h");
+        Ins(Li(8, 0xd0));
+        Label("b_set");
+        Ins(Cmpwi(9, 0));
+        BneLabel("b_h");
+        Ins(Li(9, 0x80));
+        BranchLabel("store_secondaries");
+        Label("b_h");
+        Ins(Li(9, 0xd0));
+        Label("store_secondaries");
+        Ins(Stb(7, 29, 0x10));
+        Ins(Stb(8, 29, 0x11));
+        Ins(Stb(9, 29, 0x12));
+        Ins(Lwz(30, 26, 0x94));
+        Deferred((current, _) => Branch(current, XdShinyHueBranchRamOffset + 4));
+
+        return asm.Assemble(routineRamOffset);
     }
 
     private void PatchDisableSaveCorruption(BinaryData dol)
@@ -805,6 +1031,22 @@ public sealed partial class XdProjectContext
         return 0x48000000 | (unchecked((uint)(target - current)) & 0x03ffffff);
     }
 
+    private static int? TryDecodeBranchTarget(long currentRamOffset, uint instruction)
+    {
+        if ((instruction & 0xfc000003u) != 0x48000000u)
+        {
+            return null;
+        }
+
+        var offset = (int)(instruction & 0x03fffffcu);
+        if ((offset & 0x02000000) != 0)
+        {
+            offset |= unchecked((int)0xfc000000);
+        }
+
+        return NormalizeRamOffset(currentRamOffset) + offset;
+    }
+
     private static uint BranchForward(int origin, int target)
         => 0x48000000 | (unchecked((uint)(target - origin)) & 0x03ffffff);
 
@@ -815,13 +1057,37 @@ public sealed partial class XdProjectContext
         => 0x4e800020;
 
     private static uint Bne(long currentRamOffset, long targetRamOffset)
-        => 0x40820000 | (unchecked((uint)(NormalizeRamOffset(targetRamOffset) - NormalizeRamOffset(currentRamOffset))) & 0xffff);
+        => ConditionalBranch(0x40820000, currentRamOffset, targetRamOffset);
+
+    private static uint Beq(long currentRamOffset, long targetRamOffset)
+        => ConditionalBranch(0x41820000, currentRamOffset, targetRamOffset);
+
+    private static uint Ble(long currentRamOffset, long targetRamOffset)
+        => ConditionalBranch(0x40810000, currentRamOffset, targetRamOffset);
+
+    private static uint Bgt(long currentRamOffset, long targetRamOffset)
+        => ConditionalBranch(0x41810000, currentRamOffset, targetRamOffset);
+
+    private static uint ConditionalBranch(uint branchPrefix, long currentRamOffset, long targetRamOffset)
+        => branchPrefix | (unchecked((uint)(NormalizeRamOffset(targetRamOffset) - NormalizeRamOffset(currentRamOffset))) & 0xffff);
+
+    private static uint Andi(int rd, int ra, uint uimm)
+        => (28u << 26) | ((uint)ra << 21) | ((uint)rd << 16) | (uimm & 0xffff);
+
+    private static uint Cmpw(int ra, int rb)
+        => (31u << 26) | ((uint)ra << 16) | ((uint)rb << 11);
 
     private static uint Cmpwi(int ra, int simm)
         => (11u << 26) | ((uint)ra << 16) | (unchecked((uint)simm) & 0xffff);
 
+    private static uint Divw(int rd, int ra, int rb)
+        => (31u << 26) | ((uint)rd << 21) | ((uint)ra << 16) | ((uint)rb << 11) | (491u << 1);
+
     private static uint Li(int rd, int simm)
         => Addi(rd, 0, simm);
+
+    private static uint Lwz(int rd, int ra, int d)
+        => (32u << 26) | ((uint)rd << 21) | ((uint)ra << 16) | (unchecked((uint)d) & 0xffff);
 
     private static uint Mr(int rd, int rs)
         => (31u << 26) | ((uint)rs << 21) | ((uint)rd << 16) | ((uint)rs << 11) | (444u << 1);
@@ -829,14 +1095,73 @@ public sealed partial class XdProjectContext
     private static uint Mulli(int rd, int ra, int simm)
         => (7u << 26) | ((uint)rd << 21) | ((uint)ra << 16) | (unchecked((uint)simm) & 0xffff);
 
+    private static uint Mullw(int rd, int ra, int rb)
+        => (31u << 26) | ((uint)rd << 21) | ((uint)ra << 16) | ((uint)rb << 11) | (235u << 1);
+
     private static uint Rlwinm(int rd, int ra, uint sh, uint mb, uint me)
         => (21u << 26) | ((uint)ra << 21) | ((uint)rd << 16) | (sh << 11) | (mb << 6) | (me << 1);
 
     private static uint Srawi(int rd, int ra, uint sh)
         => (31u << 26) | ((uint)ra << 21) | ((uint)rd << 16) | (sh << 11) | (824u << 1);
 
+    private static uint Stb(int rs, int ra, int d)
+        => (38u << 26) | ((uint)rs << 21) | ((uint)ra << 16) | (unchecked((uint)d) & 0xffff);
+
     private static uint Stw(int rs, int ra, int d)
         => (36u << 26) | ((uint)rs << 21) | ((uint)ra << 16) | (unchecked((uint)d) & 0xffff);
+
+    private static uint Sub(int rd, int ra, int rb)
+        => (31u << 26) | ((uint)rd << 21) | ((uint)rb << 16) | ((uint)ra << 11) | (40u << 1);
+
+    private sealed class XdAsmBuilder
+    {
+        private readonly List<XdAsmItem> items = [];
+
+        public void Emit(uint instruction)
+            => items.Add(new XdAsmItem(null, (_, _) => instruction));
+
+        public void Emit(Func<long, IReadOnlyDictionary<string, long>, uint> instruction)
+            => items.Add(new XdAsmItem(null, instruction));
+
+        public void Label(string label)
+            => items.Add(new XdAsmItem(label, null));
+
+        public uint[] Assemble(long startRamOffset)
+        {
+            var labels = new Dictionary<string, long>(StringComparer.Ordinal);
+            var current = startRamOffset;
+            foreach (var item in items)
+            {
+                if (item.Label is not null)
+                {
+                    labels[item.Label] = current;
+                }
+                else
+                {
+                    current += 4;
+                }
+            }
+
+            var instructions = new List<uint>(items.Count);
+            current = startRamOffset;
+            foreach (var item in items)
+            {
+                if (item.Emit is null)
+                {
+                    continue;
+                }
+
+                instructions.Add(item.Emit(current, labels));
+                current += 4;
+            }
+
+            return [.. instructions];
+        }
+    }
+
+    private readonly record struct XdAsmItem(
+        string? Label,
+        Func<long, IReadOnlyDictionary<string, long>, uint>? Emit);
 
     private void PatchPokemonCanLearnAnyTm(ICollection<string> writtenFiles, ICollection<string> messages)
     {
