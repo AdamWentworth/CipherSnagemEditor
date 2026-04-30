@@ -19,6 +19,38 @@
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <Style Selector="Border.XdPicker">
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+        <Style Selector="Border.XdMiniField">
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="BorderBrush" Value="#5A5A5A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+        <Style Selector="TextBlock.XdPickerText">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Margin" Value="5,0"/>
+        </Style>
+        <Style Selector="TextBlock.XdMiniText">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Margin" Value="4,0"/>
+        </Style>
         <Style Selector="TextBox.XdSearch">
             <Setter Property="Height" Value="28"/>
             <Setter Property="Margin" Value="4,4"/>
@@ -88,50 +120,55 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="*,32" Margin="10">
-            <Border Background="#303030" BorderBrush="#545454" BorderThickness="1" CornerRadius="6" Padding="12">
-                <Grid RowDefinitions="116,28,28,28,28,28,28" ColumnDefinitions="112,*" ColumnSpacing="12" RowSpacing="8">
+        <Grid Grid.Column="1" Margin="10">
+            <Border Width="260"
+                    Height="340"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#303030"
+                    BorderBrush="#545454"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    ClipToBounds="True">
+                <Canvas Width="260" Height="340">
                     <Image Source="{Binding SelectedXdPokespot.BodyImage}"
-                           Stretch="Uniform"
+                           Canvas.Left="80"
+                           Canvas.Top="48"
                            Width="100"
                            Height="100"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
-                    <Grid Grid.Column="1" RowDefinitions="62,24,24">
-                        <TextBlock Text="{Binding SelectedXdPokespot.Encounter.SpeciesName}"
-                                   Foreground="#FFFFFF"
-                                   FontWeight="Bold"
-                                   FontSize="18"
-                                   VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Grid.Row="1"
-                                   Text="{Binding SelectedXdPokespot.Encounter.SpotName, StringFormat='Pokespot: {0}'}"
-                                   Foreground="#CFCFCF"
-                                   FontSize="12"
-                                   VerticalAlignment="Center"/>
-                        <TextBox Grid.Row="2"
-                                 Classes="XdField"
-                                 Text="{Binding SelectedXdPokespot.Encounter.SpeciesName}"
-                                 IsReadOnly="True"
-                                 HorizontalContentAlignment="Center"/>
-                    </Grid>
+                           Stretch="Uniform"/>
 
-                    <TextBlock Grid.Row="1" Text="Species ID:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.SpeciesId, StringFormat='{}{0}'}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="2" Text="Min Level:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.MinLevel}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="3" Text="Max Level:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.MaxLevel}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="4" Text="Chance:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.EncounterPercentage, StringFormat='{}{0}%'}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="5" Text="Snack Steps:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="5" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.StepsPerSnack}" IsReadOnly="True"/>
-                    <TextBlock Grid.Row="6" Text="Start Offset:" Classes="XdLabel"/>
-                    <TextBox Grid.Row="6" Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdPokespot.Encounter.StartOffset, StringFormat='0x{0:X}'}" IsReadOnly="True"/>
-                </Grid>
+                    <Border Classes="XdPicker" Canvas.Left="78" Canvas.Top="135" Width="105">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdPokespot.Encounter.SpeciesName}"/>
+                    </Border>
+
+                    <TextBlock Canvas.Left="42" Canvas.Top="180" Width="70" Text="Min" Classes="XdLabel" TextAlignment="Center"/>
+                    <TextBlock Canvas.Left="148" Canvas.Top="180" Width="70" Text="Max" Classes="XdLabel" TextAlignment="Center"/>
+                    <Border Classes="XdPicker" Canvas.Left="5" Canvas.Top="205" Width="100">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdPokespot.Encounter.MinLevel, StringFormat='Lv. {0}'}"/>
+                    </Border>
+                    <Border Classes="XdPicker" Canvas.Left="155" Canvas.Top="205" Width="95">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdPokespot.Encounter.MaxLevel, StringFormat='Lv. {0}'}"/>
+                    </Border>
+
+                    <TextBlock Canvas.Left="5" Canvas.Top="250" Width="105" Text="Encounter Chance" Classes="XdLabel" TextAlignment="Center"/>
+                    <TextBlock Canvas.Left="153" Canvas.Top="250" Width="100" Text="Steps Per Snack" Classes="XdLabel" TextAlignment="Center"/>
+                    <Border Classes="XdMiniField" Canvas.Left="5" Canvas.Top="275" Width="100">
+                        <TextBlock Classes="XdMiniText" Text="{Binding SelectedXdPokespot.Encounter.EncounterPercentage}"/>
+                    </Border>
+                    <Border Classes="XdMiniField" Canvas.Left="155" Canvas.Top="275" Width="90">
+                        <TextBlock Classes="XdMiniText" Text="{Binding SelectedXdPokespot.Encounter.StepsPerSnack}"/>
+                    </Border>
+
+                    <Button Classes="XdSave"
+                            Content="Save"
+                            Width="80"
+                            Height="21"
+                            IsEnabled="False"
+                            Canvas.Left="90"
+                            Canvas.Top="306"/>
+                </Canvas>
             </Border>
-
-            <Button Grid.Row="1" Classes="XdSave" Content="Save" Width="100" Height="20" IsEnabled="False" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
         </Grid>
     </Grid>
 </UserControl>

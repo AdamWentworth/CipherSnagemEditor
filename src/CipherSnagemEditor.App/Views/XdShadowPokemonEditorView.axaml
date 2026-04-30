@@ -19,6 +19,46 @@
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <Style Selector="Border.XdPicker">
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+        <Style Selector="Border.XdMiniField">
+            <Setter Property="Height" Value="15"/>
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="BorderBrush" Value="#5A5A5A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+        <Style Selector="TextBlock.XdPickerText">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Margin" Value="4,0"/>
+        </Style>
+        <Style Selector="TextBlock.XdMiniText">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="8"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="Margin" Value="3,0"/>
+        </Style>
+        <Style Selector="TextBlock.XdTinyLabel">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
         <Style Selector="TextBox.XdSearch">
             <Setter Property="Height" Value="28"/>
             <Setter Property="Margin" Value="4,4"/>
@@ -87,78 +127,98 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="*,32" Margin="10">
-            <Border Background="#303030" BorderBrush="#545454" BorderThickness="1" CornerRadius="6" Padding="10">
-                <Grid RowDefinitions="100,92,*" RowSpacing="8">
-                    <Grid ColumnDefinitions="112,*" ColumnSpacing="12">
-                        <Border Width="88" Height="88" Background="#242424" BorderBrush="#545454" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Image Source="{Binding SelectedXdShadowPokemon.BodyImage}" Stretch="Uniform"/>
-                        </Border>
-                        <Grid Grid.Column="1" RowDefinitions="34,22,34">
-                            <TextBlock Text="{Binding SelectedXdShadowPokemon.Shadow.SpeciesName}"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="#FFFFFF"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Grid.Row="1"
-                                       Text="Shadow Pokemon"
-                                       FontSize="12"
-                                       Foreground="#CFCFCF"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Grid.Row="2"
-                                       Text="{Binding SelectedXdShadowPokemon.RowText}"
-                                       FontSize="12"
-                                       Foreground="#CFCFCF"
-                                       VerticalAlignment="Center"
-                                       MaxLines="2"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </Grid>
+        <Grid Grid.Column="1" RowDefinitions="*,40" Margin="15,14,15,4">
+            <Border Width="330"
+                    Height="280"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Background="#202020"
+                    BorderBrush="#545454"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="0"
+                    ClipToBounds="True">
+                <Canvas Width="330" Height="280">
+                    <Border Classes="XdPicker" Canvas.Left="5" Canvas.Top="5" Width="320">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdShadowPokemon.StoryPokemonText}"/>
+                    </Border>
+
+                    <Image Source="{Binding SelectedXdShadowPokemon.BodyImage}" Canvas.Left="20" Canvas.Top="45" Width="80" Height="80" Stretch="Uniform"/>
+
+                    <Border Classes="XdPicker" Canvas.Left="90" Canvas.Top="32" Width="80">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdShadowPokemon.LevelText}"/>
+                    </Border>
+                    <Border Classes="XdPicker" Canvas.Left="175" Canvas.Top="32" Width="145">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdShadowPokemon.Shadow.SpeciesName}"/>
+                    </Border>
+                    <Border Classes="XdPicker" Canvas.Left="90" Canvas.Top="62" Width="80">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdShadowPokemon.AbilityText}"/>
+                    </Border>
+                    <Border Classes="XdPicker" Canvas.Left="175" Canvas.Top="62" Width="145">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdShadowPokemon.ItemText}"/>
+                    </Border>
+                    <Border Classes="XdPicker" Canvas.Left="90" Canvas.Top="92" Width="80">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdShadowPokemon.NatureText}"/>
+                    </Border>
+                    <Border Classes="XdPicker" Canvas.Left="175" Canvas.Top="92" Width="145">
+                        <TextBlock Classes="XdPickerText" Text="{Binding SelectedXdShadowPokemon.GenderText}"/>
+                    </Border>
+
+                    <TextBlock Classes="XdTinyLabel" Canvas.Left="95" Canvas.Top="116" Width="70" Text="IVs"/>
+                    <TextBlock Classes="XdTinyLabel" Canvas.Left="180" Canvas.Top="116" Width="135" Text="Happiness"/>
+                    <Border Classes="XdMiniField" Canvas.Left="90" Canvas.Top="132" Width="80">
+                        <TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.Shadow.Iv}"/>
+                    </Border>
+                    <Border Classes="XdMiniField" Canvas.Left="175" Canvas.Top="132" Width="145">
+                        <TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.Shadow.Happiness}"/>
+                    </Border>
+
+                    <Grid Canvas.Left="8" Canvas.Top="152" Width="314" Height="14" ColumnDefinitions="48,48,48,48,48,48" ColumnSpacing="5">
+                        <TextBlock Classes="XdTinyLabel" Text="HP"/>
+                        <TextBlock Grid.Column="1" Classes="XdTinyLabel" Text="Atk"/>
+                        <TextBlock Grid.Column="2" Classes="XdTinyLabel" Text="Def"/>
+                        <TextBlock Grid.Column="3" Classes="XdTinyLabel" Text="Sp.A"/>
+                        <TextBlock Grid.Column="4" Classes="XdTinyLabel" Text="Sp.D"/>
+                        <TextBlock Grid.Column="5" Classes="XdTinyLabel" Text="Speed"/>
+                    </Grid>
+                    <Grid Canvas.Left="8" Canvas.Top="168" Width="314" Height="15" ColumnDefinitions="48,48,48,48,48,48" ColumnSpacing="5">
+                        <Border Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.HpEv}"/></Border>
+                        <Border Grid.Column="1" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.AttackEv}"/></Border>
+                        <Border Grid.Column="2" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.DefenseEv}"/></Border>
+                        <Border Grid.Column="3" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.SpecialAttackEv}"/></Border>
+                        <Border Grid.Column="4" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.SpecialDefenseEv}"/></Border>
+                        <Border Grid.Column="5" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.SpeedEv}"/></Border>
                     </Grid>
 
-                    <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="24,24,24" ColumnSpacing="12" RowSpacing="7">
-                        <Grid ColumnDefinitions="92,*" ColumnSpacing="8">
-                            <TextBlock Text="Shadow ID:" Classes="XdLabel"/>
-                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.Index}" IsReadOnly="True"/>
-                        </Grid>
-                        <Grid Grid.Column="1" ColumnDefinitions="92,*" ColumnSpacing="8">
-                            <TextBlock Text="Story PKM:" Classes="XdLabel"/>
-                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.StoryPokemonIndex}" IsReadOnly="True"/>
-                        </Grid>
-                        <Grid Grid.Row="1" ColumnDefinitions="92,*" ColumnSpacing="8">
-                            <TextBlock Text="Catch Rate:" Classes="XdLabel"/>
-                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.CatchRate}" IsReadOnly="True"/>
-                        </Grid>
-                        <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="92,*" ColumnSpacing="8">
-                            <TextBlock Text="Heart Gauge:" Classes="XdLabel"/>
-                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.HeartGauge}" IsReadOnly="True"/>
-                        </Grid>
-                        <Grid Grid.Row="2" ColumnDefinitions="92,*" ColumnSpacing="8">
-                            <TextBlock Text="Aggression:" Classes="XdLabel"/>
-                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.Aggression}" IsReadOnly="True"/>
-                        </Grid>
-                        <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="92,*" ColumnSpacing="8">
-                            <TextBlock Text="Flee:" Classes="XdLabel"/>
-                            <TextBox Grid.Column="1" Classes="XdField" Text="{Binding SelectedXdShadowPokemon.Shadow.FleeValue}" IsReadOnly="True"/>
-                        </Grid>
+                    <Grid Canvas.Left="5" Canvas.Top="190" Width="320" Height="20" ColumnDefinitions="76,76,76,76" ColumnSpacing="5">
+                        <Border Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.RegularMove1Text}"/></Border>
+                        <Border Grid.Column="1" Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.RegularMove2Text}"/></Border>
+                        <Border Grid.Column="2" Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.RegularMove3Text}"/></Border>
+                        <Border Grid.Column="3" Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.RegularMove4Text}"/></Border>
+                    </Grid>
+                    <Grid Canvas.Left="5" Canvas.Top="215" Width="320" Height="20" ColumnDefinitions="76,76,76,76" ColumnSpacing="5">
+                        <Border Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.ShadowMove1Text}"/></Border>
+                        <Border Grid.Column="1" Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.ShadowMove2Text}"/></Border>
+                        <Border Grid.Column="2" Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.ShadowMove3Text}"/></Border>
+                        <Border Grid.Column="3" Classes="XdPicker"><TextBlock Classes="XdPickerText" FontSize="8" Text="{Binding SelectedXdShadowPokemon.ShadowMove4Text}"/></Border>
                     </Grid>
 
-                    <Grid Grid.Row="2" RowDefinitions="22,*">
-                        <TextBlock Text="Shadow Moves" Foreground="#E6E6E6" FontWeight="Bold" HorizontalAlignment="Center"/>
-                        <TextBox Grid.Row="1"
-                                 Classes="XdField"
-                                 Text="{Binding SelectedXdShadowPokemon.MovesText}"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 IsReadOnly="True"
-                                 HorizontalContentAlignment="Left"
-                                 VerticalContentAlignment="Top"
-                                 MinHeight="72"/>
+                    <Grid Canvas.Left="5" Canvas.Top="239" Width="320" Height="15" ColumnDefinitions="76,76,76,76" ColumnSpacing="5">
+                        <TextBlock Classes="XdTinyLabel" Text="Counter"/>
+                        <TextBlock Grid.Column="1" Classes="XdTinyLabel" Text="Flee"/>
+                        <TextBlock Grid.Column="2" Classes="XdTinyLabel" Text="Aggression"/>
+                        <TextBlock Grid.Column="3" Classes="XdTinyLabel" Text="Catch rate"/>
                     </Grid>
-                </Grid>
+                    <Grid Canvas.Left="5" Canvas.Top="255" Width="320" Height="15" ColumnDefinitions="76,76,76,76" ColumnSpacing="5">
+                        <Border Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.Shadow.HeartGauge}"/></Border>
+                        <Border Grid.Column="1" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.Shadow.FleeValue}"/></Border>
+                        <Border Grid.Column="2" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.Shadow.Aggression}"/></Border>
+                        <Border Grid.Column="3" Classes="XdMiniField"><TextBlock Classes="XdMiniText" Text="{Binding SelectedXdShadowPokemon.Shadow.CatchRate}"/></Border>
+                    </Grid>
+                </Canvas>
             </Border>
 
-            <Button Grid.Row="1" Classes="XdSave" Content="Save" Width="100" Height="20" IsEnabled="False" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+            <Button Grid.Row="1" Classes="XdSave" Content="Save" Width="80" Height="21" IsEnabled="False" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
         </Grid>
     </Grid>
 </UserControl>

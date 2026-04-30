@@ -467,8 +467,8 @@ public partial class MainWindow : Window
             return tool.Title switch
             {
                 "Trainer Editor" => new Size(1280, 724),
-                "Shadow Pokemon Editor" => new Size(620, 430),
-                "Pokespot Editor" => new Size(560, 430),
+                "Shadow Pokemon Editor" => new Size(560, 354),
+                "Pokespot Editor" => new Size(480, 384),
                 "Gift Pokemon Editor" => new Size(560, 354),
                 "Script Compiler" => new Size(640, 504),
                 _ => ToolWindowSize(tool.Title)

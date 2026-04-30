@@ -387,6 +387,7 @@ public sealed partial class XdProjectContext
         }
 
         var names = BuildCommonNameLookup();
+        var abilityNames = BuildPokemonAbilityNameLookup();
         var rows = new List<XdShadowPokemonRecord>();
         if (darkBytes.Length < 0x20)
         {
@@ -415,6 +416,16 @@ public sealed partial class XdProjectContext
             var moveIds = Enumerable.Range(0, 4)
                 .Select(slot => ReadU16(darkBytes, start + XdShadowFirstMoveOffset + (slot * 2)))
                 .ToArray();
+            var storyStart = storyLayout.PokemonDataOffset + (storyIndex * XdDeckPokemonSize);
+            var storyInRange = storyStart >= 0 && storyStart + XdDeckPokemonSize <= storyBytes.Length;
+            var item = storyInRange ? ReadU16(storyBytes, storyStart + XdDeckPokemonItemOffset) : 0;
+            var pid = storyInRange ? storyBytes[storyStart + 0x1e] : 0;
+            var ability = pid % 2;
+            var regularMoveIds = storyInRange
+                ? Enumerable.Range(0, 4)
+                    .Select(slot => ReadU16(storyBytes, storyStart + XdDeckPokemonFirstMoveOffset + (slot * 2)))
+                    .ToArray()
+                : new[] { 0, 0, 0, 0 };
 
             rows.Add(new XdShadowPokemonRecord(
                 index,
@@ -429,7 +440,21 @@ public sealed partial class XdProjectContext
                 darkBytes[start + XdShadowAggressionOffset],
                 darkBytes[start + XdShadowAlwaysFleeOffset],
                 moveIds,
-                moveIds.Select(move => MoveName(names, move)).ToArray()));
+                moveIds.Select(move => MoveName(names, move)).ToArray(),
+                storyInRange ? storyBytes[storyStart + XdDeckPokemonLevelOffset] : level,
+                item,
+                ItemName(names, item),
+                ability,
+                AbilityName(abilityNames, species, ability),
+                pid / 8,
+                (pid / 2) % 4,
+                storyInRange ? storyBytes[storyStart + 0x03] : 0,
+                storyInRange ? storyBytes[storyStart + 0x08] : 0,
+                storyInRange
+                    ? Enumerable.Range(0, 6).Select(ev => (int)storyBytes[storyStart + 0x0e + ev]).ToArray()
+                    : new[] { 0, 0, 0, 0, 0, 0 },
+                regularMoveIds,
+                regularMoveIds.Select(move => MoveName(names, move)).ToArray()));
         }
 
         return rows;
@@ -748,6 +773,32 @@ public sealed partial class XdProjectContext
         foreach (var (id, name) in BuildItemNameMap(data, table, strings))
         {
             names[ItemNameKey(id)] = name;
+        }
+
+        return names;
+    }
+
+    private IReadOnlyDictionary<int, (string FirstAbility, string SecondAbility)> BuildPokemonAbilityNameLookup()
+    {
+        if (!TryReadCommonRel(out var data, out var table, out _, out _) || data is null || table is null)
+        {
+            return new Dictionary<int, (string FirstAbility, string SecondAbility)>();
+        }
+
+        var start = table.GetPointer(XdPokemonStatsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfPokemonIndex);
+        if (!IsSafeTableRange(data, start, count, XdPokemonStatsSize, maxCount: 1000))
+        {
+            return new Dictionary<int, (string FirstAbility, string SecondAbility)>();
+        }
+
+        var names = new Dictionary<int, (string FirstAbility, string SecondAbility)>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdPokemonStatsSize);
+            names[index] = (
+                Gen3AbilityName(data.ReadByte(offset + XdPokemonAbility1Offset)),
+                Gen3AbilityName(data.ReadByte(offset + XdPokemonAbility2Offset)));
         }
 
         return names;
@@ -1379,9 +1430,101 @@ public sealed partial class XdProjectContext
     private static string ItemName(IReadOnlyDictionary<int, string> names, int item)
         => names.TryGetValue(ItemNameKey(item), out var name) ? name : $"Item {item}";
 
+    private static string AbilityName(IReadOnlyDictionary<int, (string FirstAbility, string SecondAbility)> names, int species, int abilitySlot)
+        => names.TryGetValue(species, out var pair)
+            ? abilitySlot == 1 ? pair.SecondAbility : pair.FirstAbility
+            : $"Ability {abilitySlot}";
+
+    private static string Gen3AbilityName(int ability)
+        => ability >= 0 && ability < Gen3AbilityNames.Length
+            ? Gen3AbilityNames[ability]
+            : $"Ability {ability}";
+
     private static int MoveNameKey(int move) => 0x10000 + move;
 
     private static int ItemNameKey(int item) => 0x20000 + item;
+
+    private static readonly string[] Gen3AbilityNames =
+    [
+        "---",
+        "STENCH",
+        "DRIZZLE",
+        "SPEED BOOST",
+        "BATTLE ARMOR",
+        "STURDY",
+        "DAMP",
+        "LIMBER",
+        "SAND VEIL",
+        "STATIC",
+        "VOLT ABSORB",
+        "WATER ABSORB",
+        "OBLIVIOUS",
+        "CLOUD NINE",
+        "COMPOUND EYES",
+        "INSOMNIA",
+        "COLOR CHANGE",
+        "IMMUNITY",
+        "FLASH FIRE",
+        "SHIELD DUST",
+        "OWN TEMPO",
+        "SUCTION CUPS",
+        "INTIMIDATE",
+        "SHADOW TAG",
+        "ROUGH SKIN",
+        "WONDER GUARD",
+        "LEVITATE",
+        "EFFECT SPORE",
+        "SYNCHRONIZE",
+        "CLEAR BODY",
+        "NATURAL CURE",
+        "LIGHTNING ROD",
+        "SERENE GRACE",
+        "SWIFT SWIM",
+        "CHLOROPHYLL",
+        "ILLUMINATE",
+        "TRACE",
+        "HUGE POWER",
+        "POISON POINT",
+        "INNER FOCUS",
+        "MAGMA ARMOR",
+        "WATER VEIL",
+        "MAGNET PULL",
+        "SOUNDPROOF",
+        "RAIN DISH",
+        "SAND STREAM",
+        "PRESSURE",
+        "THICK FAT",
+        "EARLY BIRD",
+        "FLAME BODY",
+        "RUN AWAY",
+        "KEEN EYE",
+        "HYPER CUTTER",
+        "PICKUP",
+        "TRUANT",
+        "HUSTLE",
+        "CUTE CHARM",
+        "PLUS",
+        "MINUS",
+        "FORECAST",
+        "STICKY HOLD",
+        "SHED SKIN",
+        "GUTS",
+        "MARVEL SCALE",
+        "LIQUID OOZE",
+        "OVERGROW",
+        "BLAZE",
+        "TORRENT",
+        "SWARM",
+        "ROCK HEAD",
+        "DROUGHT",
+        "ARENA TRAP",
+        "VITAL SPIRIT",
+        "WHITE SMOKE",
+        "PURE POWER",
+        "SHELL ARMOR",
+        "CACOPHONY",
+        "AIR LOCK"
+    ];
 
     private static string CleanName(string? value, int index, string fallback)
         => string.IsNullOrWhiteSpace(value) || value == "-"

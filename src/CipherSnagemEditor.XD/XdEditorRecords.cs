@@ -50,7 +50,19 @@ public sealed record XdShadowPokemonRecord(
     int Aggression,
     int AlwaysFlee,
     IReadOnlyList<int> MoveIds,
-    IReadOnlyList<string> MoveNames);
+    IReadOnlyList<string> MoveNames,
+    int ShadowBoostLevel,
+    int ItemId,
+    string ItemName,
+    int Ability,
+    string AbilityName,
+    int Nature,
+    int Gender,
+    int Happiness,
+    int Iv,
+    IReadOnlyList<int> Evs,
+    IReadOnlyList<int> RegularMoveIds,
+    IReadOnlyList<string> RegularMoveNames);
 
 public sealed record XdPokemonStatsRecord(
     int Index,
