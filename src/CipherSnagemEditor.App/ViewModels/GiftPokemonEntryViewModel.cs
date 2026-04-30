@@ -51,6 +51,18 @@ public sealed partial class GiftPokemonEntryViewModel : ObservableObject
 
     public IBrush BackgroundBrush => IsSelected
         ? SelectedBackgroundBrush
+        : Gift.RowId == RowIndex && Gift.RowId <= 14
+            ? SolidColorBrush.Parse(RowIndex switch
+            {
+                0 => "#7B5735FF",
+                1 or 2 => "#80ACFFFF",
+                3 or 4 => "#F6BC00FF",
+                5 or 6 => "#20F020FF",
+                7 => "#A77AF4FF",
+                8 => "#FFC0CBFF",
+                9 or 10 or 11 => "#858585FF",
+                _ => "#FC6848FF"
+            })
         : SolidColorBrush.Parse(RowIndex switch
         {
             0 or 1 => "#80ACFFFF",

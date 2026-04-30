@@ -319,10 +319,11 @@ static void RunXdEditorsProbe(string isoPath)
     var moves = context.LoadMoveRecords();
     var items = context.LoadItemRecords();
     var pokespots = context.LoadPokespotRecords();
+    var gifts = context.LoadGiftPokemonRecords();
     var types = context.LoadTypeRecords();
     var treasures = context.LoadTreasureRecords();
 
-    Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, items={items.Count}, pokespots={pokespots.Count}, types={types.Count}, treasures={treasures.Count}");
+    Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, items={items.Count}, pokespots={pokespots.Count}, gifts={gifts.Count}, types={types.Count}, treasures={treasures.Count}");
     Console.WriteLine($"First trainer: {trainers.FirstOrDefault()?.Index}: {trainers.FirstOrDefault()?.ClassName} {trainers.FirstOrDefault()?.Name}");
     Console.WriteLine($"First shadow: {shadows.FirstOrDefault()?.Index}: {shadows.FirstOrDefault()?.SpeciesName}");
     Console.WriteLine($"First pokespot: {pokespots.FirstOrDefault()?.SpotName} {pokespots.FirstOrDefault()?.SpeciesName}");
@@ -334,6 +335,7 @@ static void RunXdEditorsProbe(string isoPath)
     Expect(moves.Count > 350, failures, $"Move parser is unexpectedly sparse: {moves.Count}.");
     Expect(items.Count > 300, failures, $"Item parser is unexpectedly sparse: {items.Count}.");
     Expect(pokespots.Count > 0, failures, "Pokespot parser returned no encounters.");
+    Expect(gifts.Count == 15, failures, $"Gift Pokemon parser should match the Swift GoD Tool's 15 gift rows, but returned {gifts.Count}.");
     Expect(types.Count >= 18, failures, $"Type parser is unexpectedly sparse: {types.Count}.");
     Expect(treasures.Count > 0, failures, "Treasure parser returned no rows.");
 

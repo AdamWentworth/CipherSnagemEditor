@@ -47,6 +47,13 @@ public sealed class GiftPokemonEditorResources
             commonRel.PokemonStats.Select(pokemon => new PickerOptionViewModel(pokemon.Index, pokemon.Index == 0 ? "-" : pokemon.Name)).ToArray(),
             commonRel.Moves.Select(move => new PickerOptionViewModel(move.Index, move.Index == 0 ? "-" : move.Name)).ToArray());
 
+    public static GiftPokemonEditorResources FromRows(
+        IReadOnlyList<ColosseumPokemonStats> pokemonRows,
+        IReadOnlyList<ColosseumMove> moveRows)
+        => new(
+            pokemonRows.Select(pokemon => new PickerOptionViewModel(pokemon.Index, pokemon.Index == 0 ? "-" : pokemon.Name)).ToArray(),
+            moveRows.Select(move => new PickerOptionViewModel(move.Index, move.Index == 0 ? "-" : move.Name)).ToArray());
+
     public PickerOptionViewModel SpeciesOption(int value)
         => OptionFor(_speciesOptionsByValue, value, value == 0 ? "-" : $"Pokemon {value}");
 

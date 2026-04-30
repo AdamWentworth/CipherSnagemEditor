@@ -81,7 +81,9 @@ public sealed record XdPokemonStatsRecord(
     int Type2,
     string Type2Name,
     int Ability1,
+    string Ability1Name,
     int Ability2,
+    string Ability2Name,
     int HeldItem1,
     string HeldItem1Name,
     int HeldItem2,
@@ -216,3 +218,112 @@ public sealed record XdPokespotUpdate(
     int MaxLevel,
     int EncounterPercentage,
     int StepsPerSnack);
+
+public sealed record XdGiftPokemonRecord(
+    int RowId,
+    int DataIndex,
+    int StartOffset,
+    string GiftType,
+    int SpeciesId,
+    string SpeciesName,
+    int Level,
+    IReadOnlyList<int> MoveIds,
+    IReadOnlyList<string> MoveNames,
+    bool UsesLevelUpMoves);
+
+public sealed record XdGiftPokemonUpdate(
+    int RowId,
+    int SpeciesId,
+    int Level,
+    IReadOnlyList<int> MoveIds);
+
+public sealed record XdPokemonStatsUpdate(
+    int Index,
+    int NameId,
+    int ExpRate,
+    int GenderRatio,
+    int BaseExp,
+    int BaseHappiness,
+    double Height,
+    double Weight,
+    int Type1,
+    int Type2,
+    int Ability1,
+    int Ability2,
+    int HeldItem1,
+    int HeldItem2,
+    int CatchRate,
+    int Hp,
+    int Attack,
+    int Defense,
+    int SpecialAttack,
+    int SpecialDefense,
+    int Speed,
+    int HpYield,
+    int AttackYield,
+    int DefenseYield,
+    int SpecialAttackYield,
+    int SpecialDefenseYield,
+    int SpeedYield,
+    IReadOnlyList<bool> LearnableTms,
+    IReadOnlyList<XdPokemonLevelUpMoveUpdate> LevelUpMoves,
+    IReadOnlyList<XdPokemonEvolutionUpdate> Evolutions);
+
+public sealed record XdPokemonLevelUpMoveUpdate(int Level, int MoveId);
+
+public sealed record XdPokemonEvolutionUpdate(int Method, int Condition, int EvolvedSpeciesId);
+
+public sealed record XdMoveUpdate(
+    int Index,
+    int NameId,
+    int DescriptionId,
+    int TypeId,
+    int TargetId,
+    int CategoryId,
+    int AnimationId,
+    int Animation2Id,
+    int EffectId,
+    int EffectTypeId,
+    int Power,
+    int Accuracy,
+    int Pp,
+    int Priority,
+    int EffectAccuracy,
+    bool HmFlag,
+    bool SoundBasedFlag,
+    bool ContactFlag,
+    bool KingsRockFlag,
+    bool ProtectFlag,
+    bool SnatchFlag,
+    bool MagicCoatFlag,
+    bool MirrorMoveFlag);
+
+public sealed record XdItemUpdate(
+    int Index,
+    int NameId,
+    int DescriptionId,
+    int BagSlotId,
+    bool CanBeHeld,
+    int Price,
+    int CouponPrice,
+    int Parameter,
+    int HoldItemId,
+    int InBattleUseId,
+    IReadOnlyList<int> FriendshipEffects);
+
+public sealed record XdTypeUpdate(
+    int Index,
+    int NameId,
+    int CategoryId,
+    IReadOnlyList<int> Effectiveness);
+
+public sealed record XdTreasureUpdate(
+    int Index,
+    int ModelId,
+    int Quantity,
+    int Angle,
+    int RoomId,
+    int ItemId,
+    float X,
+    float Y,
+    float Z);

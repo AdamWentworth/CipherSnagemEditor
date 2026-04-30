@@ -79,8 +79,8 @@ public sealed class MoveEditorResources
             typeOptions,
             BuildCategoryOptions(),
             BuildTargetOptions(),
-            BuildJsonBackedOptions("Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}", appendIndex: true),
-            BuildJsonBackedOptions("Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}", appendIndex: true),
+            BuildJsonBackedOptions("Colosseum", "Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}", appendIndex: true),
+            BuildJsonBackedOptions("Colosseum", "Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}", appendIndex: true),
             BuildEffectTypeOptions(),
             typeCategoryByValue,
             commonRel.IsPhysicalSpecialSplitImplemented);
@@ -88,7 +88,8 @@ public sealed class MoveEditorResources
 
     public static MoveEditorResources FromRows(
         IReadOnlyList<ColosseumMove> moveRows,
-        IReadOnlyList<ColosseumTypeData> typeRows)
+        IReadOnlyList<ColosseumTypeData> typeRows,
+        string assetGame = "Colosseum")
     {
         var typeCategoryByValue = typeRows.ToDictionary(type => type.Index, type => type.CategoryId);
         var typeOptions = typeRows
@@ -101,8 +102,8 @@ public sealed class MoveEditorResources
             typeOptions.Length == 0 ? [new PickerOptionViewModel(0, "Normal")] : typeOptions,
             BuildCategoryOptions(),
             BuildTargetOptions(),
-            BuildJsonBackedOptions("Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}", appendIndex: true),
-            BuildJsonBackedOptions("Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}", appendIndex: true),
+            BuildJsonBackedOptions(assetGame, "Original Moves.json", maxAnimation, index => index == 0 ? "-" : $"Animation {index}", appendIndex: true),
+            BuildJsonBackedOptions(assetGame, "Move Effects.json", maxEffect, index => index == 0 ? "-" : $"Effect {index}", appendIndex: true),
             BuildEffectTypeOptions(),
             typeCategoryByValue,
             true);
@@ -140,12 +141,13 @@ public sealed class MoveEditorResources
             : new PickerOptionViewModel(value, fallbackName);
 
     private static IReadOnlyList<PickerOptionViewModel> BuildJsonBackedOptions(
+        string assetGame,
         string fileName,
         int minimumMaximumIndex,
         Func<int, string> fallbackName,
         bool appendIndex)
     {
-        var labels = LoadJsonLabels(fileName);
+        var labels = LoadJsonLabels(assetGame, fileName);
         var count = Math.Max(minimumMaximumIndex + 1, labels.Count);
         var options = new PickerOptionViewModel[count];
         for (var index = 0; index < count; index++)
@@ -162,11 +164,11 @@ public sealed class MoveEditorResources
         return options;
     }
 
-    private static IReadOnlyList<string> LoadJsonLabels(string fileName)
+    private static IReadOnlyList<string> LoadJsonLabels(string assetGame, string fileName)
     {
         foreach (var root in CandidateAssetRoots())
         {
-            var path = Path.Combine(root, "assets", "json", "Colosseum", fileName);
+            var path = Path.Combine(root, "assets", "json", assetGame, fileName);
             if (!File.Exists(path))
             {
                 continue;

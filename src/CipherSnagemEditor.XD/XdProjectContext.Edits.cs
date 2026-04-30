@@ -1,11 +1,155 @@
 using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Binary;
 using CipherSnagemEditor.Core.GameCube;
+using CipherSnagemEditor.Core.Relocation;
 
 namespace CipherSnagemEditor.XD;
 
 public sealed partial class XdProjectContext
 {
+    public string SavePokemonStats(XdPokemonStatsUpdate update)
+    {
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var offset = CommonRelRowOffset(data, table, XdPokemonStatsIndex, XdNumberOfPokemonIndex, XdPokemonStatsSize, update.Index, 1000, "Pokemon stats");
+
+        data.WriteByte(offset + XdPokemonExpRateOffset, ClampByte(update.ExpRate));
+        data.WriteByte(offset + XdPokemonCatchRateOffset, ClampByte(update.CatchRate));
+        data.WriteByte(offset + XdPokemonGenderRatioOffset, ClampByte(update.GenderRatio));
+        data.WriteByte(offset + XdPokemonBaseExpOffset, ClampByte(update.BaseExp));
+        data.WriteByte(offset + XdPokemonBaseHappinessOffset, ClampByte(update.BaseHappiness));
+        data.WriteUInt16(offset + XdPokemonHeightOffset, ClampUInt16ToU16((int)Math.Round(update.Height * 10.0)));
+        data.WriteUInt16(offset + XdPokemonWeightOffset, ClampUInt16ToU16((int)Math.Round(update.Weight * 10.0)));
+        data.WriteUInt32(offset + XdPokemonStatsNameIdOffset, ClampUInt32(update.NameId));
+        data.WriteByte(offset + XdPokemonType1Offset, ClampByte(update.Type1));
+        data.WriteByte(offset + XdPokemonType2Offset, ClampByte(update.Type2));
+        data.WriteByte(offset + XdPokemonAbility1Offset, ClampByte(update.Ability1));
+        data.WriteByte(offset + XdPokemonAbility2Offset, ClampByte(update.Ability2));
+
+        for (var tm = 0; tm < XdPokemonTmCount; tm++)
+        {
+            data.WriteByte(offset + XdPokemonFirstTmOffset + tm, tm < update.LearnableTms.Count && update.LearnableTms[tm] ? (byte)1 : (byte)0);
+        }
+
+        data.WriteUInt16(offset + XdPokemonHeldItem1Offset, ClampUInt16ToU16(update.HeldItem1));
+        data.WriteUInt16(offset + XdPokemonHeldItem2Offset, ClampUInt16ToU16(update.HeldItem2));
+        data.WriteByte(offset + XdPokemonHpOffset, ClampByte(update.Hp));
+        data.WriteByte(offset + XdPokemonAttackOffset, ClampByte(update.Attack));
+        data.WriteByte(offset + XdPokemonDefenseOffset, ClampByte(update.Defense));
+        data.WriteByte(offset + XdPokemonSpecialAttackOffset, ClampByte(update.SpecialAttack));
+        data.WriteByte(offset + XdPokemonSpecialDefenseOffset, ClampByte(update.SpecialDefense));
+        data.WriteByte(offset + XdPokemonSpeedOffset, ClampByte(update.Speed));
+        data.WriteUInt16(offset + XdPokemonEvYieldOffset, ClampUInt16ToU16(update.HpYield));
+        data.WriteUInt16(offset + XdPokemonEvYieldOffset + 2, ClampUInt16ToU16(update.AttackYield));
+        data.WriteUInt16(offset + XdPokemonEvYieldOffset + 4, ClampUInt16ToU16(update.DefenseYield));
+        data.WriteUInt16(offset + XdPokemonEvYieldOffset + 6, ClampUInt16ToU16(update.SpecialAttackYield));
+        data.WriteUInt16(offset + XdPokemonEvYieldOffset + 8, ClampUInt16ToU16(update.SpecialDefenseYield));
+        data.WriteUInt16(offset + XdPokemonEvYieldOffset + 10, ClampUInt16ToU16(update.SpeedYield));
+
+        for (var row = 0; row < XdPokemonEvolutionCount; row++)
+        {
+            var evolutionOffset = offset + XdPokemonFirstEvolutionOffset + (row * 6);
+            var evolution = row < update.Evolutions.Count ? update.Evolutions[row] : null;
+            data.WriteByte(evolutionOffset, ClampByte(evolution?.Method ?? 0));
+            data.WriteUInt16(evolutionOffset + 2, ClampUInt16ToU16(evolution?.Condition ?? 0));
+            data.WriteUInt16(evolutionOffset + 4, ClampUInt16ToU16(evolution?.EvolvedSpeciesId ?? 0));
+        }
+
+        for (var row = 0; row < XdPokemonLevelUpMoveCount; row++)
+        {
+            var moveOffset = offset + XdPokemonFirstLevelUpMoveOffset + (row * 4);
+            var move = row < update.LevelUpMoves.Count ? update.LevelUpMoves[row] : null;
+            data.WriteByte(moveOffset, ClampByte(move?.Level ?? 0));
+            data.WriteUInt16(moveOffset + 2, ClampUInt16ToU16(move?.MoveId ?? 0));
+        }
+
+        return WriteCommonRel(data);
+    }
+
+    public string SaveMove(XdMoveUpdate update)
+    {
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var offset = CommonRelRowOffset(data, table, XdMovesIndex, XdNumberOfMovesIndex, XdMoveSize, update.Index, 1000, "Move");
+
+        data.WriteByte(offset + XdMovePriorityOffset, ClampSignedByte(update.Priority));
+        data.WriteByte(offset + XdMovePpOffset, ClampByte(update.Pp));
+        data.WriteByte(offset + XdMoveTypeOffset, ClampByte(update.TypeId));
+        data.WriteByte(offset + XdMoveTargetsOffset, ClampByte(update.TargetId));
+        data.WriteByte(offset + XdMoveAccuracyOffset, ClampByte(update.Accuracy));
+        data.WriteByte(offset + XdMoveEffectAccuracyOffset, ClampByte(update.EffectAccuracy));
+        data.WriteByte(offset + XdMoveContactFlagOffset, Flag(update.ContactFlag));
+        data.WriteByte(offset + XdMoveProtectFlagOffset, Flag(update.ProtectFlag));
+        data.WriteByte(offset + XdMoveMagicCoatFlagOffset, Flag(update.MagicCoatFlag));
+        data.WriteByte(offset + XdMoveSnatchFlagOffset, Flag(update.SnatchFlag));
+        data.WriteByte(offset + XdMoveMirrorMoveFlagOffset, Flag(update.MirrorMoveFlag));
+        data.WriteByte(offset + XdMoveKingsRockFlagOffset, Flag(update.KingsRockFlag));
+        data.WriteByte(offset + XdMoveSoundBasedFlagOffset, Flag(update.SoundBasedFlag));
+        data.WriteByte(offset + XdMoveHmFlagOffset, Flag(update.HmFlag));
+        data.WriteByte(offset + XdMoveCategoryOffset, ClampByte(update.CategoryId));
+        data.WriteByte(offset + XdMoveBasePowerOffset, ClampByte(update.Power));
+        data.WriteUInt16(offset + XdMoveEffectOffset, ClampUInt16ToU16(update.EffectId));
+        data.WriteUInt16(offset + XdMoveAnimationOffset, ClampUInt16ToU16(update.AnimationId));
+        data.WriteUInt32(offset + XdMoveNameIdOffset, ClampUInt32(update.NameId));
+        data.WriteUInt32(offset + XdMoveDescriptionIdOffset, ClampUInt32(update.DescriptionId));
+        data.WriteUInt16(offset + XdMoveAnimation2Offset, ClampUInt16ToU16(update.Animation2Id));
+        data.WriteByte(offset + XdMoveEffectTypeOffset, ClampByte(update.EffectTypeId));
+
+        return WriteCommonRel(data);
+    }
+
+    public string SaveItem(XdItemUpdate update)
+    {
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var offset = CommonRelRowOffset(data, table, XdItemsIndex, XdNumberOfItemsIndex, XdItemSize, update.Index, 2000, "Item");
+
+        data.WriteByte(offset + XdItemBagSlotOffset, ClampByte(update.BagSlotId));
+        data.WriteByte(offset + XdItemCantBeHeldOffset, update.CanBeHeld ? (byte)0 : (byte)1);
+        data.WriteByte(offset + XdItemInBattleUseOffset, ClampByte(update.InBattleUseId));
+        data.WriteUInt16(offset + XdItemPriceOffset, ClampUInt16ToU16(update.Price));
+        data.WriteUInt16(offset + XdItemCouponOffset, ClampUInt16ToU16(update.CouponPrice));
+        data.WriteByte(offset + XdItemBattleHoldOffset, ClampByte(update.HoldItemId));
+        data.WriteUInt32(offset + XdItemNameIdOffset, ClampUInt32(update.NameId));
+        data.WriteUInt32(offset + XdItemDescriptionIdOffset, ClampUInt32(update.DescriptionId));
+        data.WriteByte(offset + XdItemParameterOffset, ClampByte(update.Parameter));
+        for (var index = 0; index < 4; index++)
+        {
+            data.WriteByte(offset + XdItemFriendshipOffset + index, ClampSignedByte(ValueAt(update.FriendshipEffects, index)));
+        }
+
+        return WriteCommonRel(data);
+    }
+
+    public string SaveType(XdTypeUpdate update)
+    {
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var offset = CommonRelRowOffset(data, table, XdTypeIndex, XdNumberOfTypesIndex, XdTypeSize, update.Index, 64, "Type");
+
+        data.WriteByte(offset + XdTypeCategoryOffset, ClampByte(update.CategoryId));
+        data.WriteUInt32(offset + XdTypeNameIdOffset, ClampUInt32(update.NameId));
+        for (var index = 0; index < update.Effectiveness.Count; index++)
+        {
+            data.WriteByte(offset + XdTypeFirstEffectivenessOffset + index, ClampByte(update.Effectiveness[index]));
+        }
+
+        return WriteCommonRel(data);
+    }
+
+    public string SaveTreasure(XdTreasureUpdate update)
+    {
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var offset = CommonRelRowOffset(data, table, XdTreasureIndex, XdNumberOfTreasuresIndex, XdTreasureSize, update.Index, 1000, "Treasure");
+
+        data.WriteByte(offset + XdTreasureModelOffset, ClampByte(update.ModelId));
+        data.WriteByte(offset + XdTreasureQuantityOffset, ClampByte(update.Quantity));
+        data.WriteUInt16(offset + XdTreasureAngleOffset, ClampUInt16ToU16(update.Angle));
+        data.WriteUInt16(offset + XdTreasureRoomOffset, ClampUInt16ToU16(update.RoomId));
+        data.WriteUInt16(offset + XdTreasureItemOffset, ClampUInt16ToU16(update.ItemId));
+        WriteSingle(data, offset + XdTreasureXOffset, update.X);
+        WriteSingle(data, offset + XdTreasureYOffset, update.Y);
+        WriteSingle(data, offset + XdTreasureZOffset, update.Z);
+
+        return WriteCommonRel(data);
+    }
+
     public string SaveShadowPokemon(XdShadowPokemonUpdate update)
     {
         var archive = TryReadFsys("deck_archive.fsys", out var error)
@@ -98,6 +242,71 @@ public sealed partial class XdProjectContext
         {
             ["common.rel"] = data.ToArray()
         });
+    }
+
+    public string SaveGiftPokemon(XdGiftPokemonUpdate update)
+    {
+        var layout = XdGiftLayouts(Iso.Region).FirstOrDefault(candidate => candidate.RowId == update.RowId)
+            ?? throw new ArgumentOutOfRangeException(nameof(update), $"Gift Pokemon row {update.RowId} is unknown.");
+        var dolEntry = FindIsoFile("Start.dol")
+            ?? throw new FileNotFoundException("Start.dol was not found in the ISO.");
+        var dol = new BinaryData(GameCubeIsoReader.ReadFile(Iso, dolEntry));
+
+        dol.WriteUInt16(layout.StartOffset + layout.SpeciesOffset, ClampUInt16ToU16(update.SpeciesId));
+        if (layout.LevelOffset >= 0)
+        {
+            dol.WriteByte(layout.StartOffset + layout.LevelOffset, ClampByte(update.Level));
+        }
+        else
+        {
+            dol.WriteByte(layout.SharedLevelOffset, ClampByte(update.Level));
+        }
+
+        if (!layout.UsesLevelUpMoves)
+        {
+            for (var index = 0; index < layout.MoveOffsets.Count; index++)
+            {
+                dol.WriteUInt16(layout.StartOffset + layout.MoveOffsets[index], ClampUInt16ToU16(ValueAt(update.MoveIds, index)));
+            }
+        }
+
+        var bytes = dol.ToArray();
+        WriteIsoEntry(dolEntry, bytes);
+        var workspacePath = Path.Combine(WorkspaceDirectory, "Game Files", "Start.dol");
+        Directory.CreateDirectory(Path.GetDirectoryName(workspacePath)!);
+        File.WriteAllBytes(workspacePath, bytes);
+        return workspacePath;
+    }
+
+    private string WriteCommonRel(BinaryData data)
+        => WriteFsysEntries("common.fsys", new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["common.rel"] = data.ToArray()
+        });
+
+    private static int CommonRelRowOffset(
+        BinaryData data,
+        RelocationTable table,
+        int tablePointerIndex,
+        int countPointerIndex,
+        int rowSize,
+        int rowIndex,
+        int maxCount,
+        string label)
+    {
+        var start = table.GetPointer(tablePointerIndex);
+        var count = table.GetValueAtPointer(countPointerIndex);
+        if (!IsSafeTableRange(data, start, count, rowSize, maxCount))
+        {
+            throw new InvalidDataException($"{label} table is outside common.rel.");
+        }
+
+        if (rowIndex < 0 || rowIndex >= count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rowIndex), $"{label} #{rowIndex} is outside the {count}-row table.");
+        }
+
+        return checked(start + (rowIndex * rowSize));
     }
 
     private string WriteFsysEntries(string fsysName, IReadOnlyDictionary<string, byte[]> replacements)
@@ -286,14 +495,32 @@ public sealed partial class XdProjectContext
     private static void WriteU16(byte[] bytes, int offset, int value)
         => BigEndian.WriteUInt16(bytes, offset, checked((ushort)ClampUInt16(value)));
 
+    private static void WriteSingle(BinaryData data, int offset, float value)
+    {
+        Span<byte> bytes = stackalloc byte[4];
+        BigEndian.WriteUInt32(bytes, 0, unchecked((uint)BitConverter.SingleToInt32Bits(value)));
+        data.WriteBytes(offset, bytes);
+    }
+
     private static int ValueAt(IReadOnlyList<int> values, int index)
         => index < values.Count ? values[index] : 0;
+
+    private static byte Flag(bool value) => value ? (byte)1 : (byte)0;
 
     private static byte ClampByte(int value)
         => checked((byte)Math.Clamp(value, 0, byte.MaxValue));
 
     private static int ClampUInt16(int value)
         => Math.Clamp(value, 0, ushort.MaxValue);
+
+    private static ushort ClampUInt16ToU16(int value)
+        => checked((ushort)ClampUInt16(value));
+
+    private static uint ClampUInt32(int value)
+        => checked((uint)Math.Max(0, value));
+
+    private static byte ClampSignedByte(int value)
+        => unchecked((byte)(sbyte)Math.Clamp(value, sbyte.MinValue, sbyte.MaxValue));
 
     private static int Align16(int value)
         => (value + 0x0f) & ~0x0f;

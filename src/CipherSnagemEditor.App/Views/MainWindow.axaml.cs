@@ -251,6 +251,7 @@ public partial class MainWindow : Window
                 "Move Editor" => new MoveEditorView(),
                 "Item Editor" => new ItemEditorView(),
                 "Pokespot Editor" => new XdPokespotEditorView(),
+                "Gift Pokemon Editor" => new GiftPokemonEditorView(),
                 "Type Editor" => new TypeEditorView(),
                 "Treasure Editor" => new TreasureEditorView(),
                 "ISO Explorer" => new IsoExplorerView(),

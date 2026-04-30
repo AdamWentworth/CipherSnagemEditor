@@ -1,5 +1,6 @@
 using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Binary;
+using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Relocation;
 using CipherSnagemEditor.Core.Text;
 
@@ -126,6 +127,37 @@ public sealed partial class XdProjectContext
     private const int XdTreasureYOffset = 0x14;
     private const int XdTreasureZOffset = 0x18;
     private const int XdRoomSize = 0x44;
+    private const int XdStarterSpeciesOffset = 0x02;
+    private const int XdStarterLevelOffset = 0x0b;
+    private const int XdStarterMove1Offset = 0x12;
+    private const int XdStarterMove2Offset = 0x16;
+    private const int XdStarterMove3Offset = 0x1a;
+    private const int XdStarterMove4Offset = 0x1e;
+    private const int XdDemoGiftSpeciesOffset = 0x02;
+    private const int XdDemoGiftLevelOffset = 0x07;
+    private const int XdDemoGiftMove1Offset = 0x16;
+    private const int XdDemoGiftMove2Offset = 0x26;
+    private const int XdDemoGiftMove3Offset = 0x36;
+    private const int XdDemoGiftMove4Offset = 0x46;
+    private const int XdColosseumGiftSpeciesOffset = 0x02;
+    private const int XdColosseumGiftLevelOffset = 0x07;
+    private const int XdTradeShadowGiftSpeciesOffset = 0x02;
+    private const int XdTradeShadowGiftLevelOffset = 0x0b;
+    private const int XdTradeShadowGiftMove1Offset = 0x0e;
+    private const int XdTradeShadowGiftMove2Offset = 0x12;
+    private const int XdTradeShadowGiftMove3Offset = 0x16;
+    private const int XdTradeShadowGiftMove4Offset = 0x1a;
+    private const int XdTradeGiftSpeciesOffset = 0x02;
+    private const int XdTradeGiftLevelOffset = 0x0b;
+    private const int XdTradeGiftMove1Offset = 0x26;
+    private const int XdTradeGiftMove2Offset = 0x2a;
+    private const int XdTradeGiftMove3Offset = 0x2e;
+    private const int XdTradeGiftMove4Offset = 0x32;
+    private const int XdMtBattleGiftSpeciesOffset = 0x02;
+    private const int XdMtBattleGiftMove1Offset = 0x06;
+    private const int XdMtBattleGiftMove2Offset = 0x0a;
+    private const int XdMtBattleGiftMove3Offset = 0x0e;
+    private const int XdMtBattleGiftMove4Offset = 0x12;
 
     private static readonly IReadOnlyList<string> XdTrainerDecks =
     [
@@ -517,7 +549,9 @@ public sealed partial class XdProjectContext
                 data.ReadByte(offset + XdPokemonType2Offset),
                 TypeName(typeNames, data.ReadByte(offset + XdPokemonType2Offset)),
                 data.ReadByte(offset + XdPokemonAbility1Offset),
+                Gen3AbilityName(data.ReadByte(offset + XdPokemonAbility1Offset)),
                 data.ReadByte(offset + XdPokemonAbility2Offset),
+                Gen3AbilityName(data.ReadByte(offset + XdPokemonAbility2Offset)),
                 data.ReadUInt16(offset + XdPokemonHeldItem1Offset),
                 ItemNameById(itemNames, data.ReadUInt16(offset + XdPokemonHeldItem1Offset)),
                 data.ReadUInt16(offset + XdPokemonHeldItem2Offset),
@@ -711,6 +745,67 @@ public sealed partial class XdProjectContext
         return rows;
     }
 
+    public IReadOnlyList<XdGiftPokemonRecord> LoadGiftPokemonRecords()
+    {
+        var dol = ReadStartDolOrThrow();
+        var names = BuildCommonNameLookup();
+        var statsBySpecies = LoadPokemonStatsRecords().ToDictionary(pokemon => pokemon.Index);
+        return XdGiftLayouts(Iso.Region)
+            .Select(layout => ReadGiftPokemon(dol, layout, names, statsBySpecies))
+            .ToArray();
+    }
+
+    private static XdGiftPokemonRecord ReadGiftPokemon(
+        BinaryData dol,
+        XdGiftLayout layout,
+        IReadOnlyDictionary<int, string> names,
+        IReadOnlyDictionary<int, XdPokemonStatsRecord> statsBySpecies)
+    {
+        var species = dol.ReadUInt16(layout.StartOffset + layout.SpeciesOffset);
+        var level = layout.LevelOffset >= 0
+            ? dol.ReadByte(layout.StartOffset + layout.LevelOffset)
+            : dol.ReadByte(layout.SharedLevelOffset);
+        var moveIds = layout.UsesLevelUpMoves
+            ? DefaultMovesForLevel(statsBySpecies, species, level)
+            : layout.MoveOffsets.Select(offset => (int)dol.ReadUInt16(layout.StartOffset + offset)).ToArray();
+
+        return new XdGiftPokemonRecord(
+            layout.RowId,
+            layout.DataIndex,
+            layout.StartOffset,
+            layout.GiftType,
+            species,
+            PokemonName(names, species),
+            level,
+            moveIds,
+            moveIds.Select(move => MoveName(names, move)).ToArray(),
+            layout.UsesLevelUpMoves);
+    }
+
+    private static IReadOnlyList<int> DefaultMovesForLevel(
+        IReadOnlyDictionary<int, XdPokemonStatsRecord> statsBySpecies,
+        int species,
+        int level)
+    {
+        if (!statsBySpecies.TryGetValue(species, out var stats))
+        {
+            return [0, 0, 0, 0];
+        }
+
+        var moves = stats.LevelUpMoves
+            .Where(move => move.MoveId > 0 && move.Level <= level)
+            .Select(move => move.MoveId)
+            .Distinct()
+            .TakeLast(4)
+            .ToList();
+        while (moves.Count < 4)
+        {
+            moves.Insert(0, 0);
+        }
+
+        return moves;
+    }
+
     private bool TryReadCommonRel(
         out BinaryData? data,
         out RelocationTable? table,
@@ -823,6 +918,41 @@ public sealed partial class XdProjectContext
 
         return names;
     }
+
+    private static IReadOnlyList<XdGiftLayout> XdGiftLayouts(GameCubeRegion region)
+    {
+        var mtLevelOffset = MtBattleLevelOffset(region) + 3;
+        return
+        [
+            new(0, 0, GiftOffset(region, 0x1CBC50, 0x1CD724, 0x1C6AF4), "Starter Pokemon", XdStarterSpeciesOffset, XdStarterLevelOffset, [XdStarterMove1Offset, XdStarterMove2Offset, XdStarterMove3Offset, XdStarterMove4Offset], false, -1),
+            new(1, 0, GiftOffset(region, 0x14F73C, 0x151000, 0x14AA64), "Demo Starter Pokemon", XdDemoGiftSpeciesOffset, XdDemoGiftLevelOffset, [XdDemoGiftMove1Offset, XdDemoGiftMove2Offset, XdDemoGiftMove3Offset, XdDemoGiftMove4Offset], false, -1),
+            new(2, 1, GiftOffset(region, 0x14F614, 0x150ED8, 0x14A93C), "Demo Starter Pokemon", XdDemoGiftSpeciesOffset, XdDemoGiftLevelOffset, [XdDemoGiftMove1Offset, XdDemoGiftMove2Offset, XdDemoGiftMove3Offset, XdDemoGiftMove4Offset], false, -1),
+            new(3, 0, GiftOffset(region, 0x14F514, 0x150DD8, 0x14A83C), "Duking's Plusle", XdColosseumGiftSpeciesOffset, XdColosseumGiftLevelOffset, [], true, -1),
+            new(4, 1, GiftOffset(region, 0x14F430, 0x150CF4, 0x14A758), "Mt.Battle Ho-oh", XdColosseumGiftSpeciesOffset, XdColosseumGiftLevelOffset, [], true, -1),
+            new(5, 3, GiftOffset(region, 0x14F310, 0x150BD4, 0x14A638), "Agate Pikachu", XdColosseumGiftSpeciesOffset, XdColosseumGiftLevelOffset, [], true, -1),
+            new(6, 2, GiftOffset(region, 0x14F200, 0x150AC4, 0x14A528), "Agate Celebi", XdColosseumGiftSpeciesOffset, XdColosseumGiftLevelOffset, [], true, -1),
+            new(7, 0, GiftOffset(region, 0x1C5760, 0x1C705C, 0x1C0C70), "Shadow Pokemon Gift", XdTradeShadowGiftSpeciesOffset, XdTradeShadowGiftLevelOffset, [XdTradeShadowGiftMove1Offset, XdTradeShadowGiftMove2Offset, XdTradeShadowGiftMove3Offset, XdTradeShadowGiftMove4Offset], false, -1),
+            new(8, 0, GiftOffset(region, 0x1C57A4, 0x1C70A0, 0x1C0CB4), "Hordel Trade", XdTradeGiftSpeciesOffset, XdTradeGiftLevelOffset, [XdTradeGiftMove1Offset, XdTradeGiftMove2Offset, XdTradeGiftMove3Offset, XdTradeGiftMove4Offset], false, -1),
+            new(9, 1, GiftOffset(region, 0x1C5888, 0x1C7184, 0x1C0D1C), "Duking Trade", XdTradeGiftSpeciesOffset, XdTradeGiftLevelOffset, [XdTradeGiftMove1Offset, XdTradeGiftMove2Offset, XdTradeGiftMove3Offset, XdTradeGiftMove4Offset], false, -1),
+            new(10, 2, GiftOffset(region, 0x1C58D8, 0x1C71D4, 0x1C0D6C), "Duking Trade", XdTradeGiftSpeciesOffset, XdTradeGiftLevelOffset, [XdTradeGiftMove1Offset, XdTradeGiftMove2Offset, XdTradeGiftMove3Offset, XdTradeGiftMove4Offset], false, -1),
+            new(11, 3, GiftOffset(region, 0x1C5928, 0x1C7224, 0x1C0DBC), "Duking Trade", XdTradeGiftSpeciesOffset, XdTradeGiftLevelOffset, [XdTradeGiftMove1Offset, XdTradeGiftMove2Offset, XdTradeGiftMove3Offset, XdTradeGiftMove4Offset], false, -1),
+            new(12, 0, GiftOffset(region, 0x1C5974, 0x1C7270, 0x1C0E08), "Mt. Battle Prize", XdMtBattleGiftSpeciesOffset, -1, [XdMtBattleGiftMove1Offset, XdMtBattleGiftMove2Offset, XdMtBattleGiftMove3Offset, XdMtBattleGiftMove4Offset], false, mtLevelOffset),
+            new(13, 1, GiftOffset(region, 0x1C59A0, 0x1C729C, 0x1C0E34), "Mt. Battle Prize", XdMtBattleGiftSpeciesOffset, -1, [XdMtBattleGiftMove1Offset, XdMtBattleGiftMove2Offset, XdMtBattleGiftMove3Offset, XdMtBattleGiftMove4Offset], false, mtLevelOffset),
+            new(14, 2, GiftOffset(region, 0x1C59CC, 0x1C72C8, 0x1C0E60), "Mt. Battle Prize", XdMtBattleGiftSpeciesOffset, -1, [XdMtBattleGiftMove1Offset, XdMtBattleGiftMove2Offset, XdMtBattleGiftMove3Offset, XdMtBattleGiftMove4Offset], false, mtLevelOffset)
+        ];
+    }
+
+    private static int GiftOffset(GameCubeRegion region, int us, int eu, int jp)
+        => region switch
+        {
+            GameCubeRegion.UnitedStates => us,
+            GameCubeRegion.Europe => eu,
+            GameCubeRegion.Japan => jp,
+            _ => 0
+        };
+
+    private static int MtBattleLevelOffset(GameCubeRegion region)
+        => GiftOffset(region, 0x1C56E8, 0x1C6FE4, 0x1C0BF8);
 
     private static IReadOnlyDictionary<int, string> BuildMoveNameMap(BinaryData data, RelocationTable table, GameStringTable? strings)
     {
@@ -1105,6 +1235,13 @@ public sealed partial class XdProjectContext
         }
 
         return (data, table, strings);
+    }
+
+    private BinaryData ReadStartDolOrThrow()
+    {
+        var entry = FindIsoFile("Start.dol")
+            ?? throw new FileNotFoundException("Start.dol was not found in the ISO.");
+        return new BinaryData(GameCubeIsoReader.ReadFile(Iso, entry));
     }
 
     private static IReadOnlyDictionary<int, string> BuildTypeNameMap(BinaryData data, RelocationTable table, GameStringTable? strings)
@@ -1551,6 +1688,17 @@ public sealed partial class XdProjectContext
         int PokemonDataOffset,
         int AiEntries,
         int StringDataOffset);
+
+    private sealed record XdGiftLayout(
+        int RowId,
+        int DataIndex,
+        int StartOffset,
+        string GiftType,
+        int SpeciesOffset,
+        int LevelOffset,
+        IReadOnlyList<int> MoveOffsets,
+        bool UsesLevelUpMoves,
+        int SharedLevelOffset);
 
     private sealed record XdPokespotTarget(string Name, int PointerIndex, int CountIndex);
 }

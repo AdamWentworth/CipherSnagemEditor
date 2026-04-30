@@ -1035,7 +1035,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSavePokemonStats))]
     private async Task SavePokemonStatsAsync()
     {
-        if (CurrentProject is null || SelectedPokemonStatsDetail is null)
+        if (SelectedPokemonStatsDetail is null || (CurrentProject is null && CurrentXdProject is null))
         {
             return;
         }
@@ -1047,8 +1047,18 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var update = SelectedPokemonStatsDetail.ToUpdate();
-            var path = await Task.Run(() => CurrentProject.SavePokemonStats(update));
-            RefreshSavedPokemonStatsEntry(index);
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SavePokemonStats(update))
+                : await Task.Run(() => CurrentXdProject!.SavePokemonStats(ToXdUpdate(update)));
+            if (CurrentProject is not null)
+            {
+                RefreshSavedPokemonStatsEntry(index);
+            }
+            else
+            {
+                SelectedPokemonStatsDetail.MarkSaved();
+            }
+
             Logs.Add($"Pokemon stats saved to {path}");
         }
         catch (Exception ex)
@@ -1064,7 +1074,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveMove))]
     private async Task SaveMoveAsync()
     {
-        if (CurrentProject is null || SelectedMoveDetail is null)
+        if (SelectedMoveDetail is null || (CurrentProject is null && CurrentXdProject is null))
         {
             return;
         }
@@ -1076,8 +1086,18 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var update = SelectedMoveDetail.ToUpdate();
-            var path = await Task.Run(() => CurrentProject.SaveMove(update));
-            RefreshSavedMoveEntry(index);
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveMove(update))
+                : await Task.Run(() => CurrentXdProject!.SaveMove(ToXdUpdate(update)));
+            if (CurrentProject is not null)
+            {
+                RefreshSavedMoveEntry(index);
+            }
+            else
+            {
+                SelectedMoveDetail.MarkSaved();
+            }
+
             Logs.Add($"Move saved to {path}");
         }
         catch (Exception ex)
@@ -1093,7 +1113,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveItem))]
     private async Task SaveItemAsync()
     {
-        if (CurrentProject is null || SelectedItemDetail is null)
+        if (SelectedItemDetail is null || (CurrentProject is null && CurrentXdProject is null))
         {
             return;
         }
@@ -1105,8 +1125,18 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var update = SelectedItemDetail.ToUpdate();
-            var path = await Task.Run(() => CurrentProject.SaveItem(update));
-            RefreshSavedItemEntry(index);
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveItem(update))
+                : await Task.Run(() => CurrentXdProject!.SaveItem(ToXdUpdate(update)));
+            if (CurrentProject is not null)
+            {
+                RefreshSavedItemEntry(index);
+            }
+            else
+            {
+                SelectedItemDetail.MarkSaved();
+            }
+
             Logs.Add($"Item saved to {path}");
         }
         catch (Exception ex)
@@ -1122,7 +1152,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveGiftPokemon))]
     private async Task SaveGiftPokemonAsync()
     {
-        if (CurrentProject is null || SelectedGiftPokemonDetail is null)
+        if (SelectedGiftPokemonDetail is null || (CurrentProject is null && CurrentXdProject is null))
         {
             return;
         }
@@ -1134,8 +1164,18 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var update = SelectedGiftPokemonDetail.ToUpdate();
-            var path = await Task.Run(() => CurrentProject.SaveGiftPokemon(update));
-            RefreshSavedGiftPokemonEntry(rowId);
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveGiftPokemon(update))
+                : await Task.Run(() => CurrentXdProject!.SaveGiftPokemon(ToXdUpdate(update)));
+            if (CurrentProject is not null)
+            {
+                RefreshSavedGiftPokemonEntry(rowId);
+            }
+            else
+            {
+                SelectedGiftPokemonDetail.MarkSaved();
+            }
+
             Logs.Add($"Gift Pokemon saved to {path}");
         }
         catch (Exception ex)
@@ -1151,7 +1191,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveType))]
     private async Task SaveTypeAsync()
     {
-        if (CurrentProject is null || SelectedTypeDetail is null)
+        if (SelectedTypeDetail is null || (CurrentProject is null && CurrentXdProject is null))
         {
             return;
         }
@@ -1163,8 +1203,18 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var update = SelectedTypeDetail.ToUpdate();
-            var path = await Task.Run(() => CurrentProject.SaveType(update));
-            RefreshSavedTypeEntry(index);
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveType(update))
+                : await Task.Run(() => CurrentXdProject!.SaveType(ToXdUpdate(update)));
+            if (CurrentProject is not null)
+            {
+                RefreshSavedTypeEntry(index);
+            }
+            else
+            {
+                SelectedTypeDetail.MarkSaved();
+            }
+
             Logs.Add($"Type saved to {path}");
         }
         catch (Exception ex)
@@ -1180,7 +1230,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveTreasure))]
     private async Task SaveTreasureAsync()
     {
-        if (CurrentProject is null || SelectedTreasureDetail is null)
+        if (SelectedTreasureDetail is null || (CurrentProject is null && CurrentXdProject is null))
         {
             return;
         }
@@ -1192,8 +1242,18 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var update = SelectedTreasureDetail.ToUpdate();
-            var path = await Task.Run(() => CurrentProject.SaveTreasure(update));
-            RefreshSavedTreasureEntry(index);
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveTreasure(update))
+                : await Task.Run(() => CurrentXdProject!.SaveTreasure(ToXdUpdate(update)));
+            if (CurrentProject is not null)
+            {
+                RefreshSavedTreasureEntry(index);
+            }
+            else
+            {
+                SelectedTreasureDetail.MarkSaved();
+            }
+
             Logs.Add($"Treasure saved to {path}");
         }
         catch (Exception ex)
@@ -1565,22 +1625,22 @@ public partial class MainWindowViewModel : ViewModelBase
         => CurrentProject?.Iso is not null && SelectedTrainer is not null && !IsBusy;
 
     private bool CanSavePokemonStats()
-        => CurrentProject?.Iso is not null && SelectedPokemonStatsDetail is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedPokemonStatsDetail is not null && !IsBusy;
 
     private bool CanSaveMove()
-        => CurrentProject?.Iso is not null && SelectedMoveDetail is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedMoveDetail is not null && !IsBusy;
 
     private bool CanSaveItem()
-        => CurrentProject?.Iso is not null && SelectedItemDetail is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedItemDetail is not null && !IsBusy;
 
     private bool CanSaveGiftPokemon()
-        => CurrentProject?.Iso is not null && SelectedGiftPokemonDetail is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedGiftPokemonDetail is not null && !IsBusy;
 
     private bool CanSaveType()
-        => CurrentProject?.Iso is not null && SelectedTypeDetail is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedTypeDetail is not null && !IsBusy;
 
     private bool CanSaveTreasure()
-        => CurrentProject?.Iso is not null && SelectedTreasureDetail is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedTreasureDetail is not null && !IsBusy;
 
     private bool CanSaveInteraction()
         => CurrentProject?.Iso is not null && SelectedInteractionDetail is not null && !IsBusy;
@@ -1745,6 +1805,9 @@ public partial class MainWindowViewModel : ViewModelBase
                     break;
                 case "Pokespot Editor":
                     LoadXdPokespotRows();
+                    break;
+                case "Gift Pokemon Editor":
+                    LoadXdGiftPokemonRows();
                     break;
                 case "Type Editor":
                     LoadXdTypeRows();
@@ -2895,7 +2958,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
             var types = MapXdTypes(CurrentXdProject.LoadTypeRecords());
-            _moveEditorResources = MoveEditorResources.FromRows(moves, types);
+            _moveEditorResources = MoveEditorResources.FromRows(moves, types, "XD");
             _allMoves.Clear();
             foreach (var move in moves)
             {
@@ -2990,6 +3053,46 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedXdPokespot = null;
             SelectedToolDetail = $"Pokespot Editor\n{ex.Message}";
             Logs.Add($"XD Pokespot load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdGiftPokemonRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allGiftPokemon.Clear();
+            _giftPokemonResources = GiftPokemonEditorResources.Empty;
+            GiftPokemonEntries.Clear();
+            SelectedGiftPokemon = null;
+            SelectedGiftPokemonDetail = null;
+            return;
+        }
+
+        try
+        {
+            var pokemonStats = MapXdPokemonStats(CurrentXdProject.LoadPokemonStatsRecords());
+            var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
+            var gifts = CurrentXdProject.LoadGiftPokemonRecords().Select(MapXdGiftPokemon).ToArray();
+            _giftPokemonResources = GiftPokemonEditorResources.FromRows(pokemonStats, moves);
+            _allGiftPokemon.Clear();
+            var rowIndex = 0;
+            foreach (var gift in gifts)
+            {
+                _allGiftPokemon.Add(new GiftPokemonEntryViewModel(gift, rowIndex++));
+            }
+
+            ApplyGiftPokemonFilter(GiftPokemonSearchText);
+            SelectedGiftPokemon = GiftPokemonEntries.FirstOrDefault();
+            Logs.Add($"XD Gift Pokemon Editor loaded: {_allGiftPokemon.Count} gifts.");
+            LogPerformance("XD Gift Pokemon Editor load total", totalTimer, _allGiftPokemon.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedGiftPokemon = null;
+            SelectedGiftPokemonDetail = null;
+            SelectedToolDetail = $"Gift Pokemon Editor\n{ex.Message}";
+            Logs.Add($"XD Gift Pokemon load failed: {ex.Message}");
         }
     }
 
@@ -4032,6 +4135,100 @@ public partial class MainWindowViewModel : ViewModelBase
         return Contains(entry.SearchText, filter);
     }
 
+    private static XdPokemonStatsUpdate ToXdUpdate(ColosseumPokemonStatsUpdate update)
+        => new(
+            update.Index,
+            update.NameId,
+            update.ExpRate,
+            update.GenderRatio,
+            update.BaseExp,
+            update.BaseHappiness,
+            update.Height,
+            update.Weight,
+            update.Type1,
+            update.Type2,
+            update.Ability1,
+            update.Ability2,
+            update.HeldItem1,
+            update.HeldItem2,
+            update.CatchRate,
+            update.Hp,
+            update.Attack,
+            update.Defense,
+            update.SpecialAttack,
+            update.SpecialDefense,
+            update.Speed,
+            update.HpYield,
+            update.AttackYield,
+            update.DefenseYield,
+            update.SpecialAttackYield,
+            update.SpecialDefenseYield,
+            update.SpeedYield,
+            update.LearnableTms,
+            update.LevelUpMoves.Select(move => new XdPokemonLevelUpMoveUpdate(move.Level, move.MoveId)).ToArray(),
+            update.Evolutions.Select(evolution => new XdPokemonEvolutionUpdate(
+                evolution.Method,
+                evolution.Condition,
+                evolution.EvolvedSpeciesId)).ToArray());
+
+    private static XdMoveUpdate ToXdUpdate(ColosseumMoveUpdate update)
+        => new(
+            update.Index,
+            update.NameId,
+            update.DescriptionId,
+            update.TypeId,
+            update.TargetId,
+            update.CategoryId,
+            update.AnimationId,
+            update.Animation2Id,
+            update.EffectId,
+            update.EffectTypeId,
+            update.Power,
+            update.Accuracy,
+            update.Pp,
+            update.Priority,
+            update.EffectAccuracy,
+            update.HmFlag,
+            update.SoundBasedFlag,
+            update.ContactFlag,
+            update.KingsRockFlag,
+            update.ProtectFlag,
+            update.SnatchFlag,
+            update.MagicCoatFlag,
+            update.MirrorMoveFlag);
+
+    private static XdItemUpdate ToXdUpdate(ColosseumItemUpdate update)
+        => new(
+            update.Index,
+            update.NameId,
+            update.DescriptionId,
+            update.BagSlotId,
+            update.CanBeHeld,
+            update.Price,
+            update.CouponPrice,
+            update.Parameter,
+            update.HoldItemId,
+            update.InBattleUseId,
+            update.FriendshipEffects);
+
+    private static XdGiftPokemonUpdate ToXdUpdate(ColosseumGiftPokemonUpdate update)
+        => new(update.RowId, update.SpeciesId, update.Level, update.MoveIds);
+
+    private static XdTypeUpdate ToXdUpdate(ColosseumTypeUpdate update)
+        => new(update.Index, update.NameId, update.CategoryId, update.Effectiveness);
+
+    private static XdTreasureUpdate ToXdUpdate(ColosseumTreasureUpdate update)
+        => new(
+            update.Index,
+            update.ModelId,
+            update.Quantity,
+            update.Angle,
+            update.RoomId,
+            update.ItemId,
+            update.X,
+            update.Y,
+            update.Z);
+
     private static ColosseumTrainer MapXdTrainer(XdTrainerRecord trainer)
         => new(
             trainer.Index,
@@ -4125,6 +4322,26 @@ public partial class MainWindowViewModel : ViewModelBase
             0,
             shadow.HeartGauge);
 
+    private static ColosseumGiftPokemon MapXdGiftPokemon(XdGiftPokemonRecord gift)
+        => new(
+            gift.RowId,
+            gift.DataIndex,
+            gift.StartOffset,
+            gift.GiftType,
+            gift.SpeciesId,
+            gift.SpeciesName,
+            gift.Level,
+            gift.MoveIds,
+            gift.MoveNames,
+            0xffff,
+            "Random",
+            0xff,
+            "Random",
+            0xff,
+            "Random",
+            gift.UsesLevelUpMoves,
+            false);
+
     private static IReadOnlyList<ColosseumPokemonStats> MapXdPokemonStats(IReadOnlyList<XdPokemonStatsRecord> rows)
         => rows.Select(row => new ColosseumPokemonStats(
             row.Index,
@@ -4145,9 +4362,9 @@ public partial class MainWindowViewModel : ViewModelBase
             row.Type2,
             row.Type2Name,
             row.Ability1,
-            $"Ability {row.Ability1}",
+            row.Ability1Name,
             row.Ability2,
-            $"Ability {row.Ability2}",
+            row.Ability2Name,
             row.HeldItem1,
             row.HeldItem1Name,
             row.HeldItem2,

@@ -119,10 +119,14 @@ public sealed class PokemonStatsEditorResources
             .Select(type => new PickerOptionViewModel(type.Index, type.Name))
             .ToArray();
         var abilityIds = pokemonStatsRows
-            .SelectMany(pokemon => new[] { pokemon.Ability1, pokemon.Ability2 })
-            .Distinct()
-            .Order()
-            .Select(id => new PickerOptionViewModel(id, $"Ability {id}"))
+            .SelectMany(pokemon => new[]
+            {
+                new PickerOptionViewModel(pokemon.Ability1, pokemon.Ability1Name),
+                new PickerOptionViewModel(pokemon.Ability2, pokemon.Ability2Name)
+            })
+            .GroupBy(option => option.Value)
+            .Select(group => group.First())
+            .OrderBy(option => option.Value)
             .ToArray();
         var itemOptions = itemRows.Count == 0
             ? [new PickerOptionViewModel(0, "-")]
