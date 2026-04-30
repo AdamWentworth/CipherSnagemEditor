@@ -100,7 +100,7 @@ try
     {
         if (args.Length < 3)
         {
-            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data|randomizer-species|randomizer-bingo>");
+            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
             return 1;
         }
 

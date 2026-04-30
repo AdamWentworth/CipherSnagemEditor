@@ -1907,7 +1907,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     LoadXdPatchRows();
                     break;
                 case "Randomizer":
-                    RandomizerStatus = "Select randomizer options. XD data-table options are writable; remaining assembly/deck lanes are logged when selected.";
+                    RandomizerStatus = "Select randomizer options. XD randomizer writes common.rel, Start.dol, deck, and pocket menu paths.";
                     RunRandomizerCommand.NotifyCanExecuteChanged();
                     break;
                 case "Message Editor":
