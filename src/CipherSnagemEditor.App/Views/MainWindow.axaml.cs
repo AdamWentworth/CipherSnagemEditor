@@ -254,6 +254,10 @@ public partial class MainWindow : Window
                 "Gift Pokemon Editor" => new GiftPokemonEditorView(),
                 "Type Editor" => new TypeEditorView(),
                 "Treasure Editor" => new TreasureEditorView(),
+                "Patches" => new PatchEditorView(),
+                "Randomizer" => new RandomizerView(),
+                "Message Editor" => new MessageEditorView(),
+                "Table Editor" => new TableEditorView(),
                 "ISO Explorer" => new IsoExplorerView(),
                 _ => new XdToolView()
             };

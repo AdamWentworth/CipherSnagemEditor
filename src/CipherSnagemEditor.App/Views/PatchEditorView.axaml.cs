@@ -14,10 +14,14 @@ public partial class PatchEditorView : UserControl
     private void PatchPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is Control { DataContext: PatchEntryViewModel patch }
-            && DataContext is MainWindowViewModel viewModel
-            && viewModel.ApplyPatchCommand.CanExecute(patch))
+            && DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.ApplyPatchCommand.Execute(patch);
+            viewModel.SelectedPatch = patch;
+            if (viewModel.ApplyPatchCommand.CanExecute(patch))
+            {
+                viewModel.ApplyPatchCommand.Execute(patch);
+            }
+
             e.Handled = true;
         }
     }

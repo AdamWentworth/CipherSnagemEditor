@@ -1,5 +1,6 @@
 using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Binary;
+using CipherSnagemEditor.Core.Files;
 using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Relocation;
 using CipherSnagemEditor.Core.Text;
@@ -911,6 +912,51 @@ public sealed partial class XdProjectContext
             moveIds.Select(move => MoveName(names, move)).ToArray(),
             layout.UsesLevelUpMoves);
     }
+
+    public IReadOnlyList<XdMessageTable> LoadMessageTables()
+    {
+        var tables = new List<XdMessageTable>();
+        foreach (var isoEntry in Iso.Files.Where(entry => GameFileTypes.FromExtension(entry.Name) == GameFileType.Fsys))
+        {
+            FsysArchive archive;
+            try
+            {
+                archive = ReadIsoFsysArchive(isoEntry);
+            }
+            catch (Exception ex) when (IsParseException(ex))
+            {
+                continue;
+            }
+
+            foreach (var messageEntry in archive.Entries.Where(entry => entry.FileType == GameFileType.Message))
+            {
+                try
+                {
+                    var workspacePath = WorkspaceFsysEntryPath(isoEntry.Name, messageEntry.Name);
+                    var tableBytes = File.Exists(workspacePath)
+                        ? File.ReadAllBytes(workspacePath)
+                        : archive.Extract(messageEntry);
+                    var table = GameStringTable.Parse(tableBytes);
+                    tables.Add(ToMessageTable(isoEntry.Name, messageEntry.Name, table));
+                }
+                catch (Exception ex) when (IsParseException(ex))
+                {
+                }
+            }
+        }
+
+        return tables.OrderBy(table => table.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static XdMessageTable ToMessageTable(string isoFileName, string entryName, GameStringTable table)
+        => new(
+            $"{Path.GetFileNameWithoutExtension(isoFileName)}/{entryName}",
+            isoFileName,
+            entryName,
+            table.Strings.Select(message => new XdMessageString(
+                message.Id,
+                $"0x{message.Id:X}",
+                message.Text)).ToArray());
 
     private static IReadOnlyList<int> DefaultMovesForLevel(
         IReadOnlyDictionary<int, XdPokemonStatsRecord> statsBySpecies,

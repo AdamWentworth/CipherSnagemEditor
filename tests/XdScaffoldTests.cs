@@ -71,6 +71,17 @@ public sealed class XdScaffoldTests
     }
 
     [Fact]
+    public void XdPatchListMatchesLegacySwiftOrder()
+    {
+        var names = XdPatchDefinition.XdPatches.Select(patch => patch.Name).ToArray();
+
+        Assert.Equal(29, names.Length);
+        Assert.Equal("Removes foreign language text from the US version", names[0]);
+        Assert.Equal("Apply the gen IV physical/special split and set moves to their default category", names[1]);
+        Assert.Equal("Disable attack animations during battles", names[^1]);
+    }
+
+    [Fact]
     public void ColosseumWorkspaceNameRemainsCmTool()
     {
         var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));

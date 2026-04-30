@@ -2,6 +2,7 @@ using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Binary;
 using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Relocation;
+using CipherSnagemEditor.Core.Text;
 
 namespace CipherSnagemEditor.XD;
 
@@ -278,6 +279,46 @@ public sealed partial class XdProjectContext
         return workspacePath;
     }
 
+    public XdMessageTable SaveMessageString(string isoFileName, string entryName, int id, string text)
+    {
+        var sourceBytes = LoadMessageTableBytes(isoFileName, entryName);
+        var updatedTable = GameStringTable.Parse(sourceBytes).WithString(id, text);
+        var bytes = updatedTable.ToArray(allowGrowth: Settings.IncreaseFileSizes);
+        WriteFsysEntries(isoFileName, new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            [entryName] = bytes
+        });
+
+        return new XdMessageTable(
+            $"{Path.GetFileNameWithoutExtension(isoFileName)}/{entryName}",
+            isoFileName,
+            entryName,
+            updatedTable.Strings.Select(message => new XdMessageString(
+                message.Id,
+                $"0x{message.Id:X}",
+                message.Text)).ToArray());
+    }
+
+    private byte[] LoadMessageTableBytes(string isoFileName, string entryName)
+    {
+        var workspacePath = WorkspaceFsysEntryPath(isoFileName, entryName);
+        if (File.Exists(workspacePath))
+        {
+            return File.ReadAllBytes(workspacePath);
+        }
+
+        var archive = TryReadFsys(isoFileName, out var error)
+            ?? throw new InvalidDataException(error ?? $"{isoFileName} could not be read.");
+        var messageEntry = archive.Entries.FirstOrDefault(entry =>
+            string.Equals(entry.Name, entryName, StringComparison.OrdinalIgnoreCase));
+        if (messageEntry is null)
+        {
+            throw new FileNotFoundException($"{entryName} was not found in {isoFileName}.");
+        }
+
+        return archive.Extract(messageEntry);
+    }
+
     private string WriteCommonRel(BinaryData data)
         => WriteFsysEntries("common.fsys", new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
         {
@@ -336,17 +377,21 @@ public sealed partial class XdProjectContext
 
     private string WriteWorkspaceFile(string fsysName, string entryName, byte[] bytes)
     {
+        var path = WorkspaceFsysEntryPath(fsysName, entryName);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, bytes);
+        return path;
+    }
+
+    private string WorkspaceFsysEntryPath(string fsysName, string entryName)
+    {
         var archiveFolder = Path.GetFileNameWithoutExtension(SafeFileName(fsysName));
         if (string.IsNullOrWhiteSpace(archiveFolder))
         {
             archiveFolder = SafeFileName(fsysName);
         }
 
-        var folder = Path.Combine(WorkspaceDirectory, "Game Files", archiveFolder);
-        Directory.CreateDirectory(folder);
-        var path = Path.Combine(folder, SafeFileName(entryName));
-        File.WriteAllBytes(path, bytes);
-        return path;
+        return Path.Combine(WorkspaceDirectory, "Game Files", archiveFolder, SafeFileName(entryName));
     }
 
     private void WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)

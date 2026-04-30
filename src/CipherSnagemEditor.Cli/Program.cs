@@ -348,6 +348,7 @@ static void RunXdEditorsProbe(string isoPath)
     var items = context.LoadItemRecords();
     var pokespots = context.LoadPokespotRecords();
     var gifts = context.LoadGiftPokemonRecords();
+    var messages = context.LoadMessageTables();
     var types = context.LoadTypeRecords();
     var treasures = context.LoadTreasureRecords();
     var trainersWithBattleData = trainers.Count(trainer => trainer.Battle is not null);
@@ -357,7 +358,7 @@ static void RunXdEditorsProbe(string isoPath)
         && !move.Description.StartsWith("String ", StringComparison.Ordinal)
         && !move.Description.StartsWith('#'));
 
-    Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, tms={tms.Count}, items={items.Count}, pokespots={pokespots.Count}, gifts={gifts.Count}, types={types.Count}, treasures={treasures.Count}");
+    Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, tms={tms.Count}, items={items.Count}, pokespots={pokespots.Count}, gifts={gifts.Count}, messages={messages.Count}, types={types.Count}, treasures={treasures.Count}");
     Console.WriteLine($"XD trainer header data: classes={trainersWithResolvedClasses}, battles={trainersWithBattleData}, first battle={firstBattleTrainer?.Index}: {firstBattleTrainer?.ClassName} {firstBattleTrainer?.Name} / {firstBattleTrainer?.Battle?.BattleStyleName} {firstBattleTrainer?.Battle?.BattleTypeName}");
     Console.WriteLine($"First XD TM: {tms.FirstOrDefault()?.Index}: {tms.FirstOrDefault()?.MoveName}");
     Console.WriteLine($"First XD move description: {firstResolvedMoveDescription?.Index}: {firstResolvedMoveDescription?.Description}");
@@ -400,6 +401,8 @@ static void RunXdEditorsProbe(string isoPath)
     Expect(gifts.Count == 15, failures, $"Gift Pokemon parser should match the Swift GoD Tool's 15 gift rows, but returned {gifts.Count}.");
     Expect(gifts.Select(gift => gift.GiftType).SequenceEqual(expectedGiftTypes), failures, "XD Gift Pokemon roster drifted from the Swift GoD Tool order.");
     Expect(gifts.Where(gift => gift.RowId is >= 3 and <= 6).All(gift => gift.UsesLevelUpMoves), failures, "XD CMGiftPokemon rows should use level-up moves like the Swift GoD Tool.");
+    Expect(messages.Count > 0, failures, "Message Editor did not discover any XD message tables.");
+    Expect(messages.Any(table => table.Strings.Count > 0), failures, "Message Editor found XD message tables but no strings.");
     Expect(types.Count >= 18, failures, $"Type parser is unexpectedly sparse: {types.Count}.");
     Expect(treasures.Count > 0, failures, "Treasure parser returned no rows.");
 

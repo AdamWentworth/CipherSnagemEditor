@@ -339,6 +339,16 @@ public sealed partial class XdProjectContext
             : new XdToolRow(entry.Name, $"{entry.Size:N0} bytes", detail);
     }
 
+    public FsysArchive ReadIsoFsysArchive(GameCubeIsoFileEntry entry)
+    {
+        if (GameFileTypes.FromExtension(entry.Name) != GameFileType.Fsys)
+        {
+            throw new InvalidDataException($"{entry.Name} is not an FSYS archive.");
+        }
+
+        return FsysArchive.Parse(entry.Name, GameCubeIsoReader.ReadFile(Iso, entry));
+    }
+
     private FsysArchive? TryReadFsys(string fileName, out string? error)
     {
         var entry = FindIsoFile(fileName);

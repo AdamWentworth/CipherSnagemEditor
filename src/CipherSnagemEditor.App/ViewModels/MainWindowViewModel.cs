@@ -291,6 +291,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _randomizerShopItems;
 
     [ObservableProperty]
+    private bool _randomizerBattleBingo;
+
+    [ObservableProperty]
+    private bool _randomizerShinyHues;
+
+    [ObservableProperty]
     private bool _randomizerSimilarBaseStatTotal;
 
     [ObservableProperty]
@@ -447,6 +453,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public string SelectedTableEditorDetails => SelectedTableEditorEntry?.Details ?? "Details: -";
 
+    public string RandomizerObtainablePokemonLabel => CurrentGame == GameCubeGame.PokemonXD
+        ? "Obtainable Pokemon"
+        : "Shadow Pokemon";
+
+    public string RandomizerUnobtainablePokemonLabel => CurrentGame == GameCubeGame.PokemonXD
+        ? "Unobtainable Pokemon"
+        : "NPC Pokemon";
+
+    public bool ShowXdRandomizerOptions => CurrentGame == GameCubeGame.PokemonXD;
+
+    public double RandomizerShopItemsLeft => CurrentGame == GameCubeGame.PokemonXD ? 198 : 8;
+
     public ColosseumProjectContext? CurrentProject { get; private set; }
 
     public XdProjectContext? CurrentXdProject { get; private set; }
@@ -476,6 +494,10 @@ public partial class MainWindowViewModel : ViewModelBase
         MainWindowIconResource = game == GameCubeGame.PokemonXD
             ? "avares://CipherSnagemEditor.App/Assets/AppIconXd.png"
             : "avares://CipherSnagemEditor.App/Assets/AppIcon.png";
+        OnPropertyChanged(nameof(RandomizerObtainablePokemonLabel));
+        OnPropertyChanged(nameof(RandomizerUnobtainablePokemonLabel));
+        OnPropertyChanged(nameof(ShowXdRandomizerOptions));
+        OnPropertyChanged(nameof(RandomizerShopItemsLeft));
         LoadToolCatalog(game);
     }
 
@@ -1356,8 +1378,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveMessage))]
     private async Task SaveMessageAsync()
     {
-        if (CurrentProject is null
-            || SelectedMessageTable is null
+        if (SelectedMessageTable is null
+            || (CurrentProject is null && CurrentXdProject is null)
             || !TryParseMessageId(SelectedMessageIdText, out var messageId))
         {
             return;
@@ -1368,10 +1390,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var updated = await Task.Run(() => CurrentProject.SaveMessageString(
-                SelectedMessageTable.Table,
-                messageId,
-                SelectedMessageText));
+            var updated = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveMessageString(
+                    SelectedMessageTable.Table,
+                    messageId,
+                    SelectedMessageText))
+                : MapXdMessageTable(await Task.Run(() => CurrentXdProject!.SaveMessageString(
+                    SelectedMessageTable.Table.IsoFileName,
+                    SelectedMessageTable.Table.EntryName,
+                    messageId,
+                    SelectedMessageText)));
             SelectedMessageTable.ReplaceTable(updated);
             LoadMessageStrings(SelectedMessageTable);
             SelectedMessageString = MessageStrings.FirstOrDefault(entry => entry.Message.Id == messageId);
@@ -1414,7 +1442,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanApplyPatch))]
     private async Task ApplyPatchAsync(PatchEntryViewModel? patch)
     {
-        if (patch is null || CurrentProject is null)
+        if (patch?.Definition is null || CurrentProject is null)
         {
             return;
         }
@@ -1652,7 +1680,7 @@ public partial class MainWindowViewModel : ViewModelBase
         => CurrentXdProject?.Iso is not null && SelectedXdPokespot?.HasChanges == true && !IsBusy;
 
     private bool CanSaveMessage()
-        => CurrentProject is not null
+        => (CurrentProject is not null || CurrentXdProject is not null)
             && SelectedMessageTable is not null
             && SelectedMessageString is not null
             && TryParseMessageId(SelectedMessageIdText, out _)
@@ -1662,7 +1690,7 @@ public partial class MainWindowViewModel : ViewModelBase
         => SelectedTableEditorEntry?.RawDefinition is not null && CurrentProject is not null && !IsBusy;
 
     private bool CanApplyPatch(PatchEntryViewModel? patch)
-        => patch is not null && CurrentProject?.Iso is not null && !IsBusy;
+        => patch?.Definition is not null && CurrentProject?.Iso is not null && !IsBusy;
 
     private bool CanRunRandomizer()
         => CurrentProject?.Iso is not null && !IsBusy;
@@ -1723,6 +1751,8 @@ public partial class MainWindowViewModel : ViewModelBase
         RandomizerTmMoves = false;
         RandomizerItemBoxes = false;
         RandomizerShopItems = false;
+        RandomizerBattleBingo = false;
+        RandomizerShinyHues = false;
         RandomizerSimilarBaseStatTotal = false;
         RandomizerRemoveItemOrTradeEvolutions = false;
     }
@@ -1814,6 +1844,19 @@ public partial class MainWindowViewModel : ViewModelBase
                     break;
                 case "Treasure Editor":
                     LoadXdTreasureRows();
+                    break;
+                case "Patches":
+                    LoadXdPatchRows();
+                    break;
+                case "Randomizer":
+                    RandomizerStatus = "XD randomizer options mirror the Swift GoD Tool. Backend application is still being ported.";
+                    RunRandomizerCommand.NotifyCanExecuteChanged();
+                    break;
+                case "Message Editor":
+                    LoadMessageRows();
+                    break;
+                case "Table Editor":
+                    LoadXdTableEditorRows();
                     break;
                 case "ISO Explorer":
                     break;
@@ -3207,6 +3250,33 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyPatchCommand.NotifyCanExecuteChanged();
     }
 
+    private void LoadXdPatchRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allPatches.Clear();
+            PatchEntries.Clear();
+            SelectedPatch = null;
+            PatchStatus = "Open a Pokemon XD ISO before viewing patches.";
+            return;
+        }
+
+        _allPatches.Clear();
+        PatchEntries.Clear();
+        foreach (var definition in XdPatchDefinition.XdPatches.Select((patch, index) => new PatchEntryViewModel(patch.Name, index)))
+        {
+            _allPatches.Add(definition);
+            PatchEntries.Add(definition);
+        }
+
+        SelectedPatch = PatchEntries.FirstOrDefault();
+        PatchStatus = "XD patch list matches the Swift GoD Tool. Patch application backend is still being ported.";
+        Logs.Add($"XD Patches loaded: {_allPatches.Count} patch rows.");
+        LogPerformance("XD Patches load total", totalTimer, _allPatches.Count);
+        ApplyPatchCommand.NotifyCanExecuteChanged();
+    }
+
     private void LoadCollisionRows()
     {
         var totalTimer = Stopwatch.StartNew();
@@ -3369,7 +3439,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadMessageRows()
     {
         var totalTimer = Stopwatch.StartNew();
-        if (CurrentProject?.Iso is null && CurrentProject?.MessageTable is null)
+        if (CurrentProject?.Iso is null && CurrentProject?.MessageTable is null && CurrentXdProject?.Iso is null)
         {
             MessageTables.Clear();
             _allMessageStrings.Clear();
@@ -3393,7 +3463,10 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var tableTimer = Stopwatch.StartNew();
-            foreach (var table in CurrentProject.LoadMessageTables())
+            var tables = CurrentProject is not null
+                ? CurrentProject.LoadMessageTables()
+                : CurrentXdProject!.LoadMessageTables().Select(MapXdMessageTable).ToArray();
+            foreach (var table in tables)
             {
                 MessageTables.Add(new MessageTableViewModel(table));
             }
@@ -3459,6 +3532,38 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedTableEditorEntry = null;
             SelectedToolDetail = $"Table Editor\n{ex.Message}";
             Logs.Add($"Table Editor load failed: {ex.Message}");
+        }
+    }
+
+    private void LoadXdTableEditorRows()
+    {
+        var totalTimer = Stopwatch.StartNew();
+        if (CurrentXdProject?.Iso is null)
+        {
+            _allTableEditorEntries.Clear();
+            TableEditorEntries.Clear();
+            SelectedTableEditorEntry = null;
+            return;
+        }
+
+        try
+        {
+            _allTableEditorEntries.Clear();
+            foreach (var table in BuildXdTableEditorEntries(CurrentXdProject))
+            {
+                _allTableEditorEntries.Add(table);
+            }
+
+            ApplyTableEditorFilter(TableEditorSearchText);
+            SelectedTableEditorEntry = TableEditorEntries.FirstOrDefault();
+            Logs.Add($"XD Table Editor loaded: {_allTableEditorEntries.Count} universal table rows.");
+            LogPerformance("XD Table Editor load total", totalTimer, _allTableEditorEntries.Count);
+        }
+        catch (Exception ex)
+        {
+            SelectedTableEditorEntry = null;
+            SelectedToolDetail = $"Table Editor\n{ex.Message}";
+            Logs.Add($"XD Table Editor load failed: {ex.Message}");
         }
     }
 
@@ -3925,6 +4030,54 @@ public partial class MainWindowViewModel : ViewModelBase
             .ToArray();
     }
 
+    private static IReadOnlyList<TableEditorEntryViewModel> BuildXdTableEditorEntries(XdProjectContext project)
+    {
+        var trainers = project.LoadTrainerRecords();
+        var shadows = project.LoadShadowPokemonRecords();
+        var stats = project.LoadPokemonStatsRecords();
+        var moves = project.LoadMoveRecords();
+        var items = project.LoadItemRecords();
+        var pokespots = project.LoadPokespotRecords();
+        var gifts = project.LoadGiftPokemonRecords();
+        var types = project.LoadTypeRecords();
+        var treasures = project.LoadTreasureRecords();
+        var messages = project.LoadMessageTables();
+
+        return
+        [
+            XdTable("Trainer", TableEditorCategoryDeckTrainer, "deck_archive.fsys", trainers.Count, "DeckData_* trainer rows"),
+            XdTable("Trainer Pokemon", TableEditorCategoryDeckPokemon, "deck_archive.fsys", trainers.Sum(trainer => trainer.Pokemon.Count), "DeckData_* Pokemon rows"),
+            XdTable("Shadow Pokemon Data", TableEditorCategoryDeckPokemon, "deck_archive.fsys", shadows.Count, "DeckData_DarkPokemon.bin"),
+            XdTable("Pokemon Stats", TableEditorCategoryCommon, "common.fsys/common.rel", stats.Count, "PokemonData"),
+            XdTable("Move", TableEditorCategoryCommon, "common.fsys/common.rel", moves.Count, "Moves"),
+            XdTable("Item", TableEditorCategoryCommon, "common.fsys/common.rel", items.Count, "Items / ValidItems"),
+            XdTable("Pokespot", TableEditorCategoryCommon, "common.fsys/common.rel", pokespots.Count, "Rock / Oasis / Cave / All encounter tables"),
+            XdTable("Gift Pokemon", TableEditorCategoryCodable, "Start.dol", gifts.Count, "XGGiftPokemonManager roster"),
+            XdTable("Type", TableEditorCategoryCommon, "common.fsys/common.rel", types.Count, "MoveTypes / Effectiveness"),
+            XdTable("Treasure", TableEditorCategoryCommon, "common.fsys/common.rel", treasures.Count, "TreasureBoxData"),
+            XdTable("Messages", TableEditorCategoryOther, "FSYS .msg entries", messages.Sum(table => table.Strings.Count), $"{messages.Count} message tables"),
+            XdTable("Scripts", TableEditorCategoryOther, "Room FSYS archives", null, "Compile/decompile path is tracked by the Script Compiler"),
+            XdTable("ISO Files", TableEditorCategoryOther, project.Iso.FileName, project.Iso.Files.Count, "GameCube FST entries")
+        ];
+    }
+
+    private static TableEditorEntryViewModel XdTable(
+        string name,
+        string category,
+        string file,
+        int? count,
+        string detail)
+    {
+        var details = $"Details:\nFile: {file}\nStart Offset: -\nNumber of Entries: {HexAndDecimal(count)}\nEntry Length: -\n{detail}";
+        return new TableEditorEntryViewModel(
+            name,
+            category,
+            $"{name} {category} {file} {detail}",
+            details,
+            ColourForTableEditorCategory(category),
+            null);
+    }
+
     private static TableEditorDefinition Common(string name, int commonIndex, string category = TableEditorCategoryCommon)
         => new(name, category, "common.rel", ColosseumRawTableSource.CommonRel, commonIndex, commonIndex + 1, null, null, null);
 
@@ -4351,6 +4504,16 @@ public partial class MainWindowViewModel : ViewModelBase
             "Random",
             gift.UsesLevelUpMoves,
             false);
+
+    private static ColosseumMessageTable MapXdMessageTable(XdMessageTable table)
+        => new(
+            table.DisplayName,
+            table.IsoFileName,
+            table.EntryName,
+            table.Strings.Select(message => new ColosseumMessageString(
+                message.Id,
+                message.IdHex,
+                message.Text)).ToArray());
 
     private static IReadOnlyList<ColosseumPokemonStats> MapXdPokemonStats(IReadOnlyList<XdPokemonStatsRecord> rows)
         => rows.Select(row => new ColosseumPokemonStats(
@@ -5050,7 +5213,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private string BuildIsoFileDetails(IsoFileEntryViewModel value, out uint? groupId)
     {
         groupId = null;
-        if (CurrentProject is null)
+        if (CurrentProject is null && CurrentXdProject is null)
         {
             return "-";
         }
@@ -5062,7 +5225,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var archive = CurrentProject.ReadIsoFsysArchive(value.Entry);
+            var archive = CurrentProject is not null
+                ? CurrentProject.ReadIsoFsysArchive(value.Entry)
+                : CurrentXdProject!.ReadIsoFsysArchive(value.Entry);
             groupId = archive.GroupId;
 
             return archive.Entries.Count == 0

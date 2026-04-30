@@ -13,17 +13,28 @@ public sealed partial class PatchEntryViewModel : ObservableObject
     private static readonly IBrush TransparentBrush = Brushes.Transparent;
 
     public PatchEntryViewModel(ColosseumPatchDefinition definition, int row)
+        : this(definition.Name, row, definition)
+    {
+    }
+
+    public PatchEntryViewModel(string name, int row)
+        : this(name, row, null)
+    {
+    }
+
+    private PatchEntryViewModel(string name, int row, ColosseumPatchDefinition? definition)
     {
         Definition = definition;
+        Name = name;
         Row = row;
         BackgroundBrush = row % 2 == 0 ? EvenBrush : OddBrush;
     }
 
-    public ColosseumPatchDefinition Definition { get; }
+    public ColosseumPatchDefinition? Definition { get; }
 
     public int Row { get; }
 
-    public string Name => Definition.Name;
+    public string Name { get; }
 
     public IBrush BackgroundBrush { get; }
 

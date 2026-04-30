@@ -262,6 +262,17 @@ public sealed record XdGiftPokemonUpdate(
     int Level,
     IReadOnlyList<int> MoveIds);
 
+public sealed record XdMessageTable(
+    string DisplayName,
+    string IsoFileName,
+    string EntryName,
+    IReadOnlyList<XdMessageString> Strings);
+
+public sealed record XdMessageString(
+    int Id,
+    string IdHex,
+    string Text);
+
 public sealed record XdPokemonStatsUpdate(
     int Index,
     int NameId,
