@@ -1,5 +1,7 @@
 using CipherSnagemEditor.Core.Binary;
 using CipherSnagemEditor.Core.GameCube;
+using CipherSnagemEditor.Core.Relocation;
+using System.Text.Json;
 
 namespace CipherSnagemEditor.XD;
 
@@ -30,6 +32,14 @@ public sealed partial class XdProjectContext
 
         switch (kind)
         {
+            case XdPatchKind.PhysicalSpecialSplitApply:
+                PatchPhysicalSpecialSplitApply(writtenFiles, messages);
+                break;
+
+            case XdPatchKind.PhysicalSpecialSplitRemove:
+                PatchStartDol(writtenFiles, messages, PatchPhysicalSpecialSplitRemove, "Removed the physical/special split ASM patch.");
+                break;
+
             case XdPatchKind.DisableSaveCorruption:
                 PatchStartDol(writtenFiles, messages, PatchDisableSaveCorruption, "Disabled save-corruption checks.");
                 break;
@@ -154,6 +164,28 @@ public sealed partial class XdProjectContext
         return new XdPatchApplyResult(definition, writtenFiles, messages);
     }
 
+    private void PatchPhysicalSpecialSplitApply(ICollection<string> writtenFiles, ICollection<string> messages)
+    {
+        var dolEntry = FindIsoFile("Start.dol")
+            ?? throw new FileNotFoundException("Start.dol was not found in the ISO.");
+        var dol = ReadStartDolOrThrow();
+        var originalDol = dol.ToArray();
+        PatchPhysicalSpecialSplitApplyDol(dol);
+        if (!originalDol.SequenceEqual(dol.ToArray()))
+        {
+            writtenFiles.Add(WriteStartDol(dol, dolEntry));
+        }
+
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var categoryChanges = ApplyDefaultMoveCategories(data, table);
+        if (categoryChanges > 0)
+        {
+            writtenFiles.Add(WriteCommonRel(data));
+        }
+
+        messages.Add($"Applied physical/special split ASM and {categoryChanges:N0} default move categor{(categoryChanges == 1 ? "y" : "ies")}.");
+    }
+
     private void PatchStartDol(
         ICollection<string> writtenFiles,
         ICollection<string> messages,
@@ -194,6 +226,51 @@ public sealed partial class XdProjectContext
         WriteRamAsm(dol, saveCountRamOffset, Stw(7, 5, 0x2c));
         WriteRamAsm(dol, memoryCardMatchOffset, XdNopInstruction);
     }
+
+    private void PatchPhysicalSpecialSplitApplyDol(BinaryData dol)
+    {
+        if (Iso.Region == GameCubeRegion.Japan)
+        {
+            throw new NotSupportedException("Physical/special split is not implemented for Japanese Pokemon XD in the legacy patcher.");
+        }
+
+        foreach (var offset in XdClassPatchOffsets())
+        {
+            WriteRamAsm(dol, offset, XdNopInstruction);
+        }
+
+        if (Iso.Region == GameCubeRegion.UnitedStates)
+        {
+            dol.WriteUInt32(0x002dfcbc, XdNopInstruction);
+            dol.WriteUInt32(0x002dfcc0, 0x4be5ba91);
+            dol.WriteUInt32(0x002dfdd8, XdNopInstruction);
+            dol.WriteUInt32(0x002dfddc, 0x4be5b975);
+        }
+    }
+
+    private void PatchPhysicalSpecialSplitRemove(BinaryData dol)
+    {
+        RequireUsXdPatch("Physical/special split removal");
+        var offsets = XdClassPatchOffsets();
+        for (var index = 0; index < offsets.Count; index++)
+        {
+            WriteRamAsm(dol, offsets[index], index == 0 ? 0x40820024u : 0x40820014u);
+        }
+
+        dol.WriteUInt32(0x002dfcbc, 0x4bfe58a5);
+        dol.WriteUInt32(0x002dfcc0, 0x4be34d65);
+        dol.WriteUInt32(0x002dfdd8, 0x4bfe5789);
+        dol.WriteUInt32(0x002dfddc, 0x4be34c49);
+    }
+
+    private IReadOnlyList<long> XdClassPatchOffsets()
+        => Iso.Region switch
+        {
+            GameCubeRegion.UnitedStates => [0x8013e82c, 0x80229614, 0x8022a080, 0x802157f0, 0x802177e0],
+            GameCubeRegion.Europe => [0x801400f0, 0x8022b458, 0x8022bec4, 0x80217634],
+            GameCubeRegion.Japan => [],
+            _ => throw UnsupportedXdPatchRegion()
+        };
 
     private void PatchInfiniteTms(BinaryData dol)
     {
@@ -591,6 +668,66 @@ public sealed partial class XdProjectContext
         }
 
         return true;
+    }
+
+    private int ApplyDefaultMoveCategories(BinaryData data, RelocationTable table)
+    {
+        var categories = LoadXdDefaultMoveCategories();
+        var start = table.GetPointer(XdMovesIndex);
+        var count = table.GetValueAtPointer(XdNumberOfMovesIndex);
+        if (!IsSafeTableRange(data, start, count, XdMoveSize, maxCount: 1000))
+        {
+            throw new InvalidDataException("Move table is outside common.rel.");
+        }
+
+        var changes = 0;
+        for (var move = 0; move < Math.Min(count, categories.Count); move++)
+        {
+            var offset = start + (move * XdMoveSize) + XdMoveCategoryOffset;
+            var category = ClampByte(categories[move]);
+            if (data.ReadByte(offset) == category)
+            {
+                continue;
+            }
+
+            data.WriteByte(offset, category);
+            changes++;
+        }
+
+        return changes;
+    }
+
+    private static IReadOnlyList<int> LoadXdDefaultMoveCategories()
+    {
+        var path = FindAssetPath("assets", "json", "XD", "Move Categories.json")
+            ?? FindAssetPath("Assets", "Json", "XD", "Move Categories.json")
+            ?? throw new FileNotFoundException("Could not find assets/json/XD/Move Categories.json for the physical/special split patch.");
+        var values = JsonSerializer.Deserialize<int[]>(
+            File.ReadAllText(path),
+            new JsonSerializerOptions { AllowTrailingCommas = true });
+        return values is { Length: > 0 }
+            ? values
+            : throw new InvalidDataException("assets/json/XD/Move Categories.json did not contain any categories.");
+    }
+
+    private static string? FindAssetPath(params string[] relativeParts)
+    {
+        foreach (var root in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            var current = new DirectoryInfo(root);
+            while (current is not null)
+            {
+                var candidate = Path.Combine([current.FullName, .. relativeParts]);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                current = current.Parent;
+            }
+        }
+
+        return null;
     }
 
     private static void WriteU16Checked(BinaryData data, int offset, int value)
