@@ -22,7 +22,8 @@ public sealed partial class PokemonStatsEvolutionViewModel : ObservableObject
         _selectedSpecies = resources.SpeciesOption(evolution.EvolvedSpeciesId);
         _selectedMethod = resources.EvolutionMethodOption(evolution.Method);
         _conditionOptions = resources.EvolutionConditionOptions(evolution.Method);
-        _selectedCondition = resources.EvolutionConditionOption(evolution.Method, evolution.Condition);
+        _selectedCondition = _conditionOptions.FirstOrDefault(option => option.Value == evolution.Condition)
+            ?? resources.EvolutionConditionOption(evolution.Method, evolution.Condition);
         _isInitializing = false;
     }
 
