@@ -177,14 +177,15 @@ public partial class MainWindow : Window
         ViewPerformanceDiagnostics.AttachFirstRenderLogs(content, $"{tool.Title} content");
 
         var size = ToolWindowSize(tool.Title);
+        var minSize = ToolWindowMinSize(tool.Title);
         var windowBuildTimer = Stopwatch.StartNew();
         var window = new Window
         {
             Title = $"{tool.Title} - Colosseum Tool",
             Width = size.Width,
             Height = size.Height,
-            MinWidth = Math.Min(size.Width, 900),
-            MinHeight = Math.Min(size.Height, 560),
+            MinWidth = minSize.Width,
+            MinHeight = minSize.Height,
             CanResize = true,
             FontFamily = FontFamily,
             Background = SolidColorBrush.Parse("#F0F0FC"),
@@ -431,6 +432,14 @@ public partial class MainWindow : Window
             "ISO Explorer" => new Size(570, 424),
             _ => new Size(620, 320)
         };
+
+    private static Size ToolWindowMinSize(string title)
+    {
+        var size = ToolWindowSize(title);
+        return title == "Trainer Editor"
+            ? size
+            : new Size(Math.Min(size.Width, 900), Math.Min(size.Height, 560));
+    }
 
     private static Size ToolContentSize(string title)
     {
