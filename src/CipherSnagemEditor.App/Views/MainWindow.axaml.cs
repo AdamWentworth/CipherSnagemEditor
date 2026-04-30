@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Controls.Chrome;
 using Avalonia.Input;
@@ -6,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CipherSnagemEditor.App.ViewModels;
 
 namespace CipherSnagemEditor.App.Views;
@@ -160,15 +162,22 @@ public partial class MainWindow : Window
 
     private void OpenToolWindow(ToolEntryViewModel tool, MainWindowViewModel viewModel)
     {
+        var totalTimer = Stopwatch.StartNew();
         if (_toolWindows.TryGetValue(tool.Title, out var existing))
         {
             existing.Activate();
+            viewModel.LogPerformance($"{tool.Title} activate existing window", totalTimer);
             return;
         }
 
+        var contentTimer = Stopwatch.StartNew();
         var content = CreateToolContent(tool);
+        viewModel.LogPerformance($"{tool.Title} create content", contentTimer);
         content.DataContext = viewModel;
+        ViewPerformanceDiagnostics.AttachFirstRenderLogs(content, $"{tool.Title} content");
+
         var size = ToolWindowSize(tool.Title);
+        var windowBuildTimer = Stopwatch.StartNew();
         var window = new Window
         {
             Title = $"{tool.Title} - Colosseum Tool",
@@ -185,6 +194,8 @@ public partial class MainWindow : Window
             DataContext = viewModel
         };
         window.Content = CreateToolWindowShell(window, tool.Title, content);
+        ViewPerformanceDiagnostics.AttachFirstRenderLogs(window, $"{tool.Title} window");
+        viewModel.LogPerformance($"{tool.Title} build window shell", windowBuildTimer, ViewPerformanceDiagnostics.CountVisuals(window));
 
         if (Icon is not null)
         {
@@ -195,8 +206,20 @@ public partial class MainWindow : Window
         window.Position = new PixelPoint(Position.X + offset, Position.Y + offset);
         window.Closed += (_, _) => _toolWindows.Remove(tool.Title);
         _toolWindows[tool.Title] = window;
+
+        var showTimer = Stopwatch.StartNew();
+        window.Opened += (_, _) =>
+        {
+            viewModel.LogPerformance($"{tool.Title} opened", showTimer, ViewPerformanceDiagnostics.CountVisuals(window));
+            var renderAfterOpenTimer = Stopwatch.StartNew();
+            Dispatcher.UIThread.Post(
+                () => viewModel.LogPerformance($"{tool.Title} after open render queue", renderAfterOpenTimer, ViewPerformanceDiagnostics.CountVisuals(window)),
+                DispatcherPriority.Render);
+        };
+
         window.Show(this);
         window.Activate();
+        viewModel.LogPerformance($"{tool.Title} open tool window total", totalTimer, ViewPerformanceDiagnostics.CountVisuals(window));
     }
 
     private static Control CreateToolContent(ToolEntryViewModel tool)

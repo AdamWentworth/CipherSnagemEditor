@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -15,12 +16,13 @@ public partial class TrainerEditorView : UserControl
     private TimeSpan _spriteClock = TimeSpan.Zero;
     private IReadOnlyList<Image> _bodyImages = [];
     private int _bodyImageRefreshTicks;
+    private int _slowAnimationLogCooldown;
 
     public TrainerEditorView()
     {
         InitializeComponent();
 
-        _spriteTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
+        _spriteTimer = new DispatcherTimer { Interval = SpriteTimerInterval() };
         _spriteTimer.Tick += AnimatePokemonBodies;
         AttachedToVisualTree += (_, _) => _spriteTimer.Start();
         DetachedFromVisualTree += (_, _) => _spriteTimer.Stop();
@@ -38,6 +40,7 @@ public partial class TrainerEditorView : UserControl
 
     private void AnimatePokemonBodies(object? sender, EventArgs e)
     {
+        var timer = Stopwatch.StartNew();
         _spriteClock += _spriteTimer.Interval;
         if (_bodyImages.Count == 0 || _bodyImageRefreshTicks-- <= 0)
         {
@@ -48,6 +51,7 @@ public partial class TrainerEditorView : UserControl
             _bodyImageRefreshTicks = 25;
         }
 
+        var updatedImages = 0;
         foreach (var image in _bodyImages)
         {
             if (!image.IsVisible)
@@ -60,10 +64,35 @@ public partial class TrainerEditorView : UserControl
                 continue;
             }
 
-            image.Source = SelectFrame(slot.BodyFrames, _spriteClock);
-            image.RenderTransform = null;
+            var frame = SelectFrame(slot.BodyFrames, _spriteClock);
+            if (ReferenceEquals(image.Source, frame))
+            {
+                continue;
+            }
+
+            image.Source = frame;
+            updatedImages++;
+        }
+
+        if (_slowAnimationLogCooldown > 0)
+        {
+            _slowAnimationLogCooldown--;
+        }
+
+        timer.Stop();
+        if (timer.Elapsed.TotalMilliseconds >= 8
+            && _slowAnimationLogCooldown <= 0
+            && DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.LogPerformance("Trainer Editor sprite animation tick", timer.Elapsed, updatedImages);
+            _slowAnimationLogCooldown = 50;
         }
     }
+
+    private static TimeSpan SpriteTimerInterval()
+        => OperatingSystem.IsLinux()
+            ? TimeSpan.FromMilliseconds(100)
+            : TimeSpan.FromMilliseconds(40);
 
     private static IImage SelectFrame(IReadOnlyList<PokemonBodyFrame> frames, TimeSpan clock)
     {

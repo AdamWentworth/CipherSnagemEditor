@@ -3721,11 +3721,16 @@ public partial class MainWindowViewModel : ViewModelBase
         };
     }
 
-    private void LogPerformance(string label, Stopwatch stopwatch, int? count = null)
+    public void LogPerformance(string label, Stopwatch stopwatch, int? count = null)
     {
         stopwatch.Stop();
+        LogPerformance(label, stopwatch.Elapsed, count);
+    }
+
+    public void LogPerformance(string label, TimeSpan elapsed, int? count = null)
+    {
         var countText = count is null ? string.Empty : $" ({count.Value:N0})";
-        Logs.Add($"[perf] {label}{countText}: {stopwatch.Elapsed.TotalMilliseconds:N0} ms");
+        Logs.Add($"[perf] {label}{countText}: {elapsed.TotalMilliseconds:N0} ms");
     }
 
     private static string BuildLogSummary(ColosseumProjectContext context)
