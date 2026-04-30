@@ -14,6 +14,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem extract-iso <iso> <file-name> [output-path]");
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
+    Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -79,6 +80,18 @@ try
         }
 
         RunXdEditorsProbe(args[1]);
+        return 0;
+    }
+
+    if (args[0].Equals("xd-trainer-probe", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 3)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem xd-trainer-probe <iso> <search>");
+            return 1;
+        }
+
+        RunXdTrainerProbe(args[1], args[2]);
         return 0;
     }
 
@@ -310,6 +323,20 @@ static IReadOnlyList<string> RequiredXdContentSections(string toolTitle)
         _ => []
     };
 
+static string Simplify(string value)
+{
+    var builder = new System.Text.StringBuilder(value.Length);
+    foreach (var character in value)
+    {
+        if (char.IsLetterOrDigit(character))
+        {
+            builder.Append(char.ToLowerInvariant(character));
+        }
+    }
+
+    return builder.ToString();
+}
+
 static void RunXdEditorsProbe(string isoPath)
 {
     var context = XdProjectContext.Open(isoPath);
@@ -357,6 +384,25 @@ static void RunXdEditorsProbe(string isoPath)
     }
 
     throw new InvalidDataException($"XD editor probe failed with {failures.Count} failure(s).");
+}
+
+static void RunXdTrainerProbe(string isoPath, string searchText)
+{
+    var context = XdProjectContext.Open(isoPath);
+    var filter = Simplify(searchText);
+    var trainers = context.LoadTrainerRecords()
+        .Where(trainer => Simplify($"{trainer.Index} {trainer.Name} {trainer.ClassName} {trainer.ModelName} {trainer.Location}")
+            .Contains(filter, StringComparison.Ordinal))
+        .Take(12)
+        .ToArray();
+
+    foreach (var trainer in trainers)
+    {
+        var battle = trainer.Battle is null
+            ? "no battle"
+            : $"battle {trainer.Battle.Index}: {trainer.Battle.BattleStyleName} ({trainer.Battle.BattleStyle}), {trainer.Battle.BattleTypeName} ({trainer.Battle.BattleType}), bgm 0x{trainer.Battle.BgmId:x}";
+        Console.WriteLine($"{trainer.DeckName} #{trainer.Index}: {trainer.ClassName} {trainer.Name}; model {trainer.ModelName}; AI {trainer.Ai}; intro {trainer.CameraEffects}; {battle}; messages name {trainer.NameId}, pre {trainer.PreBattleTextId}, win {trainer.VictoryTextId}, loss {trainer.DefeatTextId}; {trainer.Location}");
+    }
 }
 
 static void RunParityProbe(string isoPath, int messageLimit, int assetLimit)
