@@ -3329,7 +3329,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         SelectedPatch = PatchEntries.FirstOrDefault();
-        PatchStatus = "Click a patch row to apply supported XD patches; assembly-only patches report their remaining parity gap.";
+        PatchStatus = "Click a patch row to apply it to the XD workspace files.";
         Logs.Add($"XD Patches loaded: {_allPatches.Count} patch rows.");
         LogPerformance("XD Patches load total", totalTimer, _allPatches.Count);
         ApplyPatchCommand.NotifyCanExecuteChanged();

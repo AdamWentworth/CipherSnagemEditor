@@ -169,8 +169,8 @@ public sealed partial class XdProjectContext
                 SourceFileRow("deck_archive.fsys", "Deck archive")
             ]),
             new("Patch Surface", [
-                new("ASM patches", "Start.dol", "Same patcher lane as Colosseum, with XD offsets still to port"),
-                new("Data patches", "common.rel / deck data", "Targets loaded tables once XD table parsers are ported")
+                new("ASM patches", "Start.dol", "Legacy XD offsets ported for the patch list"),
+                new("Data patches", "common.rel / deck data", "Targets parsed XD tables and deck archives")
             ])
         ];
 
