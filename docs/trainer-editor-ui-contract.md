@@ -13,6 +13,9 @@ Contract rules:
 - Keep the Pokemon cards as a 2 x 3 grid with the approved inline
   `TrainerPokemonSlotViewModel` template. The card template is hash-checked in
   tests because tiny spacing changes are visually meaningful here.
+- Keep the trainer sidebar virtualized. The sidebar may contain 800+ trainer
+  rows, so it must remain a `ListBox` with a `VirtualizingStackPanel`, not an
+  `ItemsControl` inside a `ScrollViewer`.
 - If the card template must change, update the contract test only after visual
   review on a current Windows build and a current Linux build from the same
   commit.

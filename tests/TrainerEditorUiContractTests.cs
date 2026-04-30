@@ -55,6 +55,18 @@ public sealed class TrainerEditorUiContractTests
         Assert.Contains("? size", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainerSidebarKeepsVirtualizedRowList()
+    {
+        var xaml = File.ReadAllText(TrainerEditorViewPath);
+
+        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding Trainers}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("<ListBox Grid.Row=\"1\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ItemsSource=\"{Binding Trainers}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SelectedItem=\"{Binding SelectedTrainer, Mode=TwoWay}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("<VirtualizingStackPanel", xaml, StringComparison.Ordinal);
+    }
+
     private static string TrainerEditorViewPath
         => Path.Combine(RepoRoot, "src", "CipherSnagemEditor.App", "Views", "TrainerEditorView.axaml");
 
