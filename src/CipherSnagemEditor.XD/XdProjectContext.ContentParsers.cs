@@ -93,6 +93,8 @@ public sealed partial class XdProjectContext
     private const int XdPokemonLevelUpMoveCount = 0x13;
     private const int XdPokemonEvolutionCount = 0x05;
     private const int XdPokemonTmCount = 0x3a;
+    private const int XdTmEntrySize = 0x08;
+    private const int XdTmMoveOffset = 0x06;
     private const int XdPokemonExpRateOffset = 0x00;
     private const int XdPokemonCatchRateOffset = 0x01;
     private const int XdPokemonGenderRatioOffset = 0x02;
@@ -722,6 +724,39 @@ public sealed partial class XdProjectContext
         }
 
         return rows;
+    }
+
+    public IReadOnlyList<XdTmMoveRecord> LoadTmMoveRecords()
+    {
+        var dol = ReadStartDolOrThrow();
+        var start = FirstXdTmListOffset(Iso.Region);
+        if (start <= 0 || start + XdTmMoveOffset >= dol.Length)
+        {
+            return [];
+        }
+
+        var movesById = LoadMoveRecords().ToDictionary(move => move.Index);
+        var tms = new List<XdTmMoveRecord>(XdPokemonTmCount);
+        for (var index = 1; index <= XdPokemonTmCount; index++)
+        {
+            var offset = start + XdTmMoveOffset + ((index - 1) * XdTmEntrySize);
+            if (offset + 2 > dol.Length)
+            {
+                break;
+            }
+
+            var moveId = dol.ReadUInt16(offset);
+            if (movesById.TryGetValue(moveId, out var move))
+            {
+                tms.Add(new XdTmMoveRecord(index, moveId, move.Name, move.TypeId, move.TypeName));
+            }
+            else
+            {
+                tms.Add(new XdTmMoveRecord(index, moveId, moveId == 0 ? "-" : $"Move {moveId}", 0, "Normal"));
+            }
+        }
+
+        return tms;
     }
 
     public IReadOnlyList<XdItemRecord> LoadItemRecords()
@@ -1499,6 +1534,15 @@ public sealed partial class XdProjectContext
             ?? throw new FileNotFoundException("Start.dol was not found in the ISO.");
         return new BinaryData(GameCubeIsoReader.ReadFile(Iso, entry));
     }
+
+    private static int FirstXdTmListOffset(GameCubeRegion region)
+        => region switch
+        {
+            GameCubeRegion.UnitedStates => 0x4023a0,
+            GameCubeRegion.Europe => 0x43cc80,
+            GameCubeRegion.Japan => 0x3dfa60,
+            _ => 0
+        };
 
     private static IReadOnlyDictionary<int, string> BuildTypeNameMap(BinaryData data, RelocationTable table, GameStringTable? strings)
     {

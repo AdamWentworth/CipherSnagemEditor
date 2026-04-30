@@ -113,7 +113,8 @@ public sealed class PokemonStatsEditorResources
         IReadOnlyList<ColosseumPokemonStats> pokemonStatsRows,
         IReadOnlyList<ColosseumMove> moveRows,
         IReadOnlyList<ColosseumItem> itemRows,
-        IReadOnlyList<ColosseumTypeData> typeRows)
+        IReadOnlyList<ColosseumTypeData> typeRows,
+        IReadOnlyList<ColosseumTmMove>? tmMoves = null)
     {
         var typeOptions = typeRows
             .Select(type => new PickerOptionViewModel(type.Index, type.Name))
@@ -149,7 +150,7 @@ public sealed class PokemonStatsEditorResources
             speciesOptions,
             moveOptions,
             BuildEvolutionMethodOptions(),
-            []);
+            tmMoves ?? []);
     }
 
     public PickerOptionViewModel TypeOption(int value)

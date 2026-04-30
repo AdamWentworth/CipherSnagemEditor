@@ -157,6 +157,13 @@ public sealed record XdMoveRecord(
     bool MirrorMoveFlag,
     bool IsShadow);
 
+public sealed record XdTmMoveRecord(
+    int Index,
+    int MoveId,
+    string MoveName,
+    int TypeId,
+    string TypeName);
+
 public sealed record XdItemRecord(
     int Index,
     int StartOffset,

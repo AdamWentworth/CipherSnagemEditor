@@ -2867,7 +2867,8 @@ public partial class MainWindowViewModel : ViewModelBase
             var moves = MapXdMoves(CurrentXdProject.LoadMoveRecords());
             var items = MapXdItems(CurrentXdProject.LoadItemRecords());
             var types = MapXdTypes(CurrentXdProject.LoadTypeRecords());
-            _pokemonStatsResources = PokemonStatsEditorResources.FromRows(stats, moves, items, types);
+            var tmMoves = MapXdTmMoves(CurrentXdProject.LoadTmMoveRecords());
+            _pokemonStatsResources = PokemonStatsEditorResources.FromRows(stats, moves, items, types, tmMoves);
             _allPokemonStats.Clear();
             foreach (var pokemon in stats)
             {
@@ -4436,6 +4437,14 @@ public partial class MainWindowViewModel : ViewModelBase
             row.MagicCoatFlag,
             row.MirrorMoveFlag,
             row.IsShadow)).ToArray();
+
+    private static IReadOnlyList<ColosseumTmMove> MapXdTmMoves(IReadOnlyList<XdTmMoveRecord> rows)
+        => rows.Select(row => new ColosseumTmMove(
+            row.Index,
+            row.MoveId,
+            row.MoveName,
+            row.TypeId,
+            row.TypeName)).ToArray();
 
     private static IReadOnlyList<ColosseumItem> MapXdItems(IReadOnlyList<XdItemRecord> rows)
         => rows.Select(row => new ColosseumItem(
