@@ -4235,7 +4235,7 @@ public partial class MainWindowViewModel : ViewModelBase
             trainer.ClassId,
             trainer.ClassName,
             trainer.ModelId,
-            $"trainer_{trainer.ModelId}",
+            trainer.ModelName,
             trainer.Ai,
             trainer.NameId,
             trainer.Name,
@@ -4245,7 +4245,16 @@ public partial class MainWindowViewModel : ViewModelBase
             trainer.PreBattleTextId,
             trainer.VictoryTextId,
             trainer.DefeatTextId,
-            null);
+            trainer.Battle is null
+                ? null
+                : new ColosseumBattle(
+                    trainer.Battle.Index,
+                    trainer.Battle.BattleType,
+                    trainer.Battle.BattleTypeName,
+                    trainer.Battle.BattleStyle,
+                    trainer.Battle.BattleStyleName,
+                    trainer.Battle.BgmId,
+                    trainer.Battle.Players.Select(player => player.TrainerId).ToArray()));
 
     private static ColosseumTrainerPokemon MapXdTrainerPokemon(XdTrainerPokemonRecord pokemon)
         => new(

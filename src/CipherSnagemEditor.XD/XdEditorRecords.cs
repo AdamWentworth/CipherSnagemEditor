@@ -7,8 +7,11 @@ public sealed record XdTrainerRecord(
     string ClassName,
     int ClassId,
     int ModelId,
+    string ModelName,
     int Ai,
     int NameId,
+    int TrainerStringId,
+    string TrainerString,
     int FirstPokemonIndex,
     int PreBattleTextId,
     int VictoryTextId,
@@ -16,7 +19,22 @@ public sealed record XdTrainerRecord(
     int CameraEffects,
     string Location,
     bool HasShadow,
-    IReadOnlyList<XdTrainerPokemonRecord> Pokemon);
+    IReadOnlyList<XdTrainerPokemonRecord> Pokemon,
+    XdBattleRecord? Battle);
+
+public sealed record XdBattleRecord(
+    int Index,
+    int BattleType,
+    string BattleTypeName,
+    int BattleStyle,
+    string BattleStyleName,
+    int BgmId,
+    IReadOnlyList<XdBattlePlayerRecord> Players);
+
+public sealed record XdBattlePlayerRecord(
+    int DeckId,
+    int TrainerId,
+    int Controller);
 
 public sealed record XdTrainerPokemonRecord(
     int Slot,

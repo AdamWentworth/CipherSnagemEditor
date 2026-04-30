@@ -3,6 +3,7 @@ using CipherSnagemEditor.Core.Binary;
 using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Relocation;
 using CipherSnagemEditor.Core.Text;
+using System.Text;
 
 namespace CipherSnagemEditor.XD;
 
@@ -29,6 +30,10 @@ public sealed partial class XdProjectContext
     private const int XdTrainerDefeatTextOffset = 0x18;
     private const int XdTrainerFirstPokemonOffset = 0x1c;
     private const int XdTrainerAiOffset = 0x28;
+    private const int XdTrainerClassesIndex = 38;
+    private const int XdNumberOfTrainerClassesIndex = 39;
+    private const int XdTrainerClassSize = 0x0c;
+    private const int XdTrainerClassNameIdOffset = 0x04;
     private const int XdDeckPokemonSize = 0x20;
     private const int XdDeckPokemonSpeciesOffset = 0x00;
     private const int XdDeckPokemonLevelOffset = 0x02;
@@ -78,6 +83,11 @@ public sealed partial class XdProjectContext
     private const int XdNumberOfMovesIndex = 125;
     private const int XdTreasureIndex = 66;
     private const int XdNumberOfTreasuresIndex = 67;
+    private const int XdBattlesIndex = 26;
+    private const int XdNumberOfBattlesIndex = 27;
+    private const int XdBattleTypeOffset = 0x00;
+    private const int XdBattleStyleOffset = 0x02;
+    private const int XdBattleBgmOffset = 0x10;
     private const int XdRoomsIndex = 58;
     private const int XdNumberOfRoomsIndex = 59;
     private const int XdPokemonLevelUpMoveCount = 0x13;
@@ -168,6 +178,78 @@ public sealed partial class XdProjectContext
         "DeckData_Imasugu",
         "DeckData_Bingo",
         "DeckData_Sample"
+    ];
+
+    private static readonly IReadOnlyList<string> XdTrainerModelNames =
+    [
+        "None",
+        "Michael A without Snag Machine",
+        "Michael B with Snag Machine",
+        "Michael B without Snag Machine",
+        "May (Emerald)",
+        "Brendan (Emerald)",
+        "Green",
+        "Red",
+        "May (RS)",
+        "Brendan (RS)",
+        "No Trainer",
+        "Female Cipher Peon",
+        "Male Cipher Peon A",
+        "Male Cipher Peon B",
+        "Male Cipher Peon C",
+        "Resix",
+        "Blusix",
+        "Browsix",
+        "Yellosix",
+        "Purpsix",
+        "Greesix",
+        "Lovrina",
+        "Sailor",
+        "Zook",
+        "Ardos",
+        "Matron",
+        "Greevil A",
+        "Newscaster",
+        "Eldes",
+        "Gorigan",
+        "Gonzap",
+        "Female Super Trainer A",
+        "Female Super Trainer B",
+        "Vander",
+        "Male Super Trainer A",
+        "Male Super Trainer B",
+        "Hunter",
+        "Beauty",
+        "Casual Dude",
+        "Fun Old Man",
+        "Curmudgeon",
+        "Eagun",
+        "Robo Groudon Chobin",
+        "Miror B.",
+        "Female Body Builder",
+        "Male Body Builder",
+        "Battlus",
+        "Casual Guy",
+        "Researcher",
+        "Rider",
+        "Navigator",
+        "Justy",
+        "Snagem A",
+        "Snagem B",
+        "Chobin",
+        "Female Chaser A",
+        "Female Chaser B",
+        "Male Chaser",
+        "Rogue Cail",
+        "Female Cool Trainer",
+        "Male Cool Trainer",
+        "Snattle",
+        "Willie",
+        "Worker",
+        "Prof. Krane taken hostage",
+        "Greevil B",
+        "Michael C with Snag Machine",
+        "Michael C without Snag Machine"
     ];
 
     private XdToolSection BuildCommonRelTargetSection(string label, IReadOnlyList<string> legacyTargets)
@@ -314,6 +396,8 @@ public sealed partial class XdProjectContext
         var common = ReadCommonRelOrThrow();
         var strings = common.Strings;
         var names = BuildCommonNameLookup();
+        var classNames = BuildTrainerClassNameMap(common.Data, common.Table, common.Strings);
+        var battles = BuildTrainerBattleLookup(common.Data, common.Table, Iso.Region);
         var shadows = LoadShadowPokemonRecords().ToDictionary(shadow => shadow.Index);
         var storyEntry = FindDeckEntry(archive, "DeckData_Story");
         var storyBytes = storyEntry is null ? null : archive.Extract(storyEntry);
@@ -361,8 +445,13 @@ public sealed partial class XdProjectContext
                 var modelId = bytes[start + XdTrainerModelOffset];
                 var trainerString = ReadDeckStringRaw(bytes, layout.StringDataOffset, trainerStringOffset);
                 var trainerName = CleanName(strings?.StringWithId(nameId), index, "Trainer");
-                var className = $"Class {classId}";
+                var className = classNames.TryGetValue(classId, out var resolvedClassName)
+                    ? resolvedClassName
+                    : $"Class {classId}";
+                var modelName = XdTrainerModelName(modelId);
                 var location = NormalizeXdLocation(trainerString);
+                var deckId = XdDeckId(deckName);
+                battles.TryGetValue((deckId, index), out var battle);
                 var pokemon = new List<XdTrainerPokemonRecord>();
                 for (var slot = 0; slot < 6; slot++)
                 {
@@ -387,8 +476,11 @@ public sealed partial class XdProjectContext
                     className,
                     classId,
                     modelId,
+                    modelName,
                     ReadU16(bytes, start + XdTrainerAiOffset),
                     nameId,
+                    trainerStringOffset,
+                    trainerString,
                     pokemonIds.FirstOrDefault(),
                     ReadU16(bytes, start + XdTrainerPreBattleTextOffset),
                     ReadU16(bytes, start + XdTrainerVictoryTextOffset),
@@ -396,7 +488,8 @@ public sealed partial class XdProjectContext
                     ReadU16(bytes, start + XdTrainerCameraOffset),
                     location,
                     shadowMask > 0,
-                    pokemon));
+                    pokemon,
+                    battle));
             }
         }
 
@@ -898,6 +991,169 @@ public sealed partial class XdProjectContext
 
         return names;
     }
+
+    private static IReadOnlyDictionary<int, string> BuildTrainerClassNameMap(BinaryData data, RelocationTable table, GameStringTable? strings)
+    {
+        var start = table.GetPointer(XdTrainerClassesIndex);
+        var count = table.GetValueAtPointer(XdNumberOfTrainerClassesIndex);
+        if (!IsSafeTableRange(data, start, count, XdTrainerClassSize, maxCount: 128))
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var names = new Dictionary<int, string>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * XdTrainerClassSize);
+            var nameId = checked((int)data.ReadUInt32(offset + XdTrainerClassNameIdOffset));
+            names[index] = CleanName(strings?.StringWithId(nameId), index, "Class");
+        }
+
+        return names;
+    }
+
+    private static IReadOnlyDictionary<(int DeckId, int TrainerId), XdBattleRecord> BuildTrainerBattleLookup(
+        BinaryData data,
+        RelocationTable table,
+        GameCubeRegion region)
+    {
+        var start = table.GetPointer(XdBattlesIndex);
+        var count = table.GetValueAtPointer(XdNumberOfBattlesIndex);
+        var battleSize = XdBattleSize(region);
+        if (!IsSafeTableRange(data, start, count, battleSize, maxCount: 5000))
+        {
+            return new Dictionary<(int DeckId, int TrainerId), XdBattleRecord>();
+        }
+
+        var lookup = new Dictionary<(int DeckId, int TrainerId), XdBattleRecord>();
+        for (var index = 0; index < count; index++)
+        {
+            var offset = start + (index * battleSize);
+            var battleType = data.ReadByte(offset + XdBattleTypeOffset);
+            var battleStyle = data.ReadByte(offset + XdBattleStyleOffset);
+            var players = Enumerable.Range(0, 4)
+                .Select(player => ReadBattlePlayer(data, offset, region, player))
+                .ToArray();
+            var battle = new XdBattleRecord(
+                index,
+                battleType,
+                XdBattleTypeName(battleType),
+                battleStyle,
+                XdBattleStyleName(battleStyle),
+                checked((int)data.ReadUInt32(offset + XdBattleBgmOffset)),
+                players);
+
+            foreach (var player in players)
+            {
+                if (player.DeckId <= 0 || player.TrainerId <= 0 || player.TrainerId == 0x1388)
+                {
+                    continue;
+                }
+
+                lookup.TryAdd((player.DeckId, player.TrainerId), battle);
+            }
+        }
+
+        return lookup;
+    }
+
+    private static XdBattlePlayerRecord ReadBattlePlayer(BinaryData data, int battleOffset, GameCubeRegion region, int player)
+    {
+        var deckOffset = XdBattlePlayerDeckOffset(region, player);
+        var trainerOffset = XdBattlePlayerTrainerOffset(region, player);
+        var controllerOffset = XdBattlePlayerControllerOffset(region, player);
+        return new XdBattlePlayerRecord(
+            ReadU16(data, battleOffset + deckOffset),
+            ReadU16(data, battleOffset + trainerOffset),
+            data.ReadByte(battleOffset + controllerOffset));
+    }
+
+    private static int XdBattleSize(GameCubeRegion region)
+        => region == GameCubeRegion.Europe ? 0x4c : 0x3c;
+
+    private static int XdBattlePlayerDeckOffset(GameCubeRegion region, int player)
+        => (region == GameCubeRegion.Europe, player) switch
+        {
+            (true, 0) => 0x2c,
+            (true, 1) => 0x34,
+            (true, 2) => 0x3c,
+            (true, 3) => 0x44,
+            (false, 0) => 0x1c,
+            (false, 1) => 0x24,
+            (false, 2) => 0x2c,
+            (false, 3) => 0x34,
+            _ => 0
+        };
+
+    private static int XdBattlePlayerTrainerOffset(GameCubeRegion region, int player)
+        => XdBattlePlayerDeckOffset(region, player) + 2;
+
+    private static int XdBattlePlayerControllerOffset(GameCubeRegion region, int player)
+        => (region == GameCubeRegion.Europe, player) switch
+        {
+            (_, 0) => 0x23,
+            (true, 1) => 0x3b,
+            (true, 2) => 0x33,
+            (true, 3) => 0x4b,
+            (false, 1) => 0x2b,
+            (false, 2) => 0x33,
+            (false, 3) => 0x3b,
+            _ => 0x23
+        };
+
+    private static int XdDeckId(string deckName)
+        => deckName switch
+        {
+            "DeckData_Story" or "Story" => 1,
+            "DeckData_Hundred" or "Hundred" => 2,
+            "DeckData_Imasugu" or "Imasugu" => 3,
+            "DeckData_Virtual" or "Virtual" => 4,
+            "DeckData_Bingo" or "Bingo" => 5,
+            "DeckData_Colosseum" or "Colosseum" => 6,
+            "DeckData_Sample" or "Sample" => 7,
+            "DeckData_DarkPokemon" or "DarkPokemon" => 0,
+            _ => -1
+        };
+
+    private static string XdTrainerModelName(int modelId)
+        => modelId >= 0 && modelId < XdTrainerModelNames.Count
+            ? XdTrainerModelNames[modelId]
+            : $"Trainer Model {modelId}";
+
+    private static string XdBattleStyleName(int id)
+        => id switch
+        {
+            0 => "None",
+            1 => "Single",
+            2 => "Double",
+            3 => "Other",
+            _ => $"Battle Style {id}"
+        };
+
+    private static string XdBattleTypeName(int id)
+        => id switch
+        {
+            0 => "None",
+            1 => "Admin Battle",
+            2 => "Story Battle",
+            3 => "Colosseum Preliminary Round",
+            4 => "Test",
+            5 => "Colosseum Final Round",
+            6 => "Orre Colosseum Preliminary Round",
+            7 => "Orre Colosseum Final Round",
+            8 => "Mt. Battle",
+            9 => "Mt. Battle Final",
+            10 => "Battle Mode",
+            11 => "Link Battle",
+            12 => "Wild Pokemon",
+            13 => "Battle Bingo",
+            14 => "Battle Bingo",
+            15 => "Battle Tutorial",
+            16 => "Miror B. Pokespot",
+            17 => "E-Card Special Battle",
+            18 => "Battle Mode Mt. Battle Final",
+            _ => $"Battle Type {id}"
+        };
 
     private static IReadOnlyDictionary<int, string> BuildPokemonNameMap(BinaryData data, RelocationTable table, GameStringTable? strings)
     {
@@ -1558,6 +1814,9 @@ public sealed partial class XdProjectContext
     private static int ReadU16(byte[] bytes, int offset)
         => offset >= 0 && offset + 2 <= bytes.Length ? BigEndian.ReadUInt16(bytes, offset) : 0;
 
+    private static int ReadU16(BinaryData data, int offset)
+        => offset >= 0 && offset + 2 <= data.Length ? data.ReadUInt16(offset) : 0;
+
     private static string PokemonName(IReadOnlyDictionary<int, string> names, int species)
         => names.TryGetValue(species, out var name) ? name : $"Pokemon {species}";
 
@@ -1664,9 +1923,48 @@ public sealed partial class XdProjectContext
     ];
 
     private static string CleanName(string? value, int index, string fallback)
-        => string.IsNullOrWhiteSpace(value) || value == "-"
+    {
+        if (string.IsNullOrWhiteSpace(value) || value == "-")
+        {
+            return $"{fallback} {index}";
+        }
+
+        var cleaned = StripDisplayControlTokens(value.Replace('\n', ' ')).Trim();
+        return string.IsNullOrWhiteSpace(cleaned) || cleaned == "-"
             ? $"{fallback} {index}"
-            : value.Replace('\n', ' ').Trim();
+            : cleaned;
+    }
+
+    private static string StripDisplayControlTokens(string value)
+    {
+        var builder = new StringBuilder(value.Length);
+        for (var index = 0; index < value.Length;)
+        {
+            if (value[index] == '[')
+            {
+                var tokenEnd = value.IndexOf(']', index);
+                if (tokenEnd > index)
+                {
+                    index = tokenEnd + 1;
+                    if (index < value.Length && value[index] == '{')
+                    {
+                        var extraEnd = value.IndexOf('}', index);
+                        if (extraEnd > index)
+                        {
+                            index = extraEnd + 1;
+                        }
+                    }
+
+                    continue;
+                }
+            }
+
+            builder.Append(value[index]);
+            index++;
+        }
+
+        return builder.ToString();
+    }
 
     private static bool IsParseException(Exception ex)
         => ex is InvalidDataException or ArgumentOutOfRangeException or EndOfStreamException or OverflowException;

@@ -322,14 +322,20 @@ static void RunXdEditorsProbe(string isoPath)
     var gifts = context.LoadGiftPokemonRecords();
     var types = context.LoadTypeRecords();
     var treasures = context.LoadTreasureRecords();
+    var trainersWithBattleData = trainers.Count(trainer => trainer.Battle is not null);
+    var trainersWithResolvedClasses = trainers.Count(trainer => !trainer.ClassName.StartsWith("Class ", StringComparison.Ordinal));
+    var firstBattleTrainer = trainers.FirstOrDefault(trainer => trainer.Battle is not null);
 
     Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, items={items.Count}, pokespots={pokespots.Count}, gifts={gifts.Count}, types={types.Count}, treasures={treasures.Count}");
+    Console.WriteLine($"XD trainer header data: classes={trainersWithResolvedClasses}, battles={trainersWithBattleData}, first battle={firstBattleTrainer?.Index}: {firstBattleTrainer?.ClassName} {firstBattleTrainer?.Name} / {firstBattleTrainer?.Battle?.BattleStyleName} {firstBattleTrainer?.Battle?.BattleTypeName}");
     Console.WriteLine($"First trainer: {trainers.FirstOrDefault()?.Index}: {trainers.FirstOrDefault()?.ClassName} {trainers.FirstOrDefault()?.Name}");
     Console.WriteLine($"First shadow: {shadows.FirstOrDefault()?.Index}: {shadows.FirstOrDefault()?.SpeciesName}");
     Console.WriteLine($"First pokespot: {pokespots.FirstOrDefault()?.SpotName} {pokespots.FirstOrDefault()?.SpeciesName}");
 
     var failures = new List<string>();
     Expect(trainers.Count > 100, failures, $"Trainer parser is unexpectedly sparse: {trainers.Count}.");
+    Expect(trainersWithResolvedClasses > 100, failures, $"Trainer class lookup is unexpectedly sparse: {trainersWithResolvedClasses}.");
+    Expect(trainersWithBattleData > 0, failures, "Trainer battle lookup returned no battle-linked trainers.");
     Expect(shadows.Count > 40, failures, $"Shadow parser is unexpectedly sparse: {shadows.Count}.");
     Expect(stats.Count > 300, failures, $"Pokemon stats parser is unexpectedly sparse: {stats.Count}.");
     Expect(moves.Count > 350, failures, $"Move parser is unexpectedly sparse: {moves.Count}.");
