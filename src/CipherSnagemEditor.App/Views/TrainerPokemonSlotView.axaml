@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             x:Class="CipherSnagemEditor.App.Views.TrainerPokemonSlotView"
+             x:DataType="vm:TrainerPokemonSlotViewModel">
+    <UserControl.Styles>
+        <Style Selector="ComboBox.LegacyPokemonField">
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Padding" Value="3,0,2,0"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyPokemonField">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Height" Value="17"/>
+            <Setter Property="Padding" Value="3,0"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="BorderBrush" Value="#747474"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBox.LegacyPokemonField:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#808080"/>
+        </Style>
+        <Style Selector="TextBox.LegacyPokemonField:focus">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="#666666"/>
+            <Setter Property="CaretBrush" Value="#FFFFFF"/>
+            <Setter Property="SelectionBrush" Value="#80ACFF"/>
+            <Setter Property="BorderBrush" Value="#8A8A8A"/>
+        </Style>
+    </UserControl.Styles>
+    <ContentControl x:Name="SlotHost"/>
+</UserControl>

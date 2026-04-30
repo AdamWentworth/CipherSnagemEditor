@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:CipherSnagemEditor.App.Controls"
+             xmlns:vm="using:CipherSnagemEditor.App.ViewModels"
+             x:Class="CipherSnagemEditor.App.Views.TrainerPokemonEmptySlotView"
+             x:DataType="vm:TrainerPokemonSlotViewModel">
+    <Border Background="{Binding BackgroundBrush}"
+            BorderBrush="#3C3C3C"
+            BorderThickness="1"
+            CornerRadius="10"
+            Margin="5"
+            Opacity="{Binding Opacity}"
+            ClipToBounds="True">
+        <Grid RowDefinitions="20,*"
+              ColumnDefinitions="64,*"
+              Margin="4"
+              ColumnSpacing="6"
+              RowSpacing="2"
+              ClipToBounds="True">
+            <TextBlock Text="{Binding DeckIndexText}"
+                       Foreground="{Binding TextBrush}"
+                       FontSize="10"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"/>
+            <controls:LegacyPokemonComboBox Grid.Column="1"
+                                            Classes="LegacyPokemonField"
+                                            Background="{Binding FieldBackgroundBrush}"
+                                            BorderBrush="{Binding FieldBorderBrush}"
+                                            Foreground="{Binding TextBrush}"
+                                            ItemsSource="{Binding ShadowOptions}"
+                                            SelectedItem="{Binding SelectedShadow, Mode=TwoWay}"
+                                            MaxDropDownHeight="260"/>
+            <controls:LegacyPokemonComboBox Grid.Row="1"
+                                            Grid.ColumnSpan="2"
+                                            Classes="LegacyPokemonField"
+                                            Background="{Binding FieldBackgroundBrush}"
+                                            BorderBrush="{Binding FieldBorderBrush}"
+                                            Foreground="{Binding TextBrush}"
+                                            ItemsSource="{Binding SpeciesOptions}"
+                                            SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                            MaxDropDownHeight="260"
+                                            Width="296"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top"
+                                            Margin="0,36,0,0"/>
+        </Grid>
+    </Border>
+</UserControl>
