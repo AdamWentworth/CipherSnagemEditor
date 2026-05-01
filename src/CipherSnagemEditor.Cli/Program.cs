@@ -16,6 +16,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
     Console.WriteLine("       ciphersnagem xd-closeout-probe <iso>");
+    Console.WriteLine("       ciphersnagem xd-script-sweep <iso> [--limit N] [--strict-byte-match]");
     Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|script-codec|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
@@ -106,6 +107,21 @@ try
         }
 
         RunXdCloseoutProbe(args[1]);
+        return 0;
+    }
+
+    if (args[0].Equals("xd-script-sweep", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem xd-script-sweep <iso> [--limit N] [--strict-byte-match]");
+            return 1;
+        }
+
+        RunXdScriptSweep(
+            args[1],
+            ReadIntOption(args, "--limit", 0),
+            args.Any(arg => arg.Equals("--strict-byte-match", StringComparison.OrdinalIgnoreCase)));
         return 0;
     }
 
@@ -490,6 +506,149 @@ static void RunXdCloseoutProbe(string isoPath)
     }
 
     throw new InvalidDataException($"XD closeout probe failed with {failures.Count} failure(s).");
+}
+
+static void RunXdScriptSweep(string isoPath, int limit, bool strictByteMatch)
+{
+    isoPath = Path.GetFullPath(isoPath);
+    var context = XdProjectContext.Open(isoPath);
+    var macroCatalog = context.BuildScriptMacroCatalog();
+    var failures = new List<string>();
+    var results = new List<XdScriptSweepResult>();
+    var scannedArchives = 0;
+    var relContainers = 0;
+
+    foreach (var isoEntry in context.Iso.Files.Where(file => file.Name.EndsWith(".fsys", StringComparison.OrdinalIgnoreCase)))
+    {
+        if (limit > 0 && results.Count >= limit)
+        {
+            break;
+        }
+
+        FsysArchive archive;
+        try
+        {
+            archive = context.ReadIsoFsysArchive(isoEntry);
+            scannedArchives++;
+        }
+        catch (Exception ex) when (IsExpectedProbeException(ex))
+        {
+            failures.Add($"{isoEntry.Name}: FSYS parse failed: {ex.Message}");
+            continue;
+        }
+
+        foreach (var entry in archive.Entries)
+        {
+            if (limit > 0 && results.Count >= limit)
+            {
+                break;
+            }
+
+            if (entry.FileType == GameFileType.Script)
+            {
+                ProbeXdScriptBytes(
+                    $"{isoEntry.Name}/{entry.Name}",
+                    archive.Extract(entry),
+                    macroCatalog,
+                    strictByteMatch,
+                    results,
+                    failures);
+                continue;
+            }
+
+            if (entry.FileType != GameFileType.Rel && !entry.Name.EndsWith(".rel", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var relBytes = archive.Extract(entry);
+            if (!GameCubeScriptCodec.TryFindEmbeddedScript(relBytes, out var scriptOffset, out var scriptLength))
+            {
+                continue;
+            }
+
+            relContainers++;
+            ProbeXdScriptBytes(
+                $"{isoEntry.Name}/{entry.Name}@0x{scriptOffset:x}",
+                relBytes[scriptOffset..(scriptOffset + scriptLength)],
+                macroCatalog,
+                strictByteMatch,
+                results,
+                failures);
+        }
+    }
+
+    var byteIdentical = results.Count(result => result.ByteIdentical);
+    var rebuilt = results.Count - byteIdentical;
+    Console.WriteLine($"XD script sweep ISO: {isoPath}");
+    Console.WriteLine($"FSYS archives scanned: {scannedArchives:N0}");
+    Console.WriteLine($"Embedded REL script containers: {relContainers:N0}");
+    Console.WriteLine($"Scripts checked: {results.Count:N0}");
+    Console.WriteLine($"Byte-identical compile output: {byteIdentical:N0}");
+    Console.WriteLine($"Rebuilt but parseable output: {rebuilt:N0}");
+
+    foreach (var result in results.Where(result => !result.ByteIdentical).Take(12))
+    {
+        Console.WriteLine($"Rebuilt: {result.Location} ({result.SourceBytes:N0} -> {result.CompiledBytes:N0} bytes; {result.Difference})");
+    }
+
+    if (results.Count == 0)
+    {
+        failures.Add("No XD scripts were found to sweep.");
+    }
+
+    if (failures.Count == 0)
+    {
+        Console.WriteLine("XD script sweep passed.");
+        return;
+    }
+
+    foreach (var failure in failures.Take(40))
+    {
+        Console.Error.WriteLine($"XD script sweep failure: {failure}");
+    }
+
+    if (failures.Count > 40)
+    {
+        Console.Error.WriteLine($"XD script sweep omitted {failures.Count - 40:N0} additional failure(s).");
+    }
+
+    throw new InvalidDataException($"XD script sweep failed with {failures.Count} failure(s).");
+}
+
+static void ProbeXdScriptBytes(
+    string location,
+    byte[] scriptBytes,
+    GameCubeScriptMacroCatalog macroCatalog,
+    bool strictByteMatch,
+    ICollection<XdScriptSweepResult> results,
+    ICollection<string> failures)
+{
+    if (!GameCubeScriptCodec.TryDecompileXds(scriptBytes, location, out var xdsText, out var decompileError, macroCatalog))
+    {
+        failures.Add($"{location}: decompile failed: {decompileError}");
+        return;
+    }
+
+    if (!GameCubeScriptCodec.TryCompileXds(xdsText, out var compiledBytes, out var compileError, macroCatalog))
+    {
+        failures.Add($"{location}: compile failed: {compileError}");
+        return;
+    }
+
+    if (!GameCubeScriptCodec.TryDecompileXds(compiledBytes, location, out _, out var reparseError, macroCatalog))
+    {
+        failures.Add($"{location}: compiled output did not parse: {reparseError}");
+        return;
+    }
+
+    var byteIdentical = scriptBytes.SequenceEqual(compiledBytes);
+    var difference = byteIdentical ? string.Empty : FirstByteDifference(scriptBytes, compiledBytes);
+    results.Add(new XdScriptSweepResult(location, scriptBytes.Length, compiledBytes.Length, byteIdentical, difference));
+    if (strictByteMatch && !byteIdentical)
+    {
+        failures.Add($"{location}: compiled output was not byte-identical ({difference}).");
+    }
 }
 
 static void ProbeXdOpenAndEditorContent(string isoPath, ICollection<string> failures)
@@ -1158,6 +1317,22 @@ static string MutateAsciiLetter(string value)
     }
 
     throw new InvalidOperationException("Text did not contain an ASCII letter to mutate.");
+}
+
+static string FirstByteDifference(byte[] left, byte[] right)
+{
+    var length = Math.Min(left.Length, right.Length);
+    for (var index = 0; index < length; index++)
+    {
+        if (left[index] != right[index])
+        {
+            return $"first diff 0x{index:x}: 0x{left[index]:x2} -> 0x{right[index]:x2}";
+        }
+    }
+
+    return left.Length == right.Length
+        ? "same bytes"
+        : $"length diff: {left.Length:N0} -> {right.Length:N0}";
 }
 
 static ColosseumTrainerPokemonUpdate TrainerPokemonUpdateFor(
@@ -1931,3 +2106,10 @@ internal sealed record ProbeMessageResult(int Tables, int Strings, long Bytes);
 internal sealed record ProbeCollisionResult(int Files, int NonEmptyFiles, int Triangles);
 
 internal sealed record ProbeVertexResult(int WzxFiles, int Models, int VertexColours);
+
+internal sealed record XdScriptSweepResult(
+    string Location,
+    int SourceBytes,
+    int CompiledBytes,
+    bool ByteIdentical,
+    string Difference);

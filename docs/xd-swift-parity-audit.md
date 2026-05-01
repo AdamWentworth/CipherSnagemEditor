@@ -30,9 +30,37 @@ Run it from the repo root:
 
 The probe mutates only the copied ISO under `.local\closeout-work`.
 
+## Script Sweep
+
+`scripts/run-xd-script-sweep.ps1` runs an in-memory compiler/decompiler sweep
+against the clean XD ISO fixture:
+
+- walks XD `.fsys` archives,
+- decompiles standalone `.scd` scripts,
+- decompiles embedded TCOD scripts in `.rel` containers such as `common.rel`,
+- compiles the generated `.xds` back to SCD bytes,
+- verifies the compiled output still parses,
+- reports byte-identical output separately from rebuilt-but-parseable output.
+
+Run the full sweep:
+
+```powershell
+.\scripts\run-xd-script-sweep.ps1
+```
+
+Run a smaller development sample:
+
+```powershell
+.\scripts\run-xd-script-sweep.ps1 -Limit 25
+```
+
+`-StrictByteMatch` is available when we intentionally want to fail on any
+non-identical rebuild, but normal parity work treats rebuilt parseable scripts as
+useful evidence rather than a failure.
+
 ## Known Gaps
 
-- Script codec coverage is strong enough for smoke confidence, but not yet a
-  full every-script sweep.
+- Script codec coverage is now broad enough to catch decode/compile regressions,
+  but byte-identical high-level recompilation is not required yet.
 - Runtime patch proof still ultimately needs manual Dolphin checks or a deeper
   save-state/DTM automation layer.
