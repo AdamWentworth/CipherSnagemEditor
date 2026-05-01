@@ -15,7 +15,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
-    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
+    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -100,7 +100,7 @@ try
     {
         if (args.Length < 3)
         {
-            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
+            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
             return 1;
         }
 
@@ -244,19 +244,16 @@ static void InspectIso(string path)
 
 static void ExtractIsoFile(string isoPath, string fileName, string? outputPath)
 {
-    var context = ColosseumProjectContext.Open(isoPath);
-    if (context.Iso is null)
-    {
-        throw new InvalidOperationException("Input path did not load as an ISO.");
-    }
-
-    var entry = context.Iso.Files.FirstOrDefault(file => file.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase));
+    var iso = GameCubeIsoReader.Open(isoPath);
+    var entry = iso.Files.FirstOrDefault(file => file.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase));
     if (entry is null)
     {
         throw new FileNotFoundException($"Could not find {fileName} in ISO.");
     }
 
-    var extractedPath = context.ExtractIsoFile(entry, outputPath);
+    var extractedPath = iso.IsPokemonXD
+        ? XdProjectContext.Open(isoPath).ExtractIsoFile(entry, outputPath)
+        : ColosseumProjectContext.Open(isoPath).ExtractIsoFile(entry, outputPath);
     Console.WriteLine(extractedPath);
 }
 
@@ -1148,6 +1145,52 @@ static void ApplyXdSmokeOperation(string isoPath, string operation)
         }
 
         Console.WriteLine($"Applied XD editor smoke: interaction {interaction.Index} {interaction.RoomName}");
+    }
+    else if (operation.Equals("iso-explorer", StringComparison.OrdinalIgnoreCase))
+    {
+        var commonEntry = context.Iso.Files.FirstOrDefault(file => file.Name.Equals("common.fsys", StringComparison.OrdinalIgnoreCase))
+            ?? context.Iso.Files.FirstOrDefault(file => file.Name.EndsWith(".fsys", StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException("No XD FSYS archive was available for ISO Explorer smoke.");
+        var exportResult = context.ExportIsoFile(commonEntry, extractFsysContents: true, decode: true, overwrite: true);
+        if (!File.Exists(exportResult.FilePath) || exportResult.ExtractedFiles.Count == 0)
+        {
+            throw new InvalidDataException("XD ISO Explorer smoke export did not produce an extracted FSYS workspace.");
+        }
+
+        var importResult = context.ImportIsoFile(commonEntry, encode: true);
+        Console.WriteLine($"XD ISO Explorer import: {commonEntry.Name}, wrote {importResult.WrittenBytes:N0} bytes.");
+        Console.WriteLine($"XD ISO Explorer export: {exportResult.ExtractedFiles.Count:N0} extracted, {exportResult.DecodedFiles.Count:N0} decoded.");
+
+        var refreshedCommon = context.Iso.Files.First(file => file.Name.Equals(commonEntry.Name, StringComparison.OrdinalIgnoreCase));
+        var archive = context.ReadIsoFsysArchive(refreshedCommon);
+        var usedIdentifiers = archive.Entries
+            .Select(entry => (ushort)(entry.Identifier >> 16))
+            .ToHashSet();
+        var identifier = Enumerable.Range(0xefe0, 0x20)
+            .Select(value => checked((ushort)value))
+            .First(value => !usedIdentifiers.Contains(value));
+        var smokeFile = Path.Combine(context.GetIsoExportDirectory(refreshedCommon.Name), "xd_iso_explorer_smoke.bin");
+        File.WriteAllBytes(smokeFile, [0x43, 0x53, 0x45, 0x58, 0x44, 0x00, 0x00, 0x01]);
+        var addResult = context.AddFileToIsoFsys(refreshedCommon, smokeFile, identifier);
+        Console.WriteLine($"XD ISO Explorer add: {addResult.EntryName}, id 0x{addResult.ShortIdentifier:x4}, archive {addResult.ArchiveBytes:N0} bytes.");
+
+        var deleteEntry = context.Iso.Files
+            .Where(file => !file.Name.Equals("Start.dol", StringComparison.OrdinalIgnoreCase)
+                && !file.Name.Equals("Game.toc", StringComparison.OrdinalIgnoreCase)
+                && !file.Name.Equals(refreshedCommon.Name, StringComparison.OrdinalIgnoreCase)
+                && !file.Name.EndsWith(".fsys", StringComparison.OrdinalIgnoreCase)
+                && file.Size >= "DELETED DELETED\0".Length)
+            .OrderBy(file => file.Size)
+            .FirstOrDefault();
+        if (deleteEntry is not null)
+        {
+            var deleteResult = context.DeleteIsoFile(deleteEntry);
+            Console.WriteLine($"XD ISO Explorer delete: {deleteResult.FileName}, backup {deleteResult.BackupPath ?? "-"}.");
+        }
+        else
+        {
+            Console.WriteLine("XD ISO Explorer delete: skipped; no small non-FSYS entry was found.");
+        }
     }
     else if (operation.Equals("randomizer-data", StringComparison.OrdinalIgnoreCase))
     {

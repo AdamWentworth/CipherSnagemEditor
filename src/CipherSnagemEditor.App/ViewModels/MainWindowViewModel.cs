@@ -927,7 +927,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
     private async Task EncodeSelectedIsoFileAsync()
     {
-        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        if ((CurrentProject?.Iso is null && CurrentXdProject?.Iso is null) || SelectedIsoFile is null)
         {
             return;
         }
@@ -938,7 +938,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var result = await Task.Run(() => CurrentProject.EncodeIsoFile(selectedFile.Entry));
+            var result = await Task.Run(() => CurrentProject is not null
+                ? CurrentProject.EncodeIsoFile(selectedFile.Entry)
+                : CurrentXdProject!.EncodeIsoFile(selectedFile.Entry));
             IsoExplorerStatus = BuildIsoEncodeStatus(selectedFile.Name, result);
             Logs.Add(IsoExplorerStatus);
             RefreshSelectedIsoFileDetails(selectedFile);
@@ -957,7 +959,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanExportSelectedIsoFile))]
     private async Task DeleteSelectedIsoFileAsync()
     {
-        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        if ((CurrentProject?.Iso is null && CurrentXdProject?.Iso is null) || SelectedIsoFile is null)
         {
             return;
         }
@@ -969,7 +971,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var result = await Task.Run(() => CurrentProject.DeleteIsoFile(selectedEntry));
+            var result = await Task.Run(() => CurrentProject is not null
+                ? CurrentProject.DeleteIsoFile(selectedEntry)
+                : CurrentXdProject!.DeleteIsoFile(selectedEntry));
             IsoExplorerStatus = BuildIsoDeleteStatus(result);
             Logs.Add(IsoExplorerStatus);
             RepopulateIsoFiles(fileName);
@@ -987,7 +991,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public async Task AddFileToSelectedFsysAsync(string sourcePath, string identifierText)
     {
-        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        if ((CurrentProject?.Iso is null && CurrentXdProject?.Iso is null) || SelectedIsoFile is null)
         {
             return;
         }
@@ -1006,7 +1010,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var result = await Task.Run(() => CurrentProject.AddFileToIsoFsys(selectedEntry, sourcePath, identifier));
+            var result = await Task.Run(() => CurrentProject is not null
+                ? CurrentProject.AddFileToIsoFsys(selectedEntry, sourcePath, identifier)
+                : CurrentXdProject!.AddFileToIsoFsys(selectedEntry, sourcePath, identifier));
             IsoExplorerStatus = $"Added {result.EntryName} (0x{result.ShortIdentifier:x4}) to {fileName}; wrote {result.ImportResult.WrittenBytes:N0} bytes.";
             Logs.Add(IsoExplorerStatus);
             RepopulateIsoFiles(fileName);
@@ -1645,7 +1651,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task ExportSelectedIsoFileAsync(bool extractFsysContents, bool decode, string label)
     {
-        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        if ((CurrentProject?.Iso is null && CurrentXdProject?.Iso is null) || SelectedIsoFile is null)
         {
             return;
         }
@@ -1657,10 +1663,9 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var selectedFile = SelectedIsoFile;
-            var result = await Task.Run(() => CurrentProject.ExportIsoFile(
-                selectedFile.Entry,
-                extractFsysContents,
-                decode));
+            var result = await Task.Run(() => CurrentProject is not null
+                ? CurrentProject.ExportIsoFile(selectedFile.Entry, extractFsysContents, decode)
+                : CurrentXdProject!.ExportIsoFile(selectedFile.Entry, extractFsysContents, decode));
             IsoExplorerStatus = BuildIsoExportStatus(fileName, result);
             Logs.Add(IsoExplorerStatus);
             RefreshSelectedIsoFileDetails(selectedFile);
@@ -1678,7 +1683,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task ImportSelectedIsoFileAsync(bool encode, string label)
     {
-        if (CurrentProject?.Iso is null || SelectedIsoFile is null)
+        if ((CurrentProject?.Iso is null && CurrentXdProject?.Iso is null) || SelectedIsoFile is null)
         {
             return;
         }
@@ -1690,7 +1695,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var result = await Task.Run(() => CurrentProject.ImportIsoFile(selectedEntry, encode));
+            var result = await Task.Run(() => CurrentProject is not null
+                ? CurrentProject.ImportIsoFile(selectedEntry, encode)
+                : CurrentXdProject!.ImportIsoFile(selectedEntry, encode));
             IsoExplorerStatus = BuildIsoImportStatus(fileName, result);
             Logs.Add(IsoExplorerStatus);
             RepopulateIsoFiles(fileName);
@@ -1707,7 +1714,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     private bool CanExportSelectedIsoFile()
-        => CurrentProject?.Iso is not null && SelectedIsoFile is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedIsoFile is not null && !IsBusy;
 
     private bool CanSaveTrainer()
         => CurrentProject?.Iso is not null && SelectedTrainer is not null && !IsBusy;

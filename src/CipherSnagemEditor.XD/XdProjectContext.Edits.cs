@@ -475,7 +475,7 @@ public sealed partial class XdProjectContext
         return Path.Combine(WorkspaceDirectory, "Game Files", archiveFolder, SafeFileName(entryName));
     }
 
-    private void WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
+    private IsoWriteResult WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
     {
         var maximumBytes = MaximumReplacementSize(entry);
         if (entry.TocEntryOffset is null && sourceBytes.Length > entry.Size)
@@ -483,9 +483,10 @@ public sealed partial class XdProjectContext
             throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
         }
 
+        var insertedBytes = 0;
         using (var stream = File.Open(Iso.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
         {
-            var insertedBytes = EnsureIsoCapacity(stream, entry, sourceBytes.Length, maximumBytes);
+            insertedBytes = EnsureIsoCapacity(stream, entry, sourceBytes.Length, maximumBytes);
             maximumBytes = checked(maximumBytes + (uint)insertedBytes);
 
             stream.Position = entry.Offset;
@@ -505,7 +506,9 @@ public sealed partial class XdProjectContext
             }
         }
 
+        LoadedFiles[entry.Name] = sourceBytes;
         Iso = GameCubeIsoReader.Open(Iso.Path);
+        return new IsoWriteResult(maximumBytes, insertedBytes);
     }
 
     private uint MaximumReplacementSize(GameCubeIsoFileEntry entry)
@@ -664,8 +667,16 @@ public sealed partial class XdProjectContext
 
     private static string SafeFileName(string name)
     {
+        var baseName = Path.GetFileName(name);
+        if (!string.IsNullOrWhiteSpace(baseName))
+        {
+            name = baseName;
+        }
+
         var invalid = Path.GetInvalidFileNameChars();
         var chars = name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
         return new string(chars);
     }
+
+    private sealed record IsoWriteResult(uint MaximumBytes, int InsertedBytes);
 }

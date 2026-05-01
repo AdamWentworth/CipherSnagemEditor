@@ -2,6 +2,7 @@ using CipherSnagemEditor.Core.Files;
 using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Binary;
+using CipherSnagemEditor.Core.Text;
 
 namespace CipherSnagemEditor.XD;
 
@@ -30,6 +31,12 @@ public sealed partial class XdProjectContext
     public GameCubeIso Iso { get; private set; }
 
     public XdSettings Settings { get; }
+
+    public Dictionary<string, byte[]> LoadedFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string, FsysArchive> LoadedFsys { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Dictionary<string, GameStringTable> LoadedStringTables { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public XdToolContent BuildToolContent(string title)
     {
