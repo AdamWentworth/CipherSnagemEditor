@@ -5,6 +5,25 @@ recipes and desktop integration templates, not generated artifacts.
 
 Generated packages belong under ignored `artifacts/`.
 
+## User Downloads
+
+GitHub Releases are the public download surface:
+
+- `colosseum-tool-windows-portable-x64.zip`
+- `god-tool-windows-portable-x64.zip`
+- `colosseum-tool-ubuntu-debian-x64.deb`
+- `god-tool-ubuntu-debian-x64.deb`
+- `colosseum-tool-linux-portable-x64.tar.gz`
+- `god-tool-linux-portable-x64.tar.gz`
+
+Windows users should choose the zip for the tool they want. Ubuntu/Debian users
+should prefer the `.deb` files. Other Linux users can use the portable `.tar.gz`
+archives.
+
+The GitHub Packages tab is not used for app downloads. Releases are the right
+place for both installer-style downloads and portable archives; Packages is for
+developer package registries such as NuGet or containers.
+
 ## What Gets Tracked
 
 - GitHub Actions workflows in `.github/workflows/`.
@@ -71,19 +90,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The workflow builds and uploads:
-
-- `colosseum-tool-windows-portable-x64.zip`
-- `god-tool-windows-portable-x64.zip`
-- `colosseum-tool-ubuntu-debian-x64.deb`
-- `god-tool-ubuntu-debian-x64.deb`
-- `colosseum-tool-linux-portable-x64.tar.gz`
-- `god-tool-linux-portable-x64.tar.gz`
-
-These files all belong on GitHub Releases, even though some are installers and
-some are portable archives. The GitHub Packages tab is not a general app
-download area; it is for package registries such as NuGet, npm, Maven, Docker,
-and similar developer feeds.
+The workflow builds and uploads the files listed in [User Downloads](#user-downloads).
 
 The Windows packages are self-contained so normal users should not need to
 install the .NET runtime separately.

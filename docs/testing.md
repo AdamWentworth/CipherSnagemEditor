@@ -1,14 +1,16 @@
 # Testing
 
-The normal test suite does not require game files:
+## Basic Checks
+
+Install the .NET 10 SDK, then build and run the normal test suite:
 
 ```powershell
-dotnet test CipherSnagemEditor.slnx
+dotnet build CipherSnagemEditor.slnx
+dotnet test CipherSnagemEditor.slnx --no-build
 ```
 
-Additional parity and smoke tests can be run locally when clean ISO fixtures and
-Dolphin are available. These files must stay under `.local/`, which is ignored
-by Git.
+These checks do not require game files. Additional parity and smoke tests can be
+run locally when clean ISO fixtures and Dolphin are available.
 
 ## Local Fixture Layout
 
