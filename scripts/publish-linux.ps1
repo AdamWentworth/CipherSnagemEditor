@@ -25,9 +25,9 @@ $appComment = if ($Tool -eq "GoD") {
 $packageName = if ($Tool -eq "GoD") { "cipher-snagem-god-tool" } else { "cipher-snagem-colosseum-tool" }
 $iconName = $packageName
 $projectRelativePath = if ($Tool -eq "GoD") {
-    "src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj"
+    "src/CipherSnagemEditor.GoDTool/CipherSnagemEditor.GoDTool.csproj"
 } else {
-    "src\CipherSnagemEditor.ColosseumTool\CipherSnagemEditor.ColosseumTool.csproj"
+    "src/CipherSnagemEditor.ColosseumTool/CipherSnagemEditor.ColosseumTool.csproj"
 }
 $launcherExecutable = if ($Tool -eq "GoD") { "GoDTool" } else { "ColosseumTool" }
 $outputRootFull = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputRoot))
@@ -37,13 +37,13 @@ $archivePath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime.tar.gz"
 $debPath = Join-Path $outputRootFull "packages\$packageName-$Runtime.deb"
 $versionedDebPath = Join-Path $outputRootFull "packages\$packageName-$Runtime-$PackageVersion.deb"
 $projectPath = Join-Path $repoRoot $projectRelativePath
-$linuxTemplateDir = Join-Path $repoRoot "packaging\linux"
+$linuxTemplateDir = Join-Path $repoRoot "packaging/linux"
 $iconPath = if ($Tool -eq "GoD") {
-    Join-Path $repoRoot "assets\ui\app-icons\xd\icon-32.png"
+    Join-Path $repoRoot "assets/ui/app-icons/xd/icon-32.png"
 } else {
-    Join-Path $repoRoot "assets\ui\app-icons\colosseum\icon-256.png"
+    Join-Path $repoRoot "assets/ui/app-icons/colosseum/icon-256.png"
 }
-$debScriptPath = Join-Path $repoRoot "scripts\create-linux-deb.py"
+$debScriptPath = Join-Path $repoRoot "scripts/create-linux-deb.py"
 
 function Assert-UnderPath([string]$Path, [string]$Root) {
     $fullPath = [System.IO.Path]::GetFullPath($Path)
