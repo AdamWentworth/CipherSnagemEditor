@@ -87,10 +87,44 @@ Successful patch ISO copies are deleted by default so the matrix does not keep
 dozens of full disc images. Use `-KeepIsos` when a specific run needs preserved
 outputs.
 
+## Dolphin Runtime Smoke Matrix
+
+`scripts/run-xd-smoke-matrix.ps1` is the runtime side of the XD closeout. It
+copies the clean XD ISO fixture per case, applies the requested XD smoke
+operation, and boots the result through Dolphin with muted audio:
+
+- `AudioBackend = No audio output`
+- `AudioVolume = 0`
+- `VideoBackend = Null` by default for headless smoke runs
+
+The default case list keeps the runtime run manageable while covering clean boot,
+representative DOL/ASM patches, an editor write, and the script codec path:
+
+```powershell
+.\scripts\run-xd-smoke-matrix.ps1
+```
+
+Run a quick local proof without launching Dolphin:
+
+```powershell
+.\scripts\run-xd-smoke-matrix.ps1 -Cases clean-boot,patch-disable-save-corruption -SkipDolphin
+```
+
+Run the full patch boot sweep when we want maximum runtime evidence:
+
+```powershell
+.\scripts\run-xd-smoke-matrix.ps1 -PatchSweep
+```
+
+Each case writes a copied ISO under `.local\xd-smoke-work` and Dolphin logs under
+`artifacts\xd-dolphin-smoke`.
+
 ## Known Gaps
 
 - Script codec coverage is now broad enough to catch decode/compile regressions,
   but byte-identical high-level recompilation is not required yet.
 - Patch matrix coverage proves application/reopen stability and table-visible
-  effects. Runtime-only assembly effects still ultimately need manual Dolphin
-  checks or a deeper save-state/DTM automation layer.
+  effects. The Dolphin runtime smoke matrix proves patched ISOs boot without
+  obvious emulator crash/log failure. Exact in-battle behavior for runtime-only
+  assembly patches still needs manual Dolphin checks or a deeper save-state/DTM
+  automation layer.
