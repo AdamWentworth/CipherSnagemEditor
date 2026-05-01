@@ -17,7 +17,8 @@ Future target:
 From the repo root:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1 -Tool Colosseum
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1 -Tool GoD
 ```
 
 The script's default Debian package version is kept in
@@ -28,12 +29,15 @@ That creates:
 
 ```text
 artifacts/
-  publish-linux-x64/
+  publish-colosseum-tool-linux-x64/
+  publish-god-tool-linux-x64/
   packages/
-    cipher-snagem-editor-linux-x64/
-    cipher-snagem-editor-linux-x64.deb
-    cipher-snagem-editor-linux-x64-0.1.12.deb
-    cipher-snagem-editor-linux-x64.tar.gz
+    colosseum-tool-linux-x64/
+    god-tool-linux-x64/
+    cipher-snagem-colosseum-tool-linux-x64-0.1.12.deb
+    cipher-snagem-god-tool-linux-x64-0.1.12.deb
+    colosseum-tool-linux-x64.tar.gz
+    god-tool-linux-x64.tar.gz
 ```
 
 By default the package is self-contained, so the Ubuntu test machine should not
@@ -42,9 +46,9 @@ need a separately installed .NET runtime.
 Self-contained Linux builds also use ReadyToRun by default to reduce cold-start
 JIT work on Ubuntu. Use `-NoReadyToRun` if you need a smaller diagnostic build.
 
-The `.deb` is the preferred Ubuntu artifact. It installs the app under
-`/opt/cipher-snagem-editor`, registers the GNOME desktop entry, and installs the
-PNG icon under `/usr/share/icons/hicolor`.
+The `.deb` is the preferred Ubuntu artifact. Colosseum and GoD packages use
+separate package names, install roots, desktop entries, and icons so both can be
+installed at the same time.
 
 For a framework-dependent build:
 
@@ -55,21 +59,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1 -F
 ## Ubuntu Test
 
 Copy the versioned `.deb`, for example
-`artifacts/packages/cipher-snagem-editor-linux-x64-0.1.12.deb`, to the Ubuntu
-machine, then double-click it in GNOME Files or run:
+`artifacts/packages/cipher-snagem-colosseum-tool-linux-x64-0.1.12.deb`, to the
+Ubuntu machine, then double-click it in GNOME Files or run:
 
 ```bash
-sudo apt install ./cipher-snagem-editor-linux-x64-0.1.12.deb
+sudo apt install ./cipher-snagem-colosseum-tool-linux-x64-0.1.12.deb
 ```
 
-Launch `Cipher Snagem Editor` from the app grid.
+Launch `Colosseum Tool` or `GoD Tool` from the app grid.
 
 Portable fallback:
 
 ```bash
-tar -xzf cipher-snagem-editor-linux-x64.tar.gz
-cd cipher-snagem-editor-linux-x64
-chmod +x CipherSnagemEditor.App run-cipher-snagem-editor.sh install-linux-user.sh
+tar -xzf colosseum-tool-linux-x64.tar.gz
+cd colosseum-tool-linux-x64
+chmod +x ColosseumTool run-cipher-snagem-editor.sh install-linux-user.sh
 ./run-cipher-snagem-editor.sh
 ```
 
@@ -79,8 +83,8 @@ Optional per-user install:
 ./install-linux-user.sh
 ```
 
-That installs the app under `~/.local/share/cipher-snagem-editor`, installs the
-PNG icon under `~/.local/share/icons`, and creates a desktop entry under
+That installs the app under a tool-specific folder in `~/.local/share`, installs
+the PNG icon under `~/.local/share/icons`, and creates a desktop entry under
 `~/.local/share/applications`.
 
 The package must contain the runtime image asset tree:

@@ -6,14 +6,9 @@ from __future__ import annotations
 import argparse
 import gzip
 import io
-import os
 from pathlib import Path
 import tarfile
 import time
-
-
-PACKAGE_NAME = "cipher-snagem-editor"
-INSTALL_ROOT = "./opt/cipher-snagem-editor"
 
 
 def main() -> None:
@@ -22,6 +17,12 @@ def main() -> None:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--runtime", default="linux-x64")
     parser.add_argument("--version", default="0.1.0")
+    parser.add_argument("--package-name", default="cipher-snagem-editor")
+    parser.add_argument("--install-root", default="/opt/cipher-snagem-editor")
+    parser.add_argument("--app-name", default="Cipher Snagem Editor")
+    parser.add_argument("--comment", default="Pokemon Colosseum and Pokemon XD modding editor")
+    parser.add_argument("--icon-name", default="cipher-snagem-editor")
+    parser.add_argument("--executable", default="CipherSnagemEditor.App")
     args = parser.parse_args()
 
     package_dir = args.package_dir.resolve()
@@ -29,8 +30,25 @@ def main() -> None:
         raise SystemExit(f"Package directory not found: {package_dir}")
 
     architecture = architecture_for_runtime(args.runtime)
-    data_tar = build_data_tar(package_dir)
-    control_tar = build_control_tar(args.version, architecture, installed_size_kb(data_tar))
+    install_root = "." + args.install_root.rstrip("/")
+    data_tar = build_data_tar(
+        package_dir,
+        install_root,
+        args.app_name,
+        args.comment,
+        args.icon_name,
+        args.executable,
+        f"{args.package_name}.desktop",
+    )
+    control_tar = build_control_tar(
+        args.version,
+        architecture,
+        installed_size_kb(data_tar),
+        args.package_name,
+        args.comment,
+        args.executable,
+        args.install_root.rstrip("/"),
+    )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     write_ar_archive(
@@ -54,23 +72,31 @@ def installed_size_kb(data_tar_gz: bytes) -> int:
     return max(1, (len(data_tar_gz) + 1023) // 1024)
 
 
-def build_control_tar(version: str, architecture: str, installed_size: int) -> bytes:
-    control = f"""Package: {PACKAGE_NAME}
+def build_control_tar(
+    version: str,
+    architecture: str,
+    installed_size: int,
+    package_name: str,
+    description: str,
+    executable: str,
+    install_root: str,
+) -> bytes:
+    control = f"""Package: {package_name}
 Version: {version}
 Section: games
 Priority: optional
 Architecture: {architecture}
 Maintainer: Cipher Snagem Editor contributors <noreply@example.invalid>
 Installed-Size: {installed_size}
-Description: Pokemon Colosseum and XD modding editor
- A desktop editor inspired by the original GoD Tool and Pokemon-XD-Code
- Colosseum Tool workflow.
+Description: {description}
+ A desktop editor inspired by StarsMMD's original GoD Tool and Pokemon-XD-Code
+ workflows.
 """
 
-    postinst = """#!/bin/sh
+    postinst = f"""#!/bin/sh
 set -e
-chmod +x /opt/cipher-snagem-editor/CipherSnagemEditor.App 2>/dev/null || true
-chmod +x /opt/cipher-snagem-editor/run-cipher-snagem-editor.sh 2>/dev/null || true
+chmod +x {install_root}/{executable} 2>/dev/null || true
+chmod +x {install_root}/run-cipher-snagem-editor.sh 2>/dev/null || true
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
 fi
@@ -99,54 +125,68 @@ exit 0
     return tar_gz_from_entries(entries)
 
 
-def build_data_tar(package_dir: Path) -> bytes:
+def build_data_tar(
+    package_dir: Path,
+    install_root: str,
+    app_name: str,
+    comment: str,
+    icon_name: str,
+    executable: str,
+    desktop_file_name: str,
+) -> bytes:
     entries: list[tuple[str, bytes | Path | None, int]] = []
     add_dir(entries, "./opt")
-    add_dir(entries, INSTALL_ROOT)
+    add_dir(entries, install_root)
 
     for source in sorted(package_dir.rglob("*")):
         relative = source.relative_to(package_dir)
         if should_skip_portable_file(relative):
             continue
 
-        target = f"{INSTALL_ROOT}/{relative.as_posix()}"
+        target = f"{install_root}/{relative.as_posix()}"
         if source.is_dir():
             add_dir(entries, target)
         elif source.is_file():
-            entries.append((target, source, mode_for_payload_file(relative)))
+            entries.append((target, source, mode_for_payload_file(relative, executable)))
 
     desktop = """[Desktop Entry]
 Version=1.0
 Type=Application
-Name=Cipher Snagem Editor
-Comment=Pokemon Colosseum and Pokemon XD modding editor
-Exec=/opt/cipher-snagem-editor/run-cipher-snagem-editor.sh %f
-Icon=cipher-snagem-editor
+Name={app_name}
+Comment={comment}
+Exec={install_root_without_dot}/run-cipher-snagem-editor.sh %f
+Icon={icon_name}
 Terminal=false
 Categories=Game;Utility;Development;
 StartupNotify=true
-StartupWMClass=CipherSnagemEditor.App
-"""
+StartupWMClass={executable}
+""".format(
+        app_name=app_name,
+        comment=comment,
+        install_root_without_dot=install_root.removeprefix("."),
+        icon_name=icon_name,
+        executable=executable,
+    )
 
-    icon = package_dir / "resources" / "cipher-snagem-editor.png"
+    icon = package_dir / "resources" / f"{icon_name}.png"
     readme = package_dir / "README-linux.txt"
 
     add_dir(entries, "./usr")
     add_dir(entries, "./usr/share")
     add_dir(entries, "./usr/share/applications")
-    entries.append(("./usr/share/applications/cipher-snagem-editor.desktop", desktop.encode("utf-8"), 0o100644))
+    entries.append((f"./usr/share/applications/{desktop_file_name}", desktop.encode("utf-8"), 0o100644))
 
     add_dir(entries, "./usr/share/icons")
     add_dir(entries, "./usr/share/icons/hicolor")
     add_dir(entries, "./usr/share/icons/hicolor/256x256")
     add_dir(entries, "./usr/share/icons/hicolor/256x256/apps")
     if icon.is_file():
-        entries.append(("./usr/share/icons/hicolor/256x256/apps/cipher-snagem-editor.png", icon, 0o100644))
+        entries.append((f"./usr/share/icons/hicolor/256x256/apps/{icon_name}.png", icon, 0o100644))
 
     add_dir(entries, "./usr/share/doc")
-    add_dir(entries, "./usr/share/doc/cipher-snagem-editor")
+    add_dir(entries, f"./usr/share/doc/{desktop_file_name.removesuffix('.desktop')}")
     if readme.is_file():
-        entries.append(("./usr/share/doc/cipher-snagem-editor/README-linux.txt", readme, 0o100644))
+        entries.append((f"./usr/share/doc/{desktop_file_name.removesuffix('.desktop')}/README-linux.txt", readme, 0o100644))
 
     return tar_gz_from_entries(entries)
 
@@ -162,9 +202,9 @@ def should_skip_portable_file(relative: Path) -> bool:
     }
 
 
-def mode_for_payload_file(relative: Path) -> int:
+def mode_for_payload_file(relative: Path, executable: str) -> int:
     if relative.name in {
-        "CipherSnagemEditor.App",
+        executable,
         "createdump",
         "run-cipher-snagem-editor.sh",
     }:

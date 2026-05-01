@@ -16,6 +16,14 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $toolSlug = if ($Tool -eq "GoD") { "god-tool" } else { "colosseum-tool" }
+$appName = if ($Tool -eq "GoD") { "GoD Tool" } else { "Colosseum Tool" }
+$appComment = if ($Tool -eq "GoD") {
+    "Pokemon XD Gale of Darkness modding editor"
+} else {
+    "Pokemon Colosseum modding editor"
+}
+$packageName = if ($Tool -eq "GoD") { "cipher-snagem-god-tool" } else { "cipher-snagem-colosseum-tool" }
+$iconName = $packageName
 $projectRelativePath = if ($Tool -eq "GoD") {
     "src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj"
 } else {
@@ -26,8 +34,8 @@ $outputRootFull = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputRoot
 $publishDir = Join-Path $outputRootFull "publish-$toolSlug-$Runtime"
 $packageDir = Join-Path $outputRootFull "packages\$toolSlug-$Runtime"
 $archivePath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime.tar.gz"
-$debPath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime.deb"
-$versionedDebPath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime-$PackageVersion.deb"
+$debPath = Join-Path $outputRootFull "packages\$packageName-$Runtime.deb"
+$versionedDebPath = Join-Path $outputRootFull "packages\$packageName-$Runtime-$PackageVersion.deb"
 $projectPath = Join-Path $repoRoot $projectRelativePath
 $linuxTemplateDir = Join-Path $repoRoot "packaging\linux"
 $iconPath = if ($Tool -eq "GoD") {
@@ -100,17 +108,34 @@ New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
 Copy-Item -Path (Join-Path $publishDir "*") -Destination $packageDir -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "run-cipher-snagem-editor.sh") -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "install-linux-user.sh") -Destination $packageDir -Force
-Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "cipher-snagem-editor.desktop") -Destination $packageDir -Force
 Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "README-linux.txt") -Destination $packageDir -Force
+Copy-Item -LiteralPath (Join-Path $linuxTemplateDir "cipher-snagem-editor.desktop") -Destination (Join-Path $packageDir "$packageName.desktop") -Force
 
-$launcherScript = Join-Path $packageDir "run-cipher-snagem-editor.sh"
-$launcherText = Get-Content -LiteralPath $launcherScript -Raw
-$launcherText = $launcherText.Replace("CipherSnagemEditor.App", $launcherExecutable)
-Set-Content -LiteralPath $launcherScript -Value $launcherText -NoNewline
+$templateReplacements = @{
+    "@APP_NAME@" = $appName
+    "@APP_COMMENT@" = $appComment
+    "@APP_SLUG@" = $packageName
+    "@EXECUTABLE@" = $launcherExecutable
+    "@ICON_NAME@" = $iconName
+}
+
+foreach ($templateFile in @(
+    "run-cipher-snagem-editor.sh",
+    "install-linux-user.sh",
+    "README-linux.txt",
+    "$packageName.desktop"
+)) {
+    $templatePath = Join-Path $packageDir $templateFile
+    $text = Get-Content -LiteralPath $templatePath -Raw
+    foreach ($key in $templateReplacements.Keys) {
+        $text = $text.Replace($key, $templateReplacements[$key])
+    }
+    Set-Content -LiteralPath $templatePath -Value $text -NoNewline
+}
 
 $resourceDir = Join-Path $packageDir "resources"
 New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
-Copy-Item -LiteralPath $iconPath -Destination (Join-Path $resourceDir "cipher-snagem-editor.png") -Force
+Copy-Item -LiteralPath $iconPath -Destination (Join-Path $resourceDir "$iconName.png") -Force
 
 if (-not $NoArchive) {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $archivePath) | Out-Null
@@ -132,7 +157,13 @@ if (-not $NoDeb) {
         --package-dir $packageDir `
         --output $debPath `
         --runtime $Runtime `
-        --version $PackageVersion
+        --version $PackageVersion `
+        --package-name $packageName `
+        --install-root "/opt/$packageName" `
+        --app-name $appName `
+        --comment $appComment `
+        --icon-name $iconName `
+        --executable $launcherExecutable
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to create Ubuntu package: $debPath"
     }

@@ -18,6 +18,20 @@ The goal of this repository is preservation and practical parity with the
 original Swift/macOS tools: familiar editor windows, equivalent data behavior,
 safe ISO workspace flows, and repeatable rebuilds on modern Windows and Linux.
 
+## ⬇️ Download
+
+Most users should download a prebuilt package from the
+[GitHub Releases page](https://github.com/AdamWentworth/CipherSnagemEditor/releases)
+instead of cloning the source.
+
+- Windows Colosseum: `colosseum-tool-win-x64-<version>.zip`
+- Windows XD/GoD: `god-tool-win-x64-<version>.zip`
+- Ubuntu/Linux Colosseum: `cipher-snagem-colosseum-tool-linux-x64-<version>.deb`
+- Ubuntu/Linux XD/GoD: `cipher-snagem-god-tool-linux-x64-<version>.deb`
+
+Windows zips are self-contained: extract the zip and run `ColosseumTool.exe` or
+`GoDTool.exe`. Each zip also includes an optional per-user shortcut installer.
+
 ## ✅ Status
 
 This repo is treated as the stable legacy-editor parity line.
@@ -145,6 +159,7 @@ scripts/
   *.ps1                               build, closeout, script, and smoke probes
 packaging/
   linux/                              Linux desktop/package helper files
+  windows/                            Windows release README and shortcut helpers
 ```
 
 Packaging-only app assets live under `src/CipherSnagemEditor.App/Assets` or the
@@ -243,13 +258,13 @@ commands.
 Publish a Windows Colosseum Tool build:
 
 ```powershell
-dotnet publish src\CipherSnagemEditor.ColosseumTool\CipherSnagemEditor.ColosseumTool.csproj -c Release -r win-x64 --self-contained false -o artifacts\publish-win-x64-colosseum
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-windows.ps1 -Tool Colosseum
 ```
 
 Publish a Windows GoD Tool build:
 
 ```powershell
-dotnet publish src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj -c Release -r win-x64 --self-contained false -o artifacts\publish-win-x64-god
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-windows.ps1 -Tool GoD
 ```
 
 Publish Linux x64 packages:

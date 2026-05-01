@@ -9,6 +9,7 @@ Generated packages belong under ignored `artifacts/`.
 
 - GitHub Actions workflows in `.github/workflows/`.
 - Linux desktop entry and launcher templates under `packaging/linux/`.
+- Windows package README and shortcut helpers under `packaging/windows/`.
 - Publish/package scripts under `scripts/`.
 - Documentation describing the release process.
 
@@ -25,13 +26,13 @@ Generated packages belong under ignored `artifacts/`.
 Windows Colosseum Tool:
 
 ```powershell
-dotnet publish src\CipherSnagemEditor.ColosseumTool\CipherSnagemEditor.ColosseumTool.csproj -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -o artifacts\publish-win-x64-colosseum
+.\scripts\publish-windows.ps1 -Tool Colosseum -Runtime win-x64
 ```
 
 Windows GoD Tool:
 
 ```powershell
-dotnet publish src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -o artifacts\publish-win-x64-god
+.\scripts\publish-windows.ps1 -Tool GoD -Runtime win-x64
 ```
 
 Linux Colosseum Tool:
@@ -62,9 +63,17 @@ The workflow builds and uploads:
 
 - `colosseum-tool-win-x64-<version>.zip`
 - `god-tool-win-x64-<version>.zip`
+- `cipher-snagem-colosseum-tool-linux-x64-<version>.deb`
+- `cipher-snagem-god-tool-linux-x64-<version>.deb`
 - `colosseum-tool-linux-x64-<version>.tar.gz`
 - `god-tool-linux-x64-<version>.tar.gz`
-- Linux `.deb` packages for the same version.
 
 The Windows packages are self-contained so normal users should not need to
 install the .NET runtime separately.
+
+Each Windows zip contains:
+
+- the app executable and runtime files,
+- `README-windows.txt`,
+- `install-windows-user.ps1` for optional Start Menu/Desktop shortcuts,
+- `uninstall-windows-user.ps1` for removing those per-user shortcuts/files.

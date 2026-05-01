@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-INSTALL_DIR="$DATA_HOME/cipher-snagem-editor"
+INSTALL_DIR="$DATA_HOME/@APP_SLUG@"
 DESKTOP_DIR="$DATA_HOME/applications"
 ICON_DIR="$DATA_HOME/icons/hicolor/256x256/apps"
 
@@ -16,14 +16,14 @@ else
     echo "Already running from $INSTALL_DIR"
 fi
 
-cp "$INSTALL_DIR/resources/cipher-snagem-editor.png" "$ICON_DIR/cipher-snagem-editor.png"
+cp "$INSTALL_DIR/resources/@ICON_NAME@.png" "$ICON_DIR/@ICON_NAME@.png"
 sed "s|@INSTALL_DIR@|$INSTALL_DIR|g" \
-    "$INSTALL_DIR/cipher-snagem-editor.desktop" \
-    > "$DESKTOP_DIR/cipher-snagem-editor.desktop"
+    "$INSTALL_DIR/@APP_SLUG@.desktop" \
+    > "$DESKTOP_DIR/@APP_SLUG@.desktop"
 
-chmod +x "$INSTALL_DIR/CipherSnagemEditor.App"
+chmod +x "$INSTALL_DIR/@EXECUTABLE@"
 chmod +x "$INSTALL_DIR/run-cipher-snagem-editor.sh"
-chmod +x "$DESKTOP_DIR/cipher-snagem-editor.desktop"
+chmod +x "$DESKTOP_DIR/@APP_SLUG@.desktop"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$DESKTOP_DIR" >/dev/null 2>&1 || true
@@ -32,5 +32,5 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -q "$DATA_HOME/icons/hicolor" >/dev/null 2>&1 || true
 fi
 
-echo "Installed Cipher Snagem Editor to $INSTALL_DIR"
-echo "Desktop entry: $DESKTOP_DIR/cipher-snagem-editor.desktop"
+echo "Installed @APP_NAME@ to $INSTALL_DIR"
+echo "Desktop entry: $DESKTOP_DIR/@APP_SLUG@.desktop"
