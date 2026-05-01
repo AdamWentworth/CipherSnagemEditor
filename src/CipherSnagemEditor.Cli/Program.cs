@@ -15,6 +15,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
+    Console.WriteLine("       ciphersnagem xd-closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|script-codec|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
@@ -93,6 +94,18 @@ try
         }
 
         RunXdTrainerProbe(args[1], args[2]);
+        return 0;
+    }
+
+    if (args[0].Equals("xd-closeout-probe", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem xd-closeout-probe <iso>");
+            return 1;
+        }
+
+        RunXdCloseoutProbe(args[1]);
         return 0;
     }
 
@@ -449,6 +462,237 @@ static void RunXdTrainerProbe(string isoPath, string searchText)
             ? "no battle"
             : $"battle {trainer.Battle.Index}: {trainer.Battle.BattleStyleName} ({trainer.Battle.BattleStyle}), {trainer.Battle.BattleTypeName} ({trainer.Battle.BattleType}), bgm 0x{trainer.Battle.BgmId:x}";
         Console.WriteLine($"{trainer.DeckName} #{trainer.Index}: {trainer.ClassName} {trainer.Name}; model {trainer.ModelName}; AI {trainer.Ai}; intro {trainer.CameraEffects}; {battle}; messages name {trainer.NameId}, pre {trainer.PreBattleTextId}, win {trainer.VictoryTextId}, loss {trainer.DefeatTextId}; {trainer.Location}");
+    }
+}
+
+static void RunXdCloseoutProbe(string isoPath)
+{
+    isoPath = Path.GetFullPath(isoPath);
+    var failures = new List<string>();
+
+    ProbeXdOpenAndEditorContent(isoPath, failures);
+    ProbeXdPriorityEditorRoundTrips(isoPath, failures);
+    ProbeXdRepresentativePatchRoundTrip(isoPath, failures);
+    ProbeXdRandomizerRoundTrip(isoPath, failures);
+    ProbeXdIsoExplorerRoundTrip(isoPath, failures);
+    ProbeXdScriptCodecRoundTrip(isoPath, failures);
+
+    Console.WriteLine($"XD closeout ISO: {isoPath}");
+    if (failures.Count == 0)
+    {
+        Console.WriteLine("XD closeout probe passed.");
+        return;
+    }
+
+    foreach (var failure in failures)
+    {
+        Console.Error.WriteLine($"XD closeout failure: {failure}");
+    }
+
+    throw new InvalidDataException($"XD closeout probe failed with {failures.Count} failure(s).");
+}
+
+static void ProbeXdOpenAndEditorContent(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        RunXdProbe(isoPath);
+        RunXdEditorsProbe(isoPath);
+        Console.WriteLine("XD open/editor content probe passed.");
+    }
+    catch (Exception ex) when (IsExpectedProbeException(ex))
+    {
+        failures.Add($"XD open/editor content probe failed: {ex.Message}");
+    }
+}
+
+static void ProbeXdPriorityEditorRoundTrips(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        var context = XdProjectContext.Open(isoPath);
+
+        var stats = context.LoadPokemonStatsRecords().First(candidate => candidate.Index > 0 && candidate.NameId > 0 && candidate.CatchRate > 0);
+        var hp = stats.Hp >= 255 ? stats.Hp - 1 : stats.Hp + 1;
+        context.SavePokemonStats(XdPokemonStatsUpdateFor(stats, hp: hp));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedStats = context.LoadPokemonStatsRecords().First(candidate => candidate.Index == stats.Index);
+        Expect(reopenedStats.Hp == hp, failures, $"XD Pokemon Stats Editor did not persist HP for {stats.Name}.");
+
+        var move = context.LoadMoveRecords()
+            .FirstOrDefault(candidate => candidate.Name.Equals("ICE PUNCH", StringComparison.OrdinalIgnoreCase))
+            ?? context.LoadMoveRecords().First(candidate => candidate.Index > 0 && !candidate.IsShadow && candidate.Pp > 0);
+        var pp = move.Pp >= 64 ? move.Pp - 1 : move.Pp + 1;
+        context.SaveMove(XdMoveUpdateFor(move, pp: pp));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedMove = context.LoadMoveRecords().First(candidate => candidate.Index == move.Index);
+        Expect(reopenedMove.Pp == pp, failures, $"XD Move Editor did not persist PP for {move.Name}.");
+
+        var item = context.LoadItemRecords().First(candidate => candidate.Index > 0 && candidate.NameId > 0 && candidate.Price > 0);
+        var price = item.Price >= 65000 ? item.Price - 100 : item.Price + 100;
+        context.SaveItem(XdItemUpdateFor(item, price: price));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedItem = context.LoadItemRecords().First(candidate => candidate.Index == item.Index);
+        Expect(reopenedItem.Price == price, failures, $"XD Item Editor did not persist price for {item.Name}.");
+
+        var type = context.LoadTypeRecords().First(candidate => candidate.Effectiveness.Count >= 18);
+        var effectiveness = type.Effectiveness.ToArray();
+        effectiveness[0] = effectiveness[0] == 0x41 ? 0x3f : 0x41;
+        context.SaveType(new XdTypeUpdate(type.Index, type.NameId, type.CategoryId, effectiveness));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedType = context.LoadTypeRecords().First(candidate => candidate.Index == type.Index);
+        Expect(reopenedType.Effectiveness[0] == effectiveness[0], failures, $"XD Type Editor did not persist matchup value for {type.Name}.");
+
+        var treasure = context.LoadTreasureRecords().First(candidate => candidate.Index > 0 && candidate.ItemId > 0);
+        var quantity = treasure.Quantity >= 99 ? treasure.Quantity - 1 : treasure.Quantity + 1;
+        context.SaveTreasure(XdTreasureUpdateFor(treasure, quantity: quantity));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedTreasure = context.LoadTreasureRecords().First(candidate => candidate.Index == treasure.Index);
+        Expect(reopenedTreasure.Quantity == quantity, failures, $"XD Treasure Editor did not persist quantity for treasure {treasure.Index}.");
+
+        var gift = context.LoadGiftPokemonRecords().First(candidate => candidate.StartOffset > 0 && candidate.Level > 0);
+        var giftLevel = gift.Level >= 99 ? gift.Level - 1 : gift.Level + 1;
+        context.SaveGiftPokemon(new XdGiftPokemonUpdate(gift.RowId, gift.SpeciesId, giftLevel, gift.MoveIds));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedGift = context.LoadGiftPokemonRecords().First(candidate => candidate.RowId == gift.RowId);
+        Expect(reopenedGift.Level == giftLevel, failures, $"XD Gift Pokemon Editor did not persist level for {gift.GiftType}.");
+
+        var shadow = context.LoadShadowPokemonRecords().First(candidate => candidate.SpeciesId > 0);
+        var catchRate = shadow.CatchRate >= 255 ? shadow.CatchRate - 1 : shadow.CatchRate + 1;
+        context.SaveShadowPokemon(XdShadowPokemonUpdateFor(shadow, catchRate: catchRate));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedShadow = context.LoadShadowPokemonRecords().First(candidate => candidate.Index == shadow.Index);
+        Expect(reopenedShadow.CatchRate == catchRate, failures, $"XD Shadow Pokemon Editor did not persist catch rate for {shadow.SpeciesName}.");
+
+        var pokespot = context.LoadPokespotRecords().First(candidate => candidate.StartOffset > 0);
+        var stepsPerSnack = pokespot.StepsPerSnack >= 999 ? pokespot.StepsPerSnack - 1 : pokespot.StepsPerSnack + 1;
+        context.SavePokespot(new XdPokespotUpdate(
+            pokespot.StartOffset,
+            pokespot.SpeciesId,
+            pokespot.MinLevel,
+            pokespot.MaxLevel,
+            pokespot.EncounterPercentage,
+            stepsPerSnack));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedPokespot = context.LoadPokespotRecords().First(candidate => candidate.StartOffset == pokespot.StartOffset);
+        Expect(reopenedPokespot.StepsPerSnack == stepsPerSnack, failures, $"XD Pokespot Editor did not persist steps/snack for {pokespot.SpotName} {pokespot.SpeciesName}.");
+
+        var interaction = context.LoadInteractionPointRecords()
+            .FirstOrDefault(row => row.InfoKind == XdInteractionInfoKind.Warp)
+            ?? context.LoadInteractionPointRecords().First(row => row.InfoKind != XdInteractionInfoKind.None);
+        var sound = interaction.InfoKind == XdInteractionInfoKind.Warp && !interaction.Sound;
+        context.SaveInteractionPoint(XdInteractionPointUpdateFor(interaction, sound: sound));
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedInteraction = context.LoadInteractionPointRecords().First(candidate => candidate.Index == interaction.Index);
+        Expect(reopenedInteraction.Sound == sound, failures, $"XD Interaction Editor did not persist sound flag for row {interaction.Index}.");
+
+        var messageTable = context.LoadMessageTables().First(table => table.Strings.Any(message => HasAsciiLetter(message.Text)));
+        var message = messageTable.Strings.First(candidate => HasAsciiLetter(candidate.Text));
+        var messageText = MutateAsciiLetter(message.Text);
+        context.SaveMessageString(messageTable.IsoFileName, messageTable.EntryName, message.Id, messageText);
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedMessage = context.LoadMessageTables()
+            .First(table => table.IsoFileName.Equals(messageTable.IsoFileName, StringComparison.OrdinalIgnoreCase)
+                && table.EntryName.Equals(messageTable.EntryName, StringComparison.OrdinalIgnoreCase))
+            .Strings
+            .First(candidate => candidate.Id == message.Id);
+        Expect(reopenedMessage.Text == messageText, failures, $"XD Message Editor did not persist message {message.IdHex} in {messageTable.DisplayName}.");
+
+        var trainer = context.LoadTrainerRecords()
+            .First(candidate => candidate.Battle is not null && candidate.Pokemon.Any(pokemon => pokemon.DeckIndex > 0));
+        Expect(trainer.Battle is not null, failures, $"XD Trainer Editor did not resolve battle metadata for {trainer.ClassName} {trainer.Name}.");
+        Expect(trainer.Pokemon.Any(pokemon => pokemon.SpeciesId > 0 && !pokemon.SpeciesName.StartsWith("Pokemon ", StringComparison.Ordinal)), failures, $"XD Trainer Editor did not resolve party species for {trainer.ClassName} {trainer.Name}.");
+
+        Console.WriteLine("XD priority editor save/reopen probe passed.");
+    }
+    catch (Exception ex) when (IsExpectedProbeException(ex))
+    {
+        failures.Add($"XD priority editor probe failed: {ex.Message}");
+    }
+}
+
+static void ProbeXdRepresentativePatchRoundTrip(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        var context = XdProjectContext.Open(isoPath);
+        var result = context.ApplyPatch(XdPatchKind.PokemonHaveMaxCatchRate);
+        Expect(result.WrittenFiles.Count > 0, failures, "XD max catch-rate patch did not write any workspace files.");
+
+        var reopened = XdProjectContext.Open(isoPath);
+        var stats = reopened.LoadPokemonStatsRecords()
+            .Where(candidate => candidate.NameId > 0 && candidate.CatchRate > 0)
+            .ToArray();
+        var shadows = reopened.LoadShadowPokemonRecords()
+            .Where(candidate => candidate.SpeciesId > 0 && candidate.CatchRate > 0)
+            .ToArray();
+        Expect(stats.Length > 0 && stats.All(candidate => candidate.CatchRate == 255), failures, "XD max catch-rate patch did not persist base Pokemon catch rates.");
+        Expect(shadows.Length > 0 && shadows.All(candidate => candidate.CatchRate == 255), failures, "XD max catch-rate patch did not persist shadow Pokemon catch rates.");
+        Console.WriteLine("XD representative patch apply/reopen probe passed.");
+    }
+    catch (Exception ex) when (IsExpectedProbeException(ex))
+    {
+        failures.Add($"XD patch probe failed: {ex.Message}");
+    }
+}
+
+static void ProbeXdRandomizerRoundTrip(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        ApplyXdSmokeOperation(isoPath, "randomizer-data");
+        var reopened = XdProjectContext.Open(isoPath);
+        Expect(reopened.LoadPokemonStatsRecords().Count > 300, failures, "XD Pokemon stats table did not reload after randomizer import.");
+        Expect(reopened.LoadMoveRecords().Count > 350, failures, "XD move table did not reload after randomizer import.");
+        Expect(reopened.LoadTypeRecords().All(type => type.Effectiveness.Count == 18), failures, "XD type matchup rows did not reload with 18 entries after randomizer import.");
+        Expect(reopened.LoadTreasureRecords().Any(treasure => treasure.ItemId > 0), failures, "XD treasure table did not reload after randomizer import.");
+        Expect(reopened.LoadTmMoveRecords().Count == 58, failures, "XD TM/HM rows did not reload after randomizer import.");
+        Console.WriteLine("XD randomizer write/reopen probe passed.");
+    }
+    catch (Exception ex) when (IsExpectedProbeException(ex))
+    {
+        failures.Add($"XD randomizer probe failed: {ex.Message}");
+    }
+}
+
+static void ProbeXdIsoExplorerRoundTrip(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        ApplyXdSmokeOperation(isoPath, "iso-explorer");
+        var reopened = XdProjectContext.Open(isoPath);
+        Expect(reopened.Iso.Files.Any(file => file.Name.Equals("common.fsys", StringComparison.OrdinalIgnoreCase)), failures, "common.fsys did not reload after XD ISO Explorer smoke.");
+        Expect(reopened.LoadPokemonStatsRecords().Count > 300, failures, "XD common data did not reload after ISO Explorer import/add/delete smoke.");
+        Console.WriteLine("XD ISO Explorer export/import/add/delete probe passed.");
+    }
+    catch (Exception ex) when (IsExpectedProbeException(ex))
+    {
+        failures.Add($"XD ISO Explorer probe failed: {ex.Message}");
+    }
+}
+
+static void ProbeXdScriptCodecRoundTrip(string isoPath, ICollection<string> failures)
+{
+    try
+    {
+        ApplyXdSmokeOperation(isoPath, "script-codec");
+        var reopened = XdProjectContext.Open(isoPath);
+        Expect(reopened.LoadInteractionPointRecords().Count > 0, failures, "XD interaction data did not reload after script codec import.");
+        Console.WriteLine("XD script codec export/import/reopen probe passed.");
+    }
+    catch (Exception ex) when (IsExpectedProbeException(ex))
+    {
+        failures.Add($"XD script codec probe failed: {ex.Message}");
     }
 }
 
@@ -859,6 +1103,46 @@ static void Expect(bool condition, ICollection<string> failures, string message)
     }
 }
 
+static bool IsExpectedProbeException(Exception ex)
+    => ex is InvalidDataException
+        or InvalidOperationException
+        or IOException
+        or ArgumentOutOfRangeException
+        or EndOfStreamException
+        or OverflowException
+        or NotSupportedException;
+
+static bool HasAsciiLetter(string value)
+    => value.Any(character => character is >= 'A' and <= 'Z' or >= 'a' and <= 'z');
+
+static string MutateAsciiLetter(string value)
+{
+    var characters = value.ToCharArray();
+    for (var index = 0; index < characters.Length; index++)
+    {
+        var character = characters[index];
+        if (character is >= 'A' and < 'Z' or >= 'a' and < 'z')
+        {
+            characters[index] = (char)(character + 1);
+            return new string(characters);
+        }
+
+        if (character is 'Z')
+        {
+            characters[index] = 'Y';
+            return new string(characters);
+        }
+
+        if (character is 'z')
+        {
+            characters[index] = 'y';
+            return new string(characters);
+        }
+    }
+
+    throw new InvalidOperationException("Text did not contain an ASCII letter to mutate.");
+}
+
 static ColosseumTrainerPokemonUpdate TrainerPokemonUpdateFor(
     ColosseumTrainerPokemon pokemon,
     int? level = null,
@@ -970,6 +1254,138 @@ static ColosseumTreasureUpdate TreasureUpdateFor(ColosseumTreasure treasure, int
         treasure.X,
         treasure.Y,
         treasure.Z);
+
+static XdPokemonStatsUpdate XdPokemonStatsUpdateFor(XdPokemonStatsRecord pokemon, int? hp = null)
+    => new(
+        pokemon.Index,
+        pokemon.NameId,
+        pokemon.ExpRate,
+        pokemon.GenderRatio,
+        pokemon.BaseExp,
+        pokemon.BaseHappiness,
+        pokemon.Height,
+        pokemon.Weight,
+        pokemon.Type1,
+        pokemon.Type2,
+        pokemon.Ability1,
+        pokemon.Ability2,
+        pokemon.HeldItem1,
+        pokemon.HeldItem2,
+        pokemon.CatchRate,
+        hp ?? pokemon.Hp,
+        pokemon.Attack,
+        pokemon.Defense,
+        pokemon.SpecialAttack,
+        pokemon.SpecialDefense,
+        pokemon.Speed,
+        pokemon.HpYield,
+        pokemon.AttackYield,
+        pokemon.DefenseYield,
+        pokemon.SpecialAttackYield,
+        pokemon.SpecialDefenseYield,
+        pokemon.SpeedYield,
+        pokemon.LearnableTms,
+        pokemon.LevelUpMoves.Select(move => new XdPokemonLevelUpMoveUpdate(move.Level, move.MoveId)).ToArray(),
+        pokemon.Evolutions.Select(evolution => new XdPokemonEvolutionUpdate(evolution.Method, evolution.Condition, evolution.EvolvedSpeciesId)).ToArray());
+
+static XdMoveUpdate XdMoveUpdateFor(XdMoveRecord move, int? pp = null)
+    => new(
+        move.Index,
+        move.NameId,
+        move.DescriptionId,
+        move.TypeId,
+        move.TargetId,
+        move.CategoryId,
+        move.AnimationId,
+        move.Animation2Id,
+        move.EffectId,
+        move.EffectTypeId,
+        move.Power,
+        move.Accuracy,
+        pp ?? move.Pp,
+        move.Priority,
+        move.EffectAccuracy,
+        move.HmFlag,
+        move.SoundBasedFlag,
+        move.ContactFlag,
+        move.KingsRockFlag,
+        move.ProtectFlag,
+        move.SnatchFlag,
+        move.MagicCoatFlag,
+        move.MirrorMoveFlag);
+
+static XdItemUpdate XdItemUpdateFor(XdItemRecord item, int? price = null)
+    => new(
+        item.Index,
+        item.NameId,
+        item.DescriptionId,
+        item.BagSlotId,
+        item.CanBeHeld,
+        price ?? item.Price,
+        item.CouponPrice,
+        item.Parameter,
+        item.HoldItemId,
+        item.InBattleUseId,
+        item.FriendshipEffects);
+
+static XdTreasureUpdate XdTreasureUpdateFor(XdTreasureRecord treasure, int? quantity = null)
+    => new(
+        treasure.Index,
+        treasure.ModelId,
+        quantity ?? treasure.Quantity,
+        treasure.Angle,
+        treasure.RoomId,
+        treasure.ItemId,
+        treasure.X,
+        treasure.Y,
+        treasure.Z);
+
+static XdShadowPokemonUpdate XdShadowPokemonUpdateFor(XdShadowPokemonRecord shadow, int? catchRate = null)
+    => new(
+        shadow.Index,
+        shadow.StoryPokemonIndex,
+        shadow.SpeciesId,
+        shadow.Level,
+        catchRate ?? shadow.CatchRate,
+        shadow.HeartGauge,
+        shadow.InUseFlag,
+        shadow.FleeValue,
+        shadow.Aggression,
+        shadow.AlwaysFlee,
+        shadow.MoveIds,
+        shadow.ShadowBoostLevel,
+        shadow.ItemId,
+        shadow.Ability,
+        shadow.Nature,
+        shadow.Gender,
+        shadow.Happiness,
+        shadow.Iv,
+        shadow.Evs,
+        shadow.RegularMoveIds);
+
+static XdInteractionPointUpdate XdInteractionPointUpdateFor(XdInteractionPointRecord interaction, bool? sound = null)
+    => new(
+        interaction.Index,
+        interaction.RoomId,
+        interaction.RegionId,
+        interaction.InteractionMethodId,
+        interaction.InfoKind,
+        interaction.ScriptIndex,
+        interaction.TargetRoomId,
+        interaction.TargetEntryId,
+        sound ?? interaction.Sound,
+        interaction.DoorId,
+        interaction.ElevatorId,
+        interaction.TargetElevatorId,
+        interaction.DirectionId,
+        interaction.StringId,
+        interaction.CutsceneId,
+        interaction.CameraFsysId,
+        interaction.PcUnknown,
+        interaction.Parameter1,
+        interaction.Parameter2,
+        interaction.Parameter3,
+        interaction.Parameter4);
 
 static void ApplySmokeOperation(string isoPath, string operation)
 {
