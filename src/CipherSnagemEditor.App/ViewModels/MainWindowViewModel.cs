@@ -1291,7 +1291,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveInteraction))]
     private async Task SaveInteractionAsync()
     {
-        if (CurrentProject is null || SelectedInteractionDetail is null)
+        if ((CurrentProject is null && CurrentXdProject is null) || SelectedInteractionDetail is null)
         {
             return;
         }
@@ -1303,7 +1303,9 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             var update = SelectedInteractionDetail.ToUpdate();
-            var path = await Task.Run(() => CurrentProject.SaveInteractionPoint(update));
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveInteractionPoint(update))
+                : await Task.Run(() => CurrentXdProject!.SaveInteractionPoint(ToXdUpdate(update)));
             RefreshSavedInteractionEntry(index);
             Logs.Add($"Interaction point saved to {path}");
         }
@@ -1727,7 +1729,7 @@ public partial class MainWindowViewModel : ViewModelBase
         => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedTreasureDetail is not null && !IsBusy;
 
     private bool CanSaveInteraction()
-        => CurrentProject?.Iso is not null && SelectedInteractionDetail is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedInteractionDetail is not null && !IsBusy;
 
     private bool CanSaveXdShadowPokemon()
         => CurrentXdProject?.Iso is not null && SelectedXdShadowPokemon?.HasChanges == true && !IsBusy;
@@ -1912,6 +1914,9 @@ public partial class MainWindowViewModel : ViewModelBase
                     break;
                 case "Message Editor":
                     LoadMessageRows();
+                    break;
+                case "Interaction Editor":
+                    LoadInteractionRows();
                     break;
                 case "Table Editor":
                     LoadXdTableEditorRows();
@@ -3431,7 +3436,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadInteractionRows()
     {
         var totalTimer = Stopwatch.StartNew();
-        if (CurrentProject?.Iso is null)
+        if (CurrentProject?.Iso is null && CurrentXdProject?.Iso is null)
         {
             _allInteractions.Clear();
             _interactionEditorResources = InteractionEditorResources.Empty;
@@ -3458,16 +3463,24 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var commonTimer = Stopwatch.StartNew();
-            var commonRel = CurrentProject.LoadCommonRel();
-            LogPerformance("Interaction Editor load common.rel", commonTimer);
-
-            var resourceTimer = Stopwatch.StartNew();
-            _interactionEditorResources = InteractionEditorResources.FromCommonRel(commonRel);
-            LogPerformance("Interaction Editor build resources", resourceTimer);
+            var recordsTimer = Stopwatch.StartNew();
+            IReadOnlyList<ColosseumInteractionPoint> interactions;
+            if (CurrentProject is not null)
+            {
+                var commonRel = CurrentProject.LoadCommonRel();
+                interactions = commonRel.InteractionPoints;
+                _interactionEditorResources = InteractionEditorResources.FromCommonRel(commonRel);
+                LogPerformance("Interaction Editor load common.rel", recordsTimer);
+            }
+            else
+            {
+                interactions = CurrentXdProject!.LoadInteractionPointRecords().Select(MapXdInteractionPoint).ToArray();
+                _interactionEditorResources = InteractionEditorResources.FromInteractions(interactions, isXd: true);
+                LogPerformance("XD Interaction Editor load common.rel", recordsTimer);
+            }
 
             var rowTimer = Stopwatch.StartNew();
-            foreach (var interaction in commonRel.InteractionPoints)
+            foreach (var interaction in interactions)
             {
                 _allInteractions.Add(new InteractionEntryViewModel(interaction));
             }
@@ -4441,6 +4454,41 @@ public partial class MainWindowViewModel : ViewModelBase
             update.Y,
             update.Z);
 
+    private static XdInteractionPointUpdate ToXdUpdate(ColosseumInteractionPointUpdate update)
+        => new(
+            update.Index,
+            update.RoomId,
+            update.RegionId,
+            update.InteractionMethodId,
+            update.InfoKind switch
+            {
+                ColosseumInteractionInfoKind.Warp => XdInteractionInfoKind.Warp,
+                ColosseumInteractionInfoKind.Door => XdInteractionInfoKind.Door,
+                ColosseumInteractionInfoKind.Text => XdInteractionInfoKind.Text,
+                ColosseumInteractionInfoKind.Elevator => XdInteractionInfoKind.Elevator,
+                ColosseumInteractionInfoKind.CutsceneWarp => XdInteractionInfoKind.CutsceneWarp,
+                ColosseumInteractionInfoKind.Pc => XdInteractionInfoKind.Pc,
+                ColosseumInteractionInfoKind.CurrentScript => XdInteractionInfoKind.CurrentScript,
+                ColosseumInteractionInfoKind.CommonScript => XdInteractionInfoKind.CommonScript,
+                _ => XdInteractionInfoKind.None
+            },
+            update.ScriptIndex,
+            update.TargetRoomId,
+            update.TargetEntryId,
+            update.Sound,
+            update.DoorId,
+            update.ElevatorId,
+            update.TargetElevatorId,
+            update.DirectionId,
+            update.StringId,
+            update.CutsceneId,
+            update.CameraFsysId,
+            update.PcUnknown,
+            update.Parameter1,
+            update.Parameter2,
+            update.Parameter3,
+            update.Parameter4);
+
     private static ColosseumTrainer MapXdTrainer(XdTrainerRecord trainer)
         => new(
             trainer.Index,
@@ -4724,6 +4772,48 @@ public partial class MainWindowViewModel : ViewModelBase
             row.X,
             row.Y,
             row.Z)).ToArray();
+
+    private static ColosseumInteractionPoint MapXdInteractionPoint(XdInteractionPointRecord row)
+        => new(
+            row.Index,
+            row.StartOffset,
+            row.RoomId,
+            row.RoomName,
+            row.RegionId,
+            row.InteractionMethodId,
+            row.InteractionMethodName,
+            row.ScriptIdentifier,
+            row.ScriptIndex,
+            row.InfoKind switch
+            {
+                XdInteractionInfoKind.Warp => ColosseumInteractionInfoKind.Warp,
+                XdInteractionInfoKind.Door => ColosseumInteractionInfoKind.Door,
+                XdInteractionInfoKind.Text => ColosseumInteractionInfoKind.Text,
+                XdInteractionInfoKind.Elevator => ColosseumInteractionInfoKind.Elevator,
+                XdInteractionInfoKind.CutsceneWarp => ColosseumInteractionInfoKind.CutsceneWarp,
+                XdInteractionInfoKind.Pc => ColosseumInteractionInfoKind.Pc,
+                XdInteractionInfoKind.CurrentScript => ColosseumInteractionInfoKind.CurrentScript,
+                XdInteractionInfoKind.CommonScript => ColosseumInteractionInfoKind.CommonScript,
+                _ => ColosseumInteractionInfoKind.None
+            },
+            row.TargetRoomId,
+            row.TargetRoomName,
+            row.TargetEntryId,
+            row.Sound,
+            row.DoorId,
+            row.ElevatorId,
+            row.TargetElevatorId,
+            row.DirectionId,
+            row.DirectionName,
+            row.StringId,
+            row.CutsceneId,
+            row.CameraFsysId,
+            row.PcUnknown,
+            row.Parameter1,
+            row.Parameter2,
+            row.Parameter3,
+            row.Parameter4,
+            row.Description);
 
     private static IBrush BrushForXdTrainerDeck(string deckName)
         => SolidColorBrush.Parse(deckName switch
@@ -5205,7 +5295,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RefreshSavedInteractionEntry(int index)
     {
-        var updated = CurrentProject?.LoadCommonRel().InteractionPointById(index);
+        var updated = CurrentProject is not null
+            ? CurrentProject.LoadCommonRel().InteractionPointById(index)
+            : CurrentXdProject?.LoadInteractionPointRecords()
+                .Where(interaction => interaction.Index == index)
+                .Select(MapXdInteractionPoint)
+                .FirstOrDefault();
         if (updated is null)
         {
             SelectedInteractionDetail?.MarkSaved();

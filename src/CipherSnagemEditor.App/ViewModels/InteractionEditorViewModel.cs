@@ -45,6 +45,8 @@ public sealed partial class InteractionEditorViewModel : ObservableObject
 
     public string TriggerNoneTitle => "Press A Button (2)";
 
+    public bool IsTriggerPressA2Visible => Resources.SupportsPressA2;
+
     public bool IsTriggerPressA2
     {
         get => _triggerMethodId == 4;
@@ -317,16 +319,7 @@ public sealed partial class InteractionEditorViewModel : ObservableObject
         {
             0 => ColosseumInteractionInfoKind.None,
             2 => ColosseumInteractionInfoKind.CurrentScript,
-            _ => scriptIndex switch
-            {
-                4 => ColosseumInteractionInfoKind.Warp,
-                5 => ColosseumInteractionInfoKind.Door,
-                6 => ColosseumInteractionInfoKind.Elevator,
-                0x0b => ColosseumInteractionInfoKind.Text,
-                0x0c => ColosseumInteractionInfoKind.CutsceneWarp,
-                0x0d => ColosseumInteractionInfoKind.Pc,
-                _ => ColosseumInteractionInfoKind.CommonScript
-            }
+            _ => Resources.CommonInfoKindForScriptIndex(scriptIndex)
         };
 
         LoadDefaultFields();

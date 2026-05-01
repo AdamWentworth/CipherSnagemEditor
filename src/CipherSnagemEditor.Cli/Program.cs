@@ -15,7 +15,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
-    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
+    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -100,7 +100,7 @@ try
     {
         if (args.Length < 3)
         {
-            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
+            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
             return 1;
         }
 
@@ -364,6 +364,7 @@ static void RunXdEditorsProbe(string isoPath)
     var messages = context.LoadMessageTables();
     var types = context.LoadTypeRecords();
     var treasures = context.LoadTreasureRecords();
+    var interactions = context.LoadInteractionPointRecords();
     var trainersWithBattleData = trainers.Count(trainer => trainer.Battle is not null);
     var trainersWithResolvedClasses = trainers.Count(trainer => !trainer.ClassName.StartsWith("Class ", StringComparison.Ordinal));
     var firstBattleTrainer = trainers.FirstOrDefault(trainer => trainer.Battle is not null);
@@ -371,7 +372,7 @@ static void RunXdEditorsProbe(string isoPath)
         && !move.Description.StartsWith("String ", StringComparison.Ordinal)
         && !move.Description.StartsWith('#'));
 
-    Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, tms={tms.Count}, items={items.Count}, pokespots={pokespots.Count}, gifts={gifts.Count}, messages={messages.Count}, types={types.Count}, treasures={treasures.Count}");
+    Console.WriteLine($"XD editor records: trainers={trainers.Count}, shadows={shadows.Count}, stats={stats.Count}, moves={moves.Count}, tms={tms.Count}, items={items.Count}, pokespots={pokespots.Count}, gifts={gifts.Count}, messages={messages.Count}, types={types.Count}, treasures={treasures.Count}, interactions={interactions.Count}");
     Console.WriteLine($"XD trainer header data: classes={trainersWithResolvedClasses}, battles={trainersWithBattleData}, first battle={firstBattleTrainer?.Index}: {firstBattleTrainer?.ClassName} {firstBattleTrainer?.Name} / {firstBattleTrainer?.Battle?.BattleStyleName} {firstBattleTrainer?.Battle?.BattleTypeName}");
     Console.WriteLine($"First XD TM: {tms.FirstOrDefault()?.Index}: {tms.FirstOrDefault()?.MoveName}");
     Console.WriteLine($"First XD move description: {firstResolvedMoveDescription?.Index}: {firstResolvedMoveDescription?.Description}");
@@ -418,6 +419,8 @@ static void RunXdEditorsProbe(string isoPath)
     Expect(messages.Any(table => table.Strings.Count > 0), failures, "Message Editor found XD message tables but no strings.");
     Expect(types.Count >= 18, failures, $"Type parser is unexpectedly sparse: {types.Count}.");
     Expect(treasures.Count > 0, failures, "Treasure parser returned no rows.");
+    Expect(interactions.Count > 0, failures, "Interaction parser returned no rows.");
+    Expect(interactions.Any(interaction => !interaction.RoomName.StartsWith("Room 0x", StringComparison.Ordinal)), failures, "Interaction parser did not resolve XD room IDs.");
 
     if (failures.Count == 0)
     {
@@ -1106,6 +1109,46 @@ static void ApplyXdSmokeOperation(string isoPath, string operation)
             Console.WriteLine(message);
         }
     }
+    else if (operation.Equals("editor-interaction", StringComparison.OrdinalIgnoreCase))
+    {
+        var interaction = context.LoadInteractionPointRecords()
+            .FirstOrDefault(row => row.InfoKind == XdInteractionInfoKind.Warp)
+            ?? context.LoadInteractionPointRecords().FirstOrDefault()
+            ?? throw new InvalidDataException("No XD interaction points were available to smoke-save.");
+        var nextSound = interaction.InfoKind == XdInteractionInfoKind.Warp && !interaction.Sound;
+        var update = new XdInteractionPointUpdate(
+            interaction.Index,
+            interaction.RoomId,
+            interaction.RegionId,
+            interaction.InteractionMethodId,
+            interaction.InfoKind,
+            interaction.ScriptIndex,
+            interaction.TargetRoomId,
+            interaction.TargetEntryId,
+            nextSound,
+            interaction.DoorId,
+            interaction.ElevatorId,
+            interaction.TargetElevatorId,
+            interaction.DirectionId,
+            interaction.StringId,
+            interaction.CutsceneId,
+            interaction.CameraFsysId,
+            interaction.PcUnknown,
+            interaction.Parameter1,
+            interaction.Parameter2,
+            interaction.Parameter3,
+            interaction.Parameter4);
+        writtenFiles.Add(context.SaveInteractionPoint(update));
+        var reopenedInteraction = XdProjectContext.Open(isoPath)
+            .LoadInteractionPointRecords()
+            .First(row => row.Index == interaction.Index);
+        if (reopenedInteraction.Sound != nextSound)
+        {
+            throw new InvalidDataException($"XD interaction smoke save did not persist row {interaction.Index}.");
+        }
+
+        Console.WriteLine($"Applied XD editor smoke: interaction {interaction.Index} {interaction.RoomName}");
+    }
     else if (operation.Equals("randomizer-data", StringComparison.OrdinalIgnoreCase))
     {
         var result = context.Randomize(new XdRandomizerOptions(
@@ -1226,7 +1269,7 @@ static void ApplyXdSmokeOperation(string isoPath, string operation)
 
     var reopened = XdProjectContext.Open(isoPath);
     Console.WriteLine(
-        $"XD reopen: stats={reopened.LoadPokemonStatsRecords().Count}, moves={reopened.LoadMoveRecords().Count}, tms={reopened.LoadTmMoveRecords().Count}, types={reopened.LoadTypeRecords().Count}, treasures={reopened.LoadTreasureRecords().Count}");
+        $"XD reopen: stats={reopened.LoadPokemonStatsRecords().Count}, moves={reopened.LoadMoveRecords().Count}, tms={reopened.LoadTmMoveRecords().Count}, types={reopened.LoadTypeRecords().Count}, treasures={reopened.LoadTreasureRecords().Count}, interactions={reopened.LoadInteractionPointRecords().Count}");
 }
 
 static ColosseumPatchKind ParsePatchKind(string patchName)

@@ -214,6 +214,49 @@ public sealed record XdPokespotRecord(
     int StepsPerSnack,
     int StartOffset);
 
+public sealed record XdInteractionPointRecord(
+    int Index,
+    int StartOffset,
+    int RoomId,
+    string RoomName,
+    int RegionId,
+    int InteractionMethodId,
+    string InteractionMethodName,
+    int ScriptIdentifier,
+    int ScriptIndex,
+    XdInteractionInfoKind InfoKind,
+    int TargetRoomId,
+    string TargetRoomName,
+    int TargetEntryId,
+    bool Sound,
+    int DoorId,
+    int ElevatorId,
+    int TargetElevatorId,
+    int DirectionId,
+    string DirectionName,
+    int StringId,
+    int CutsceneId,
+    int CameraFsysId,
+    int PcUnknown,
+    uint Parameter1,
+    uint Parameter2,
+    uint Parameter3,
+    uint Parameter4,
+    string Description);
+
+public enum XdInteractionInfoKind
+{
+    None,
+    Warp,
+    Door,
+    Text,
+    Elevator,
+    CutsceneWarp,
+    Pc,
+    CurrentScript,
+    CommonScript
+}
+
 public sealed record XdShadowPokemonUpdate(
     int Index,
     int StoryPokemonIndex,
@@ -243,6 +286,29 @@ public sealed record XdPokespotUpdate(
     int MaxLevel,
     int EncounterPercentage,
     int StepsPerSnack);
+
+public sealed record XdInteractionPointUpdate(
+    int Index,
+    int RoomId,
+    int RegionId,
+    int InteractionMethodId,
+    XdInteractionInfoKind InfoKind,
+    int ScriptIndex,
+    int TargetRoomId,
+    int TargetEntryId,
+    bool Sound,
+    int DoorId,
+    int ElevatorId,
+    int TargetElevatorId,
+    int DirectionId,
+    int StringId,
+    int CutsceneId,
+    int CameraFsysId,
+    int PcUnknown,
+    uint Parameter1,
+    uint Parameter2,
+    uint Parameter3,
+    uint Parameter4);
 
 public sealed record XdGiftPokemonRecord(
     int RowId,

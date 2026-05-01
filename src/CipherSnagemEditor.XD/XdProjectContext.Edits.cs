@@ -151,6 +151,74 @@ public sealed partial class XdProjectContext
         return WriteCommonRel(data);
     }
 
+    public string SaveInteractionPoint(XdInteractionPointUpdate update)
+    {
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var offset = CommonRelRowOffset(data, table, XdInteractionPointsIndex, XdNumberOfInteractionPointsIndex, XdInteractionPointSize, update.Index, 5000, "Interaction point");
+
+        for (var index = 0; index < XdInteractionPointSize; index++)
+        {
+            data.WriteByte(offset + index, 0);
+        }
+
+        data.WriteByte(offset + XdInteractionMethodOffset, ClampByte(update.InteractionMethodId));
+        data.WriteUInt16(offset + XdInteractionRoomIdOffset, ClampUInt16ToU16(update.RoomId));
+        data.WriteByte(offset + XdInteractionRegionIdOffset, ClampByte(update.RegionId));
+
+        var scriptIdentifier = update.InfoKind == XdInteractionInfoKind.None
+            ? 0
+            : update.InfoKind == XdInteractionInfoKind.CurrentScript
+                ? XdInteractionCurrentScriptIdentifier
+                : XdInteractionCommonScriptIdentifier;
+        data.WriteUInt16(offset + XdInteractionScriptValueOffset, ClampUInt16ToU16(scriptIdentifier));
+        data.WriteUInt16(offset + XdInteractionScriptIndexOffset, ClampUInt16ToU16(XdInteractionScriptIndexFor(update)));
+
+        switch (update.InfoKind)
+        {
+            case XdInteractionInfoKind.None:
+                break;
+            case XdInteractionInfoKind.Warp:
+                data.WriteUInt16(offset + XdInteractionWarpTargetRoomIdOffset, ClampUInt16ToU16(update.TargetRoomId));
+                data.WriteByte(offset + XdInteractionWarpTargetEntryIdOffset, ClampByte(update.TargetEntryId));
+                data.WriteByte(offset + XdInteractionWarpSoundOffset, update.Sound ? (byte)1 : (byte)0);
+                break;
+            case XdInteractionInfoKind.Door:
+                data.WriteUInt16(offset + XdInteractionDoorIdOffset, ClampUInt16ToU16(update.DoorId));
+                break;
+            case XdInteractionInfoKind.Text:
+                data.WriteUInt16(offset + XdInteractionStringIdOffset, ClampUInt16ToU16(update.StringId));
+                break;
+            case XdInteractionInfoKind.Elevator:
+                data.WriteUInt16(offset + XdInteractionElevatorIdOffset, ClampUInt16ToU16(update.ElevatorId));
+                data.WriteUInt16(offset + XdInteractionElevatorTargetRoomIdOffset, ClampUInt16ToU16(update.TargetRoomId));
+                data.WriteUInt16(offset + XdInteractionTargetElevatorIdOffset, ClampUInt16ToU16(update.TargetElevatorId));
+                data.WriteByte(offset + XdInteractionElevatorDirectionOffset, ClampByte(update.DirectionId));
+                break;
+            case XdInteractionInfoKind.CutsceneWarp:
+                data.WriteUInt16(offset + XdInteractionWarpTargetRoomIdOffset, ClampUInt16ToU16(update.TargetRoomId));
+                data.WriteByte(offset + XdInteractionWarpTargetEntryIdOffset, ClampByte(update.TargetEntryId));
+                data.WriteUInt16(offset + XdInteractionCutsceneIdOffset, ClampUInt16ToU16(update.CutsceneId));
+                data.WriteUInt16(offset + XdInteractionCameraIdOffset, ClampUInt16ToU16(update.CameraFsysId));
+                data.WriteByte(offset + XdInteractionCameraIdOffset + 1, 0x18);
+                break;
+            case XdInteractionInfoKind.Pc:
+                data.WriteUInt16(offset + XdInteractionPcRoomIdOffset, ClampUInt16ToU16(update.TargetRoomId));
+                data.WriteByte(offset + XdInteractionPcUnknownOffset, ClampByte(update.PcUnknown));
+                break;
+            case XdInteractionInfoKind.CurrentScript:
+            case XdInteractionInfoKind.CommonScript:
+                data.WriteUInt32(offset + XdInteractionParameter1Offset, update.Parameter1);
+                data.WriteUInt32(offset + XdInteractionParameter2Offset, update.Parameter2);
+                data.WriteUInt32(offset + XdInteractionParameter3Offset, update.Parameter3);
+                data.WriteUInt32(offset + XdInteractionParameter4Offset, update.Parameter4);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(update), $"Unsupported XD interaction info kind {update.InfoKind}.");
+        }
+
+        return WriteCommonRel(data);
+    }
+
     public string SaveShadowPokemon(XdShadowPokemonUpdate update)
     {
         var archive = TryReadFsys("deck_archive.fsys", out var error)
@@ -318,6 +386,19 @@ public sealed partial class XdProjectContext
 
         return archive.Extract(messageEntry);
     }
+
+    private static int XdInteractionScriptIndexFor(XdInteractionPointUpdate update)
+        => update.InfoKind switch
+        {
+            XdInteractionInfoKind.None => 0,
+            XdInteractionInfoKind.Warp => XdInteractionWarpScriptIndex,
+            XdInteractionInfoKind.Door => XdInteractionDoorScriptIndex,
+            XdInteractionInfoKind.Text => XdInteractionTextScriptIndex,
+            XdInteractionInfoKind.Elevator => XdInteractionElevatorScriptIndex,
+            XdInteractionInfoKind.CutsceneWarp => XdInteractionCutsceneScriptIndex,
+            XdInteractionInfoKind.Pc => XdInteractionPcScriptIndex,
+            _ => update.ScriptIndex
+        };
 
     private string WriteCommonRel(BinaryData data)
         => WriteFsysEntries("common.fsys", new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)

@@ -146,6 +146,7 @@
             <RadioButton Classes="LegacyInteractionRadio"
                          GroupName="InteractionTrigger"
                          Content="{Binding SelectedInteractionDetail.TriggerNoneTitle}"
+                         IsVisible="{Binding SelectedInteractionDetail.IsTriggerPressA2Visible}"
                          IsChecked="{Binding SelectedInteractionDetail.IsTriggerPressA2, Mode=TwoWay}"
                          Canvas.Left="18"
                          Canvas.Top="100"

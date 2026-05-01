@@ -4,7 +4,9 @@ using CipherSnagemEditor.Core.Files;
 using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Relocation;
 using CipherSnagemEditor.Core.Text;
+using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 namespace CipherSnagemEditor.XD;
 
@@ -91,6 +93,39 @@ public sealed partial class XdProjectContext
     private const int XdBattleBgmOffset = 0x10;
     private const int XdRoomsIndex = 58;
     private const int XdNumberOfRoomsIndex = 59;
+    private const int XdInteractionPointsIndex = 62;
+    private const int XdNumberOfInteractionPointsIndex = 63;
+    private const int XdInteractionPointSize = 0x1c;
+    private const int XdInteractionMethodOffset = 0x00;
+    private const int XdInteractionRoomIdOffset = 0x02;
+    private const int XdInteractionRegionIdOffset = 0x07;
+    private const int XdInteractionScriptValueOffset = 0x08;
+    private const int XdInteractionScriptIndexOffset = 0x0a;
+    private const int XdInteractionParameter1Offset = 0x0c;
+    private const int XdInteractionParameter2Offset = 0x10;
+    private const int XdInteractionParameter3Offset = 0x14;
+    private const int XdInteractionParameter4Offset = 0x18;
+    private const int XdInteractionWarpTargetRoomIdOffset = 0x0e;
+    private const int XdInteractionWarpTargetEntryIdOffset = 0x13;
+    private const int XdInteractionWarpSoundOffset = 0x17;
+    private const int XdInteractionStringIdOffset = 0x0e;
+    private const int XdInteractionDoorIdOffset = 0x0e;
+    private const int XdInteractionElevatorIdOffset = 0x0e;
+    private const int XdInteractionElevatorTargetRoomIdOffset = 0x12;
+    private const int XdInteractionTargetElevatorIdOffset = 0x16;
+    private const int XdInteractionElevatorDirectionOffset = 0x1b;
+    private const int XdInteractionCutsceneIdOffset = 0x16;
+    private const int XdInteractionCameraIdOffset = 0x18;
+    private const int XdInteractionPcRoomIdOffset = 0x0e;
+    private const int XdInteractionPcUnknownOffset = 0x13;
+    private const int XdInteractionCurrentScriptIdentifier = 0x100;
+    private const int XdInteractionCommonScriptIdentifier = 0x596;
+    private const int XdInteractionWarpScriptIndex = 0x04;
+    private const int XdInteractionDoorScriptIndex = 0x05;
+    private const int XdInteractionElevatorScriptIndex = 0x06;
+    private const int XdInteractionTextScriptIndex = 0x0c;
+    private const int XdInteractionCutsceneScriptIndex = 0x0d;
+    private const int XdInteractionPcScriptIndex = 0x0e;
     private const int XdPokemonLevelUpMoveCount = 0x13;
     private const int XdPokemonEvolutionCount = 0x05;
     private const int XdPokemonTmCount = 0x3a;
@@ -139,7 +174,7 @@ public sealed partial class XdProjectContext
     private const int XdTreasureXOffset = 0x10;
     private const int XdTreasureYOffset = 0x14;
     private const int XdTreasureZOffset = 0x18;
-    private const int XdRoomSize = 0x44;
+    private const int XdRoomSize = 0x40;
     private const int XdStarterSpeciesOffset = 0x02;
     private const int XdStarterLevelOffset = 0x0b;
     private const int XdStarterMove1Offset = 0x12;
@@ -837,6 +872,26 @@ public sealed partial class XdProjectContext
                 ReadSingle(data, offset + XdTreasureXOffset),
                 ReadSingle(data, offset + XdTreasureYOffset),
                 ReadSingle(data, offset + XdTreasureZOffset)));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<XdInteractionPointRecord> LoadInteractionPointRecords()
+    {
+        var (data, table, _) = ReadCommonRelOrThrow();
+        var rooms = BuildRoomNameMap(data, table);
+        var start = table.GetPointer(XdInteractionPointsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfInteractionPointsIndex);
+        if (!IsSafeTableRange(data, start, count, XdInteractionPointSize, maxCount: 5000))
+        {
+            throw new InvalidDataException("Interaction point table is outside common.rel.");
+        }
+
+        var rows = new List<XdInteractionPointRecord>();
+        for (var index = 0; index < count; index++)
+        {
+            rows.Add(ReadInteractionPointRecord(data, rooms, index, start + (index * XdInteractionPointSize)));
         }
 
         return rows;
@@ -1695,22 +1750,264 @@ public sealed partial class XdProjectContext
         return rows;
     }
 
-    private static IReadOnlyDictionary<int, string> BuildRoomNameMap(BinaryData data, RelocationTable table)
+    private XdInteractionPointRecord ReadInteractionPointRecord(
+        BinaryData data,
+        IReadOnlyDictionary<int, string> rooms,
+        int index,
+        int offset)
     {
-        var start = table.GetPointer(XdRoomsIndex);
-        var count = table.GetValueAtPointer(XdNumberOfRoomsIndex);
-        if (!IsSafeTableRange(data, start, count, XdRoomSize, maxCount: 1000))
+        var roomId = data.ReadUInt16(offset + XdInteractionRoomIdOffset);
+        var roomName = RoomName(rooms, roomId);
+        var methodId = data.ReadByte(offset + XdInteractionMethodOffset);
+        var scriptIdentifier = data.ReadUInt16(offset + XdInteractionScriptValueOffset);
+        var scriptIndex = data.ReadUInt16(offset + XdInteractionScriptIndexOffset);
+        var infoKind = XdInteractionInfoKind.None;
+        var targetRoomId = 0;
+        var targetEntryId = 0;
+        var sound = false;
+        var doorId = 0;
+        var elevatorId = 0;
+        var targetElevatorId = 0;
+        var directionId = 0;
+        var stringId = 0;
+        var cutsceneId = 0;
+        var cameraFsysId = 0;
+        var pcUnknown = 0;
+        var parameter1 = 0u;
+        var parameter2 = 0u;
+        var parameter3 = 0u;
+        var parameter4 = 0u;
+
+        if (scriptIdentifier == XdInteractionCurrentScriptIdentifier)
         {
-            return new Dictionary<int, string>();
+            infoKind = XdInteractionInfoKind.CurrentScript;
+            parameter1 = data.ReadUInt32(offset + XdInteractionParameter1Offset);
+            parameter2 = data.ReadUInt32(offset + XdInteractionParameter2Offset);
+            parameter3 = data.ReadUInt32(offset + XdInteractionParameter3Offset);
+            parameter4 = data.ReadUInt32(offset + XdInteractionParameter4Offset);
+        }
+        else if (scriptIdentifier == XdInteractionCommonScriptIdentifier)
+        {
+            switch (scriptIndex)
+            {
+                case XdInteractionWarpScriptIndex:
+                    infoKind = XdInteractionInfoKind.Warp;
+                    targetRoomId = data.ReadUInt16(offset + XdInteractionWarpTargetRoomIdOffset);
+                    targetEntryId = data.ReadByte(offset + XdInteractionWarpTargetEntryIdOffset);
+                    sound = data.ReadByte(offset + XdInteractionWarpSoundOffset) == 1;
+                    break;
+                case XdInteractionDoorScriptIndex:
+                    infoKind = XdInteractionInfoKind.Door;
+                    doorId = data.ReadUInt16(offset + XdInteractionDoorIdOffset);
+                    break;
+                case XdInteractionElevatorScriptIndex:
+                    infoKind = XdInteractionInfoKind.Elevator;
+                    elevatorId = data.ReadUInt16(offset + XdInteractionElevatorIdOffset);
+                    targetRoomId = data.ReadUInt16(offset + XdInteractionElevatorTargetRoomIdOffset);
+                    targetElevatorId = data.ReadUInt16(offset + XdInteractionTargetElevatorIdOffset);
+                    directionId = data.ReadByte(offset + XdInteractionElevatorDirectionOffset);
+                    break;
+                case XdInteractionTextScriptIndex:
+                    infoKind = XdInteractionInfoKind.Text;
+                    stringId = data.ReadUInt16(offset + XdInteractionStringIdOffset);
+                    break;
+                case XdInteractionCutsceneScriptIndex:
+                    infoKind = XdInteractionInfoKind.CutsceneWarp;
+                    targetRoomId = data.ReadUInt16(offset + XdInteractionWarpTargetRoomIdOffset);
+                    targetEntryId = data.ReadByte(offset + XdInteractionWarpTargetEntryIdOffset);
+                    cutsceneId = data.ReadUInt16(offset + XdInteractionCutsceneIdOffset);
+                    cameraFsysId = data.ReadUInt16(offset + XdInteractionCameraIdOffset);
+                    break;
+                case XdInteractionPcScriptIndex:
+                    infoKind = XdInteractionInfoKind.Pc;
+                    targetRoomId = data.ReadUInt16(offset + XdInteractionPcRoomIdOffset);
+                    pcUnknown = data.ReadByte(offset + XdInteractionPcUnknownOffset);
+                    break;
+                default:
+                    infoKind = XdInteractionInfoKind.CommonScript;
+                    parameter1 = data.ReadUInt32(offset + XdInteractionParameter1Offset);
+                    parameter2 = data.ReadUInt32(offset + XdInteractionParameter2Offset);
+                    parameter3 = data.ReadUInt32(offset + XdInteractionParameter3Offset);
+                    parameter4 = data.ReadUInt32(offset + XdInteractionParameter4Offset);
+                    break;
+            }
         }
 
-        var rooms = new Dictionary<int, string>();
+        var targetRoomName = RoomName(rooms, targetRoomId);
+        return new XdInteractionPointRecord(
+            index,
+            offset,
+            roomId,
+            roomName,
+            data.ReadByte(offset + XdInteractionRegionIdOffset),
+            methodId,
+            InteractionMethodName(methodId),
+            scriptIdentifier,
+            scriptIndex,
+            infoKind,
+            targetRoomId,
+            targetRoomName,
+            targetEntryId,
+            sound,
+            doorId,
+            elevatorId,
+            targetElevatorId,
+            directionId,
+            ElevatorDirectionName(directionId),
+            stringId,
+            cutsceneId,
+            cameraFsysId,
+            pcUnknown,
+            parameter1,
+            parameter2,
+            parameter3,
+            parameter4,
+            InteractionPointDescription(
+                index,
+                roomName,
+                methodId,
+                data.ReadByte(offset + XdInteractionRegionIdOffset),
+                infoKind,
+                targetRoomName,
+                targetEntryId,
+                sound,
+                doorId,
+                elevatorId,
+                targetElevatorId,
+                directionId,
+                stringId,
+                cutsceneId,
+                cameraFsysId,
+                pcUnknown,
+                parameter1,
+                parameter2,
+                parameter3,
+                parameter4,
+                scriptIndex));
+    }
+
+    private IReadOnlyDictionary<int, string> BuildRoomNameMap(BinaryData data, RelocationTable table)
+    {
+        var jsonRooms = LoadRoomIdJson();
+        var start = table.GetPointer(XdRoomsIndex);
+        var count = table.GetValueAtPointer(XdNumberOfRoomsIndex);
+        var rowSize = XdRoomRowSize(Iso.Region);
+        if (!IsSafeTableRange(data, start, count, rowSize, maxCount: 1000))
+        {
+            return jsonRooms;
+        }
+
+        var rooms = new Dictionary<int, string>(jsonRooms);
         for (var index = 0; index < count; index++)
         {
-            rooms[index] = $"Room 0x{index:x4}";
+            var offset = start + (index * rowSize);
+            var roomId = ReadU16(data, offset + XdInteractionRoomIdOffset);
+            if (roomId <= 0)
+            {
+                continue;
+            }
+
+            if (!rooms.ContainsKey(roomId))
+            {
+                rooms[roomId] = $"Room 0x{roomId:x4}";
+            }
         }
 
         return rooms;
+    }
+
+    private static IReadOnlyDictionary<int, string> LoadRoomIdJson()
+    {
+        try
+        {
+            var path = FindAssetPath("assets", "json", "XD", "Room IDs.json")
+                ?? FindAssetPath("Assets", "Json", "XD", "Room IDs.json");
+            if (path is null)
+            {
+                return new Dictionary<int, string>();
+            }
+
+            var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path))
+                ?? new Dictionary<string, string>();
+            var rooms = new Dictionary<int, string>();
+            foreach (var (key, name) in raw)
+            {
+                var trimmed = key.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? key[2..] : key;
+                if (int.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var id)
+                    && !string.IsNullOrWhiteSpace(name))
+                {
+                    rooms[id] = name;
+                }
+            }
+
+            return rooms;
+        }
+        catch (Exception ex) when (IsParseException(ex) || ex is IOException || ex is JsonException)
+        {
+            return new Dictionary<int, string>();
+        }
+    }
+
+    private static int XdRoomRowSize(GameCubeRegion region)
+        => region == GameCubeRegion.Japan ? 0x30 : 0x40;
+
+    private static string RoomName(IReadOnlyDictionary<int, string> rooms, int roomId)
+        => roomId == 0 ? "-" : rooms.TryGetValue(roomId, out var name) ? name : $"Room 0x{roomId:x4}";
+
+    private static string InteractionMethodName(int id)
+        => id switch
+        {
+            0 => "None",
+            1 => "Walk Through",
+            2 => "Walk In Front Of",
+            3 => "Press A",
+            4 => "Press A 2",
+            _ => $"Method {id}"
+        };
+
+    private static string ElevatorDirectionName(int id)
+        => id == 1 ? "Down" : "Up";
+
+    private static string InteractionPointDescription(
+        int index,
+        string roomName,
+        int methodId,
+        int regionId,
+        XdInteractionInfoKind infoKind,
+        string targetRoomName,
+        int targetEntryId,
+        bool sound,
+        int doorId,
+        int elevatorId,
+        int targetElevatorId,
+        int directionId,
+        int stringId,
+        int cutsceneId,
+        int cameraFsysId,
+        int pcUnknown,
+        uint parameter1,
+        uint parameter2,
+        uint parameter3,
+        uint parameter4,
+        int scriptIndex)
+    {
+        var method = InteractionMethodName(methodId);
+        var trigger = methodId == 0 ? string.Empty : $"{method} region {regionId}. ";
+        var info = infoKind switch
+        {
+            XdInteractionInfoKind.None => "-",
+            XdInteractionInfoKind.Warp => $"Warp to {targetRoomName} entry {targetEntryId} {(sound ? "with" : "without")} sound.",
+            XdInteractionInfoKind.Door => $"Open door {doorId}.",
+            XdInteractionInfoKind.Text => $"Display text {stringId}.",
+            XdInteractionInfoKind.Elevator => $"Elevator {elevatorId} {ElevatorDirectionName(directionId)} to {targetRoomName} elevator {targetElevatorId}.",
+            XdInteractionInfoKind.CutsceneWarp => $"Cutscene {cutsceneId:X} to {targetRoomName} entry {targetEntryId}, camera {cameraFsysId:X}.",
+            XdInteractionInfoKind.Pc => $"Use PC room {targetRoomName}, unknown {pcUnknown}.",
+            XdInteractionInfoKind.CurrentScript => $"Current room script {scriptIndex}: {parameter1}, {parameter2}, {parameter3}, {parameter4}.",
+            XdInteractionInfoKind.CommonScript => $"Common script {scriptIndex}: {parameter1}, {parameter2}, {parameter3}, {parameter4}.",
+            _ => "-"
+        };
+
+        return $"{index} - {roomName}. {trigger}{info}";
     }
 
     private static string ReadDeckStringRaw(byte[] bytes, int stringDataOffset, int offset)
@@ -1929,7 +2226,7 @@ public sealed partial class XdProjectContext
         {
             return
             [
-                new("Rooms", 58, 59, 0x44, joined),
+                new("Rooms", 58, 59, XdRoomSize, joined),
                 new("Doors", 60, 61, 0x14, joined),
                 new("Interaction Points", 62, 63, 0x1c, joined)
             ];
