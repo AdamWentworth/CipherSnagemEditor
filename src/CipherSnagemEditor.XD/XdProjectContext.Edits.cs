@@ -477,148 +477,9 @@ public sealed partial class XdProjectContext
 
     private IsoWriteResult WriteIsoEntry(GameCubeIsoFileEntry entry, byte[] sourceBytes)
     {
-        var maximumBytes = MaximumReplacementSize(entry);
-        if (entry.TocEntryOffset is null && sourceBytes.Length > entry.Size)
-        {
-            throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
-        }
-
-        var insertedBytes = 0;
-        using (var stream = File.Open(Iso.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
-        {
-            insertedBytes = EnsureIsoCapacity(stream, entry, sourceBytes.Length, maximumBytes);
-            maximumBytes = checked(maximumBytes + (uint)insertedBytes);
-
-            stream.Position = entry.Offset;
-            stream.Write(sourceBytes);
-
-            if (entry.Size > sourceBytes.Length)
-            {
-                WriteZeros(stream, checked((int)(entry.Size - sourceBytes.Length)));
-            }
-
-            if (entry.TocEntryOffset is not null)
-            {
-                Span<byte> sizeBytes = stackalloc byte[4];
-                BigEndian.WriteUInt32(sizeBytes, 0, checked((uint)sourceBytes.Length));
-                stream.Position = entry.TocEntryOffset.Value + 8;
-                stream.Write(sizeBytes);
-            }
-        }
-
-        LoadedFiles[entry.Name] = sourceBytes;
-        Iso = GameCubeIsoReader.Open(Iso.Path);
-        return new IsoWriteResult(maximumBytes, insertedBytes);
-    }
-
-    private uint MaximumReplacementSize(GameCubeIsoFileEntry entry)
-    {
-        if (entry.TocEntryOffset is null)
-        {
-            return entry.Size;
-        }
-
-        var nextFile = Iso.Files
-            .Where(file => file.Offset > entry.Offset)
-            .OrderBy(file => file.Offset)
-            .FirstOrDefault();
-        var maxEnd = nextFile?.Offset ?? checked((uint)new FileInfo(Iso.Path).Length);
-        return maxEnd <= entry.Offset ? entry.Size : maxEnd - entry.Offset;
-    }
-
-    private int EnsureIsoCapacity(FileStream stream, GameCubeIsoFileEntry entry, int sourceLength, uint currentMaximumBytes)
-    {
-        if (sourceLength <= currentMaximumBytes)
-        {
-            return 0;
-        }
-
-        if (entry.TocEntryOffset is null)
-        {
-            throw new InvalidDataException($"{entry.Name} cannot grow because it does not have a normal FST size entry.");
-        }
-
-        var insertedBytes = Align16(checked(sourceLength - (int)currentMaximumBytes));
-        var insertOffset = checked((long)entry.Offset + entry.Size);
-        InsertZeros(stream, insertOffset, insertedBytes);
-
-        Span<byte> offsetBytes = stackalloc byte[4];
-        foreach (var shiftedEntry in Iso.Files
-            .Where(file => file.TocEntryOffset is not null && file.Offset > entry.Offset)
-            .OrderBy(file => file.Offset))
-        {
-            BigEndian.WriteUInt32(offsetBytes, 0, checked(shiftedEntry.Offset + (uint)insertedBytes));
-            stream.Position = shiftedEntry.TocEntryOffset!.Value + 4;
-            stream.Write(offsetBytes);
-        }
-
-        UpdateUserDataSize(stream);
-        return insertedBytes;
-    }
-
-    private static void InsertZeros(FileStream stream, long offset, int count)
-    {
-        if (count <= 0)
-        {
-            return;
-        }
-
-        var oldLength = stream.Length;
-        if (offset < 0 || offset > oldLength)
-        {
-            throw new ArgumentOutOfRangeException(nameof(offset), $"Offset 0x{offset:x} is outside the ISO.");
-        }
-
-        var buffer = new byte[1024 * 1024];
-        stream.SetLength(oldLength + count);
-        var readEnd = oldLength;
-        while (readEnd > offset)
-        {
-            var readStart = Math.Max(offset, readEnd - buffer.Length);
-            var length = checked((int)(readEnd - readStart));
-            stream.Position = readStart;
-            ReadExactly(stream, buffer.AsSpan(0, length));
-            stream.Position = readStart + count;
-            stream.Write(buffer, 0, length);
-            readEnd = readStart;
-        }
-
-        stream.Position = offset;
-        WriteZeros(stream, count);
-    }
-
-    private static void UpdateUserDataSize(FileStream stream)
-    {
-        const int userDataStartOffsetLocation = 0x434;
-        const int userDataSizeLocation = 0x438;
-
-        Span<byte> headerBytes = stackalloc byte[4];
-        stream.Position = userDataStartOffsetLocation;
-        ReadExactly(stream, headerBytes);
-        var userDataStart = BigEndian.ReadUInt32(headerBytes, 0);
-        if (userDataStart == 0 || userDataStart > stream.Length)
-        {
-            return;
-        }
-
-        BigEndian.WriteUInt32(headerBytes, 0, checked((uint)(stream.Length - userDataStart)));
-        stream.Position = userDataSizeLocation;
-        stream.Write(headerBytes);
-    }
-
-    private static void ReadExactly(Stream stream, Span<byte> buffer)
-    {
-        var read = 0;
-        while (read < buffer.Length)
-        {
-            var count = stream.Read(buffer[read..]);
-            if (count == 0)
-            {
-                throw new EndOfStreamException("Unexpected end of ISO while shifting file data.");
-            }
-
-            read += count;
-        }
+        var result = IsoWorkspace.WriteIsoEntry(entry, sourceBytes);
+        Iso = IsoWorkspace.Iso;
+        return result;
     }
 
     private static void WriteU16(byte[] bytes, int offset, int value)
@@ -651,20 +512,6 @@ public sealed partial class XdProjectContext
     private static byte ClampSignedByte(int value)
         => unchecked((byte)(sbyte)Math.Clamp(value, sbyte.MinValue, sbyte.MaxValue));
 
-    private static int Align16(int value)
-        => (value + 0x0f) & ~0x0f;
-
-    private static void WriteZeros(Stream stream, int count)
-    {
-        Span<byte> zeros = stackalloc byte[4096];
-        while (count > 0)
-        {
-            var length = Math.Min(count, zeros.Length);
-            stream.Write(zeros[..length]);
-            count -= length;
-        }
-    }
-
     private static string SafeFileName(string name)
     {
         var baseName = Path.GetFileName(name);
@@ -677,6 +524,4 @@ public sealed partial class XdProjectContext
         var chars = name.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray();
         return new string(chars);
     }
-
-    private sealed record IsoWriteResult(uint MaximumBytes, int InsertedBytes);
 }

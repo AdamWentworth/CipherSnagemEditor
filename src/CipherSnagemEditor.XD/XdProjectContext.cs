@@ -20,6 +20,7 @@ public sealed partial class XdProjectContext
         WorkspaceDirectory = workspaceDirectory;
         Iso = iso;
         Settings = settings;
+        IsoWorkspace = new GameCubeIsoWorkspace(iso, workspaceDirectory, settings.IncreaseFileSizes);
     }
 
     public string SourcePath { get; }
@@ -32,11 +33,13 @@ public sealed partial class XdProjectContext
 
     public XdSettings Settings { get; }
 
-    public Dictionary<string, byte[]> LoadedFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+    private GameCubeIsoWorkspace IsoWorkspace { get; }
 
-    public Dictionary<string, FsysArchive> LoadedFsys { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, byte[]> LoadedFiles => IsoWorkspace.LoadedFiles;
 
-    public Dictionary<string, GameStringTable> LoadedStringTables { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, FsysArchive> LoadedFsys => IsoWorkspace.LoadedFsys;
+
+    public Dictionary<string, GameStringTable> LoadedStringTables => IsoWorkspace.LoadedStringTables;
 
     public XdToolContent BuildToolContent(string title)
     {
@@ -344,16 +347,6 @@ public sealed partial class XdProjectContext
         return entry is null
             ? new XdToolRow(fileName, "Missing", detail)
             : new XdToolRow(entry.Name, $"{entry.Size:N0} bytes", detail);
-    }
-
-    public FsysArchive ReadIsoFsysArchive(GameCubeIsoFileEntry entry)
-    {
-        if (GameFileTypes.FromExtension(entry.Name) != GameFileType.Fsys)
-        {
-            throw new InvalidDataException($"{entry.Name} is not an FSYS archive.");
-        }
-
-        return FsysArchive.Parse(entry.Name, GameCubeIsoReader.ReadFile(Iso, entry));
     }
 
     private FsysArchive? TryReadFsys(string fileName, out string? error)

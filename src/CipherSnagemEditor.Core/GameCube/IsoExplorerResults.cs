@@ -31,3 +31,5 @@ public sealed record IsoFsysAddFileResult(
     int ArchiveBytes,
     bool Compressed,
     IsoImportResult ImportResult);
+
+public sealed record IsoWriteResult(uint MaximumBytes, int InsertedBytes);
