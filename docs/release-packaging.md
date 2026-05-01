@@ -10,8 +10,8 @@ Generated packages belong under ignored `artifacts/`.
 - GitHub Actions workflows in `.github/workflows/`.
 - Linux desktop entry and launcher templates under `packaging/linux/`.
 - Windows package README and shortcut helpers under `packaging/windows/`.
-- Publish/package scripts under `scripts/`, including the local PowerShell
-  scripts and the Ubuntu CI Linux packaging script.
+- Publish/package scripts under `scripts/`, including Windows PowerShell
+  scripts, Linux bash scripts, and the Python `.deb` helper.
 - Documentation describing the release process.
 
 ## What Does Not Get Tracked
@@ -23,6 +23,9 @@ Generated packages belong under ignored `artifacts/`.
 - Generated CM Tool workspaces.
 
 ## Local Release Commands
+
+Use the script that matches the platform doing the packaging. Linux maintainers
+should not need PowerShell just to produce Linux artifacts.
 
 Windows Colosseum Tool:
 
@@ -38,13 +41,21 @@ Windows GoD Tool:
 
 Linux Colosseum Tool:
 
-```powershell
-.\scripts\publish-linux.ps1 -Tool Colosseum -Runtime linux-x64
+```bash
+bash scripts/publish-linux.sh Colosseum linux-x64
 ```
 
 Linux GoD Tool:
 
+```bash
+bash scripts/publish-linux.sh GoD linux-x64
+```
+
+From Windows, maintainers can also cross-publish Linux artifacts with
+PowerShell:
+
 ```powershell
+.\scripts\publish-linux.ps1 -Tool Colosseum -Runtime linux-x64
 .\scripts\publish-linux.ps1 -Tool GoD -Runtime linux-x64
 ```
 

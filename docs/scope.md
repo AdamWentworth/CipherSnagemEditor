@@ -78,3 +78,12 @@ not destabilize the editor/rebuild workflows in this repository.
 
 No game files are included in this repository. Do not commit ISOs, GCMs,
 extracted ISO contents, save files, generated workspaces, or emulator user data.
+
+## Platform Scripts
+
+Packaging scripts are platform-specific where that improves the user experience:
+
+- Windows packages are produced by `scripts/publish-windows.ps1`.
+- Linux packages are produced by `scripts/publish-linux.sh`.
+- `scripts/publish-linux.ps1` is kept for maintainers who want to cross-publish
+  Linux packages from Windows.

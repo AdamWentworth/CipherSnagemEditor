@@ -162,7 +162,7 @@ assets/
 docs/
   *.md                                scope, testing, and packaging notes
 scripts/
-  *.ps1                               build, closeout, script, and smoke probes
+  *.ps1, *.sh, *.py                   build, package, script, and smoke helpers
 packaging/
   linux/                              Linux desktop/package helper files
   windows/                            Windows release README and shortcut helpers
@@ -275,8 +275,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-windows.ps1 
 
 Publish Linux x64 packages:
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1
+```bash
+bash scripts/publish-linux.sh Colosseum linux-x64
+bash scripts/publish-linux.sh GoD linux-x64
 ```
 
 ## 📚 Documentation
