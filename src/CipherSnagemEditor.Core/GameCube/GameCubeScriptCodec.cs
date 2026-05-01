@@ -41,6 +41,78 @@ public static class GameCubeScriptCodec
         @"^function\s+(?<name>@?[A-Za-z_][A-Za-z0-9_]*)\s*\((?<args>[^)]*)\)\s*\{\s*$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly IReadOnlyDictionary<int, ScriptOperatorInfo> Operators = new Dictionary<int, ScriptOperatorInfo>
+    {
+        [16] = new("!", 1),
+        [17] = new("-", 1),
+        [32] = new("^", 2),
+        [33] = new("or", 2),
+        [34] = new("and", 2),
+        [35] = new("+", 2),
+        [36] = new("-", 2),
+        [37] = new("*", 2),
+        [38] = new("/", 2),
+        [39] = new("%", 2),
+        [48] = new("=", 2),
+        [49] = new(">", 2),
+        [50] = new(">=", 2),
+        [51] = new("<", 2),
+        [52] = new("<=", 2),
+        [53] = new("!=", 2)
+    };
+
+    private static readonly IReadOnlyList<int[]> BinaryOperatorPrecedence =
+    [
+        [33],
+        [34],
+        [48, 49, 50, 51, 52, 53],
+        [35, 36],
+        [32, 37, 38, 39]
+    ];
+
+    private static readonly IReadOnlyDictionary<string, MacroArgumentInfo> MacroArgumentsByType =
+        new Dictionary<string, MacroArgumentInfo>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["pokemon"] = new("PokemonID", false),
+            ["item"] = new("ItemID", false),
+            ["model"] = new("ModelID", true),
+            ["move"] = new("MoveID", false),
+            ["room"] = new("RoomID", true),
+            ["flag"] = new("FlagID", true),
+            ["talk"] = new("SpeechType", false),
+            ["ability"] = new("AbilityID", false),
+            ["msgVar"] = new("MessageVariable", false),
+            ["battleResult"] = new("BattleResult", false),
+            ["shadowStatus"] = new("ShadowPokemonStatus", false),
+            ["pokespot"] = new("PokespotID", false),
+            ["battleID"] = new("BattleID", false),
+            ["shadowID"] = new("ShadowPokemonID", false),
+            ["treasureID"] = new("TreasureID", false),
+            ["battlefield"] = new("RoomID", true),
+            ["partyMember"] = new("NPCPartyMemberID", false),
+            ["integerMoney"] = new("Pokedollars", false),
+            ["integerCoupons"] = new("Pokecoupons", false),
+            ["integerQuantity"] = new("Quantity", false),
+            ["integerIndex"] = new("Index", false),
+            ["vectorDimension"] = new("VectorDimension", false),
+            ["giftPokemon"] = new("GiftID", false),
+            ["region"] = new("RegionID", false),
+            ["language"] = new("LanguageID", false),
+            ["PCBox"] = new("PCBoxID", false),
+            ["transitionID"] = new("TransitionID", false),
+            ["yesNoIndex"] = new("YesNoIndex", false),
+            ["scriptFunction"] = new("ScriptFunction", true),
+            ["sfxID"] = new("SoundEffectID", false),
+            ["storyProgress"] = new("StoryProgress", false),
+            ["buttonInput"] = new("ButtonInput", true),
+            ["msg"] = new("StringID", false)
+        };
+
+    private static readonly IReadOnlyDictionary<string, MacroArgumentInfo> MacroArgumentsByWrapper =
+        MacroArgumentsByType.Values
+            .GroupBy(info => info.WrapperName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
     public static bool TryDecompileXds(byte[] scriptBytes, string sourceName, out string text, out string? error)
     {
         text = string.Empty;
@@ -283,6 +355,12 @@ public static class GameCubeScriptCodec
                 continue;
             }
 
+            if (TryFoldStackOperator(instruction.Words, pendingStack, out var foldedExpression))
+            {
+                pendingStack.Add(foldedExpression);
+                continue;
+            }
+
             if (TryPopCount(index + 1 < instructions.Count ? instructions[index + 1].Words : [], out var popCount)
                 && TryCallStd(instruction.Words, out var classId, out var functionId)
                 && pendingStack.Count >= popCount)
@@ -307,6 +385,19 @@ public static class GameCubeScriptCodec
                 continue;
             }
 
+            if (TryJump(instruction.Words, out var jumpOpCode, out var jumpTarget)
+                && jumpOpCode is 10 or 11
+                && pendingStack.Count > 0)
+            {
+                var firstArgumentIndex = pendingStack.Count - 1;
+                FlushStackValues(builder, pendingStack.Take(firstArgumentIndex));
+                var condition = pendingStack[^1];
+                pendingStack.Clear();
+                var keyword = jumpOpCode == 10 ? "if" : "ifnot";
+                builder.AppendLine($"    goto {LocationText(jumpTarget, functionNamesByOffset)} {keyword} {condition.Text}");
+                continue;
+            }
+
             FlushStackValues(builder, pendingStack);
             pendingStack.Clear();
             builder.AppendLine("    " + HighLevelInstructionText(instruction.Words, functionNamesByOffset));
@@ -319,7 +410,10 @@ public static class GameCubeScriptCodec
     {
         foreach (var value in values)
         {
-            builder.AppendLine("    " + value.SourceLine);
+            foreach (var sourceLine in value.SourceLines)
+            {
+                builder.AppendLine("    " + sourceLine);
+            }
         }
     }
 
@@ -586,6 +680,16 @@ public static class GameCubeScriptCodec
             }
 
             return true;
+        }
+
+        if (op == "goto" && TryParseConditionalGoto(line, out instruction, out error))
+        {
+            return error is null;
+        }
+
+        if (op is "jmptrue" or "jmpfalse" && TryParseConditionalJump(line, op, out instruction, out error))
+        {
+            return error is null;
         }
 
         if (op is "call" or "goto" or "jmptrue" or "jmpfalse")
@@ -1169,11 +1273,135 @@ public static class GameCubeScriptCodec
     private static string StandardCallText(int classId, int functionId, IReadOnlyList<StackValueExpression> arguments)
     {
         var name = GameCubeScriptCatalog.FunctionDisplayName(classId, functionId);
-        var argumentText = string.Join(", ", arguments.Select(argument => argument.Text));
+        var parameterTypes = ParameterTypesForFunction(classId, functionId);
+        var argumentText = string.Join(", ", arguments.Select((argument, index) => ArgumentDisplayText(argument, parameterTypes.ElementAtOrDefault(index))));
         var comment = GameCubeScriptCatalog.FunctionComment(classId, functionId);
         var call = $"callstd {name}({argumentText})";
         return string.IsNullOrWhiteSpace(comment) ? call : $"{call} // {comment}";
     }
+
+    private static bool TryFoldStackOperator(
+        IReadOnlyList<uint> words,
+        List<StackValueExpression> pendingStack,
+        out StackValueExpression foldedExpression)
+    {
+        foldedExpression = StackValueExpression.Empty;
+        if (words.Count != 1)
+        {
+            return false;
+        }
+
+        var word = words[0];
+        var op = (int)((word >> 24) & 0xff);
+        var sub = (int)((word >> 16) & 0xff);
+        if (op != 1 || !Operators.TryGetValue(sub, out var operatorInfo))
+        {
+            return false;
+        }
+
+        var sourceLine = HighLevelInstructionText(words, new Dictionary<int, string>());
+        if (operatorInfo.ParameterCount == 1 && sub is 16 or 17 && pendingStack.Count >= 1)
+        {
+            var operand = pendingStack[^1];
+            pendingStack.RemoveAt(pendingStack.Count - 1);
+            var text = operatorInfo.Token + BracketedExpressionText(operand);
+            foldedExpression = new StackValueExpression(
+                text,
+                operand.SourceLines.Append(sourceLine).ToArray(),
+                operand.Words.Append(words[0]).ToArray(),
+                null,
+                false);
+            return true;
+        }
+
+        if (operatorInfo.ParameterCount == 2 && pendingStack.Count >= 2)
+        {
+            var right = pendingStack[^1];
+            var left = pendingStack[^2];
+            pendingStack.RemoveRange(pendingStack.Count - 2, 2);
+            var text = $"{BinaryOperandText(left)} {operatorInfo.Token} {BinaryOperandText(right)}";
+            foldedExpression = new StackValueExpression(
+                text,
+                left.SourceLines.Concat(right.SourceLines).Append(sourceLine).ToArray(),
+                left.Words.Concat(right.Words).Append(words[0]).ToArray(),
+                null,
+                false);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string BinaryOperandText(StackValueExpression expression)
+        => expression.IsSimple ? expression.Text : $"({expression.Text})";
+
+    private static string BracketedExpressionText(StackValueExpression expression)
+        => $"({expression.Text})";
+
+    private static IReadOnlyList<string> ParameterTypesForFunction(int classId, int functionId)
+    {
+        var function = GameCubeScriptCatalog.Function(classId, functionId);
+        if (function is null
+            || string.IsNullOrWhiteSpace(function.ParameterTypes)
+            || function.ParameterTypes.Equals("nil", StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        var parameterText = function.ParameterTypes.Trim();
+        if (!parameterText.StartsWith('[') || !parameterText.EndsWith(']'))
+        {
+            return [];
+        }
+
+        return SplitTopLevelArguments(parameterText[1..^1])
+            .Select(NormalizeMacroType)
+            .ToArray();
+    }
+
+    private static string NormalizeMacroType(string macroType)
+    {
+        macroType = macroType.Trim();
+        if (macroType.Length > 0 && macroType[0] == '.')
+        {
+            macroType = macroType[1..];
+        }
+
+        foreach (var wrapper in new[] { "optional", "array", "list" })
+        {
+            if (macroType.StartsWith(wrapper + "(", StringComparison.OrdinalIgnoreCase) && macroType.EndsWith(')'))
+            {
+                return NormalizeMacroType(macroType[(wrapper.Length + 1)..^1]);
+            }
+        }
+
+        var open = macroType.IndexOf('(');
+        return open > 0 ? macroType[..open] : macroType;
+    }
+
+    private static string ArgumentDisplayText(StackValueExpression argument, string? parameterType)
+    {
+        if (parameterType is not null
+            && argument.Constant is { Type: 1 } constant
+            && MacroArgumentsByType.TryGetValue(parameterType, out var macroInfo))
+        {
+            return $"{macroInfo.WrapperName}({MacroArgumentValueText(constant.Value, macroInfo.Hexadecimal)})";
+        }
+
+        if (parameterType is not null
+            && argument.Constant is { Type: 1 } boolConstant
+            && parameterType.Equals("bool", StringComparison.OrdinalIgnoreCase))
+        {
+            return boolConstant.Value == 0 ? "NO" : "YES";
+        }
+
+        return argument.Text;
+    }
+
+    private static string MacroArgumentValueText(uint value, bool hexadecimal)
+        => hexadecimal
+            ? $"0x{value:x8}"
+            : unchecked((int)value).ToString(CultureInfo.InvariantCulture);
 
     private static bool TryCallStd(IReadOnlyList<uint> words, out int classId, out int functionId)
     {
@@ -1192,6 +1420,26 @@ public static class GameCubeScriptCodec
 
         classId = (int)((word >> 16) & 0xff);
         functionId = unchecked((short)(word & 0xffff));
+        return true;
+    }
+
+    private static bool TryJump(IReadOnlyList<uint> words, out int opCode, out int target)
+    {
+        opCode = 0;
+        target = 0;
+        if (words.Count != 1)
+        {
+            return false;
+        }
+
+        var word = words[0];
+        opCode = (int)((word >> 24) & 0xff);
+        if (opCode is not (10 or 11 or 12))
+        {
+            return false;
+        }
+
+        target = (int)(word & 0x00ff_ffff);
         return true;
     }
 
@@ -1250,7 +1498,13 @@ public static class GameCubeScriptCodec
             var text = words.Count == 2
                 ? ConstantText((ushort)sub, words[1])
                 : ConstantText((ushort)sub, unchecked((uint)param));
-            value = new StackValueExpression(text, HighLevelInstructionText(words, new Dictionary<int, string>()));
+            var constantValue = words.Count == 2 ? words[1] : unchecked((uint)param);
+            value = new StackValueExpression(
+                text,
+                [HighLevelInstructionText(words, new Dictionary<int, string>())],
+                words.ToArray(),
+                new StackConstant(sub, constantValue),
+                true);
             return true;
         }
 
@@ -1258,7 +1512,12 @@ public static class GameCubeScriptCodec
         {
             var variable = VariableText(sub, param);
             var text = op == 17 ? $"ptr({variable})" : variable;
-            value = new StackValueExpression(text, HighLevelInstructionText(words, new Dictionary<int, string>()));
+            value = new StackValueExpression(
+                text,
+                [HighLevelInstructionText(words, new Dictionary<int, string>())],
+                words.ToArray(),
+                null,
+                true);
             return true;
         }
 
@@ -1343,6 +1602,23 @@ public static class GameCubeScriptCodec
         words = [];
         error = null;
         text = text.Trim();
+        text = TrimOuterParentheses(text);
+
+        if (TryParseStackExpression(text, out words, out error))
+        {
+            return true;
+        }
+
+        error = $"Unsupported callstd argument: {text}";
+        return false;
+    }
+
+    private static bool TryParseStackExpression(string text, out IReadOnlyList<uint> words, out string? error)
+    {
+        words = [];
+        error = null;
+        text = TrimOuterParentheses(text.Trim());
+
         if (text.StartsWith("ptr(", StringComparison.OrdinalIgnoreCase) && text.EndsWith(')'))
         {
             var variable = text[4..^1].Trim();
@@ -1353,6 +1629,12 @@ public static class GameCubeScriptCodec
             }
 
             words = [BuildWord(17, pointerLevel, pointerParameter)];
+            return true;
+        }
+
+        if (TryParseMacroConstant(text, out var macroValue))
+        {
+            words = [BuildWord(2, 1, 0), macroValue];
             return true;
         }
 
@@ -1370,8 +1652,319 @@ public static class GameCubeScriptCodec
             return true;
         }
 
-        error = $"Unsupported callstd argument: {text}";
+        if (TryParseUnaryExpression(text, out words, out error))
+        {
+            return true;
+        }
+
+        if (TryParseBinaryExpression(text, out words, out error))
+        {
+            return true;
+        }
+
         return false;
+    }
+
+    private static bool TryParseConditionalGoto(string line, out HighLevelInstruction instruction, out string? error)
+    {
+        instruction = HighLevelInstruction.Empty;
+        error = null;
+        var remainder = line["goto".Length..].Trim();
+        var targetEnd = FirstWhitespaceIndex(remainder);
+        if (targetEnd < 0)
+        {
+            return false;
+        }
+
+        var target = remainder[..targetEnd].TrimEnd('(', ')');
+        var conditionText = remainder[targetEnd..].Trim();
+        var opcode = conditionText.StartsWith("ifnot ", StringComparison.OrdinalIgnoreCase) ? 11
+            : conditionText.StartsWith("if ", StringComparison.OrdinalIgnoreCase) ? 10
+            : -1;
+        if (opcode < 0)
+        {
+            return false;
+        }
+
+        conditionText = conditionText[(opcode == 11 ? "ifnot".Length : "if".Length)..].Trim();
+        return TryBuildConditionalJumpInstruction(target, conditionText, opcode, out instruction, out error);
+    }
+
+    private static bool TryParseConditionalJump(string line, string op, out HighLevelInstruction instruction, out string? error)
+    {
+        instruction = HighLevelInstruction.Empty;
+        error = null;
+        var remainder = line[op.Length..].Trim();
+        var targetEnd = FirstWhitespaceIndex(remainder);
+        if (targetEnd < 0)
+        {
+            return false;
+        }
+
+        var target = remainder[..targetEnd].TrimEnd('(', ')');
+        var conditionPrefix = remainder[targetEnd..].Trim();
+        if (!conditionPrefix.StartsWith("if ", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var opcode = op.Equals("jmptrue", StringComparison.OrdinalIgnoreCase) ? 10 : 11;
+        var conditionText = conditionPrefix["if".Length..].Trim();
+        return TryBuildConditionalJumpInstruction(target, conditionText, opcode, out instruction, out error);
+    }
+
+    private static bool TryBuildConditionalJumpInstruction(
+        string target,
+        string conditionText,
+        int opcode,
+        out HighLevelInstruction instruction,
+        out string? error)
+    {
+        instruction = HighLevelInstruction.Empty;
+        if (!TryParseStackArgument(conditionText, out var conditionWords, out error))
+        {
+            return true;
+        }
+
+        instruction = new HighLevelInstruction(conditionWords.Count + 1, offsets =>
+        {
+            var resolved = ResolveLocation(target, offsets);
+            var words = new List<uint>(conditionWords.Count + 1);
+            words.AddRange(conditionWords);
+            words.Add(BuildLongWord(opcode, resolved));
+            return words;
+        });
+        return true;
+    }
+
+    private static bool TryParseMacroConstant(string text, out uint value)
+    {
+        value = 0;
+        text = text.Trim();
+        if (text.Equals("YES", StringComparison.OrdinalIgnoreCase))
+        {
+            value = 1;
+            return true;
+        }
+
+        if (text.Equals("NO", StringComparison.OrdinalIgnoreCase))
+        {
+            value = 0;
+            return true;
+        }
+
+        var open = text.IndexOf('(');
+        var close = text.LastIndexOf(')');
+        if (open <= 0 || close != text.Length - 1)
+        {
+            return false;
+        }
+
+        var wrapperName = text[..open].Trim();
+        if (!MacroArgumentsByWrapper.ContainsKey(wrapperName))
+        {
+            return false;
+        }
+
+        if (!TryParseInteger(text[(open + 1)..close], out var parsed))
+        {
+            return false;
+        }
+
+        value = unchecked((uint)parsed);
+        return true;
+    }
+
+    private static bool TryParseUnaryExpression(string text, out IReadOnlyList<uint> words, out string? error)
+    {
+        words = [];
+        error = null;
+        text = text.Trim();
+        var operatorId = text.StartsWith("!(", StringComparison.Ordinal) ? 16
+            : text.StartsWith("-(", StringComparison.Ordinal) ? 17
+            : -1;
+        if (operatorId < 0 || !text.EndsWith(')'))
+        {
+            return false;
+        }
+
+        var operandText = text[2..^1].Trim();
+        if (!TryParseStackArgument(operandText, out var operandWords, out error))
+        {
+            return true;
+        }
+
+        words = operandWords.Append(BuildWord(1, operatorId, 0)).ToArray();
+        return true;
+    }
+
+    private static bool TryParseBinaryExpression(string text, out IReadOnlyList<uint> words, out string? error)
+    {
+        words = [];
+        error = null;
+        text = text.Trim();
+        foreach (var operatorGroup in BinaryOperatorPrecedence)
+        {
+            if (!TryFindTopLevelBinaryOperator(text, operatorGroup, out var operatorIndex, out var operatorId, out var tokenLength))
+            {
+                continue;
+            }
+
+            var leftText = text[..operatorIndex].Trim();
+            var rightText = text[(operatorIndex + tokenLength)..].Trim();
+            if (leftText.Length == 0 || rightText.Length == 0)
+            {
+                continue;
+            }
+
+            if (!TryParseStackArgument(leftText, out var leftWords, out error)
+                || !TryParseStackArgument(rightText, out var rightWords, out error))
+            {
+                return true;
+            }
+
+            words = leftWords.Concat(rightWords).Append(BuildWord(1, operatorId, 0)).ToArray();
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryFindTopLevelBinaryOperator(
+        string text,
+        IReadOnlyCollection<int> operatorIds,
+        out int operatorIndex,
+        out int operatorId,
+        out int tokenLength)
+    {
+        operatorIndex = -1;
+        operatorId = 0;
+        tokenLength = 0;
+        var depth = 0;
+        for (var index = 0; index < text.Length; index++)
+        {
+            var character = text[index];
+            if (character == '(')
+            {
+                depth++;
+                continue;
+            }
+
+            if (character == ')')
+            {
+                depth--;
+                continue;
+            }
+
+            if (depth != 0)
+            {
+                continue;
+            }
+
+            foreach (var candidateId in operatorIds)
+            {
+                var token = Operators[candidateId].Token;
+                if (!MatchesBinaryTokenAt(text, index, token))
+                {
+                    continue;
+                }
+
+                operatorIndex = index;
+                operatorId = candidateId;
+                tokenLength = token.Length;
+            }
+        }
+
+        return operatorIndex >= 0;
+    }
+
+    private static bool MatchesBinaryTokenAt(string text, int index, string token)
+    {
+        if (index < 0 || index + token.Length > text.Length)
+        {
+            return false;
+        }
+
+        if (!text.AsSpan(index, token.Length).Equals(token.AsSpan(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (char.IsLetter(token[0]))
+        {
+            return IsWordBoundary(text, index - 1) && IsWordBoundary(text, index + token.Length);
+        }
+
+        if (token == "-" && IsUnaryMinusPosition(text, index))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsWordBoundary(string text, int index)
+        => index < 0 || index >= text.Length || !char.IsLetterOrDigit(text[index]) && text[index] != '_';
+
+    private static bool IsUnaryMinusPosition(string text, int index)
+    {
+        for (var previous = index - 1; previous >= 0; previous--)
+        {
+            if (char.IsWhiteSpace(text[previous]))
+            {
+                continue;
+            }
+
+            return text[previous] is '(' or ',' or '+' or '-' or '*' or '/' or '%' or '^' or '=' or '>' or '<';
+        }
+
+        return true;
+    }
+
+    private static string TrimOuterParentheses(string text)
+    {
+        text = text.Trim();
+        while (text.Length >= 2 && text[0] == '(' && text[^1] == ')' && OuterParenthesesWrapWholeText(text))
+        {
+            text = text[1..^1].Trim();
+        }
+
+        return text;
+    }
+
+    private static bool OuterParenthesesWrapWholeText(string text)
+    {
+        var depth = 0;
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (text[index] == '(')
+            {
+                depth++;
+            }
+            else if (text[index] == ')')
+            {
+                depth--;
+                if (depth == 0 && index < text.Length - 1)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return depth == 0;
+    }
+
+    private static int FirstWhitespaceIndex(string text)
+    {
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (char.IsWhiteSpace(text[index]))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     private static bool TryParseSetInstruction(string assignmentText, out HighLevelInstruction instruction, out string? error)
@@ -1603,7 +2196,7 @@ public static class GameCubeScriptCodec
 
         var open = text.IndexOf('(');
         var close = text.LastIndexOf(')');
-        if (open <= 0 || close <= open)
+        if (open <= 0 || close <= open || close != text.Length - 1)
         {
             return false;
         }
@@ -1811,9 +2404,20 @@ public static class GameCubeScriptCodec
         public static HighLevelInstruction Empty { get; } = new(0, _ => []);
     }
 
-    private sealed record StackValueExpression(string Text, string SourceLine)
+    private sealed record ScriptOperatorInfo(string Token, int ParameterCount);
+
+    private sealed record MacroArgumentInfo(string WrapperName, bool Hexadecimal);
+
+    private sealed record StackConstant(int Type, uint Value);
+
+    private sealed record StackValueExpression(
+        string Text,
+        IReadOnlyList<string> SourceLines,
+        IReadOnlyList<uint> Words,
+        StackConstant? Constant,
+        bool IsSimple)
     {
-        public static StackValueExpression Empty { get; } = new(string.Empty, string.Empty);
+        public static StackValueExpression Empty { get; } = new(string.Empty, [], [], null, true);
     }
 
     private sealed record ParsedScript(

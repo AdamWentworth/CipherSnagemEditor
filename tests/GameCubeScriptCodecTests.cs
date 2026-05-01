@@ -110,6 +110,56 @@ public sealed class GameCubeScriptCodecTests
         Assert.Equal(script, compiled);
     }
 
+    [Fact]
+    public void DecompilesTypedStandardCallArgumentsAsEditableMacroWrappers()
+    {
+        var script = CreateSampleScript(
+            Instruction(2, 1, 0), 0x340,
+            Instruction(9, 0, 129),
+            Instruction(6, 1, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("callstd setFlagToTrue(FlagID(0x00000340))", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void DecompilesOperatorExpressionsInAssignmentsWithoutChangingBytes()
+    {
+        var script = CreateSampleScript(
+            Instruction(2, 1, 0), 2,
+            Instruction(3, 1, 1),
+            Instruction(1, 35, 0),
+            Instruction(4, 0, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("set gvar_00 = Int(2) + arg_0", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void DecompilesConditionalJumpsWithFoldedExpressionsWithoutChangingBytes()
+    {
+        var script = CreateSampleScript(
+            Instruction(2, 1, 0), 1,
+            Instruction(3, 1, 1),
+            Instruction(1, 48, 0),
+            LongInstruction(11, 5),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("goto 0x000005 ifnot Int(1) = arg_0", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
     private static uint FirstCodeWord(byte[] script)
     {
         var offset = 0x10;
@@ -130,6 +180,9 @@ public sealed class GameCubeScriptCodecTests
 
     private static uint Instruction(int op, int sub, int parameter)
         => ((uint)(op & 0xff) << 24) | ((uint)(sub & 0xff) << 16) | (unchecked((uint)parameter) & 0xffff);
+
+    private static uint LongInstruction(int op, int parameter)
+        => ((uint)(op & 0xff) << 24) | (unchecked((uint)parameter) & 0x00ff_ffff);
 
     private static byte[] CreateSampleScript(params uint[] codeWords)
     {
