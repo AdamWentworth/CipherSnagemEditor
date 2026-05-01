@@ -325,6 +325,75 @@ public sealed class ProjectContextTests
     }
 
     [Fact]
+    public void DecodesAndRepacksScriptsThroughFsysIsoExplorerFlow()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var isoPath = Path.Combine(temp, "Sample.iso");
+        var originalScript = CreateSampleScript();
+        var fsysBytes = CreateFsys(("sample.scd", originalScript, GameFileType.Script));
+        var bytes = CreateSingleFileIso("scripts.fsys", fsysBytes, fileSlotSize: 0x700);
+        File.WriteAllBytes(isoPath, bytes);
+
+        var context = ColosseumProjectContext.Open(isoPath);
+        var entry = Assert.Single(context.Iso!.Files, file => file.Name == "scripts.fsys");
+
+        var export = context.ExportIsoFile(entry, extractFsysContents: true, decode: true);
+
+        var folder = Path.Combine(temp, "Sample CM Tool", "Game Files", "scripts");
+        var scriptPath = Path.Combine(folder, "sample.scd");
+        var xdsPath = scriptPath + ".xds";
+        Assert.Contains(xdsPath, export.DecodedFiles);
+        var decompiled = File.ReadAllText(xdsPath);
+        Assert.Contains("define ++XDSVersion 2.0", decompiled);
+        Assert.Contains("raw_scd_words", decompiled);
+        Assert.Contains("return", decompiled);
+
+        var result = context.EncodeIsoFile(entry);
+
+        Assert.Contains(xdsPath, result.EncodedFiles);
+        Assert.Contains(scriptPath, result.PackedFiles);
+        var archive = FsysArchive.Load(export.FilePath);
+        var archivedScript = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "sample.scd"));
+        Assert.Equal(originalScript, archivedScript);
+    }
+
+    [Fact]
+    public void DecodesAndRepacksCommonRelEmbeddedScriptThroughFsysIsoExplorerFlow()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(temp);
+        var isoPath = Path.Combine(temp, "Sample.iso");
+        var script = CreateSampleScript();
+        var commonRel = new byte[0x20 + script.Length + 0x10];
+        script.CopyTo(commonRel.AsSpan(0x20));
+        commonRel[0] = 0xca;
+        commonRel[^1] = 0xfe;
+        var fsysBytes = CreateFsys(("common.rel", commonRel, GameFileType.Rel));
+        var bytes = CreateSingleFileIso("common.fsys", fsysBytes, fileSlotSize: 0x900);
+        File.WriteAllBytes(isoPath, bytes);
+
+        var context = ColosseumProjectContext.Open(isoPath);
+        var entry = Assert.Single(context.Iso!.Files, file => file.Name == "common.fsys");
+
+        var export = context.ExportIsoFile(entry, extractFsysContents: true, decode: true);
+
+        var folder = Path.Combine(temp, "Sample CM Tool", "Game Files", "common");
+        var relPath = Path.Combine(folder, "common.rel");
+        var xdsPath = relPath + ".xds";
+        Assert.Contains(xdsPath, export.DecodedFiles);
+        Assert.Contains("common.rel.xds", File.ReadAllText(xdsPath));
+
+        var result = context.EncodeIsoFile(entry);
+
+        Assert.Contains(xdsPath, result.EncodedFiles);
+        Assert.Contains(relPath, result.PackedFiles);
+        var archive = FsysArchive.Load(export.FilePath);
+        var archivedRel = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "common.rel"));
+        Assert.Equal(commonRel, archivedRel);
+    }
+
+    [Fact]
     public void ImportsLargerFileByShiftingLaterIsoFiles()
     {
         var temp = Path.Combine(Path.GetTempPath(), "CipherSnagemEditorTests", Guid.NewGuid().ToString("N"));
@@ -521,6 +590,66 @@ public sealed class ProjectContextTests
         thp[0x60] = 0xde;
         thp[0x61] = 0xad;
         return thp;
+    }
+
+    private static byte[] CreateSampleScript()
+    {
+        uint[][] sections =
+        [
+            [
+                0x4654424c, 0x30, 0, 0,
+                1, 0x28, 0x12345678, 0,
+                0, 0x28, 0x6d61696e, 0
+            ],
+            [
+                0x48454144, 0x30, 0, 0,
+                1, 0, 0, 0,
+                0, 0, 0, 0
+            ],
+            [
+                0x434f4445, 0x30, 0, 0,
+                1, 1, 0, 0,
+                0x08000000, 0, 0, 0
+            ],
+            [
+                0x47564152, 0x30, 0, 0,
+                1, 8, 0, 0,
+                1, 42, 0, 0
+            ],
+            [
+                0x53545247, 0x30, 0, 0,
+                1, 0, 0, 0,
+                0x68690000, 0, 0, 0
+            ],
+            [
+                0x56454354, 0x20, 0, 0,
+                0, 12, 0, 0
+            ],
+            [
+                0x47495249, 0x20, 0, 0,
+                0, 0, 0, 0
+            ],
+            [
+                0x41525259, 0x20, 0, 0,
+                0, 0, 0, 0
+            ]
+        ];
+
+        var totalWords = 4 + sections.Sum(section => section.Length);
+        var bytes = new byte[totalWords * 4];
+        BigEndian.WriteUInt32(bytes, 0, 0x54434f44);
+        BigEndian.WriteUInt32(bytes, 4, checked((uint)bytes.Length));
+        var offset = 0x10;
+        foreach (var section in sections)
+        {
+            foreach (var word in section)
+            {
+                BigEndian.WriteUInt32(bytes, offset, word);
+                offset += 4;
+            }
+        }
+
+        return bytes;
     }
 
     private static int Align16(int value)

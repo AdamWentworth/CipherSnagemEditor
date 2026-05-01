@@ -15,7 +15,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
-    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
+    Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|script-codec|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
@@ -100,7 +100,7 @@ try
     {
         if (args.Length < 3)
         {
-            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
+            Console.Error.WriteLine("Usage: ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|script-codec|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
             return 1;
         }
 
@@ -1190,6 +1190,65 @@ static void ApplyXdSmokeOperation(string isoPath, string operation)
         else
         {
             Console.WriteLine("XD ISO Explorer delete: skipped; no small non-FSYS entry was found.");
+        }
+    }
+    else if (operation.Equals("script-codec", StringComparison.OrdinalIgnoreCase))
+    {
+        var scriptArchiveEntry = context.Iso.Files
+            .Where(file => file.Name.EndsWith(".fsys", StringComparison.OrdinalIgnoreCase))
+            .Select(file =>
+            {
+                try
+                {
+                    return (File: file, Archive: context.ReadIsoFsysArchive(file));
+                }
+                catch
+                {
+                    return (File: file, Archive: (FsysArchive?)null);
+                }
+            })
+            .FirstOrDefault(candidate => candidate.Archive?.Entries.Any(entry => entry.FileType == GameFileType.Script) == true);
+        if (scriptArchiveEntry.Archive is null)
+        {
+            throw new InvalidDataException("No XD FSYS archive with a standalone .scd script was found.");
+        }
+
+        var exportResult = context.ExportIsoFile(scriptArchiveEntry.File, extractFsysContents: true, decode: true, overwrite: true);
+        var scriptTextFiles = exportResult.DecodedFiles
+            .Where(path => path.EndsWith(".scd.xds", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (scriptTextFiles.Length == 0)
+        {
+            throw new InvalidDataException($"Script codec smoke did not decompile any scripts from {scriptArchiveEntry.File.Name}.");
+        }
+
+        var importResult = context.ImportIsoFile(scriptArchiveEntry.File, encode: true);
+        Console.WriteLine($"XD Script codec archive: {scriptArchiveEntry.File.Name}, {scriptTextFiles.Length:N0} script(s), wrote {importResult.WrittenBytes:N0} bytes.");
+        Console.WriteLine($"First script text: {Path.GetFileName(scriptTextFiles[0])}");
+
+        var refreshedScriptArchiveEntry = context.Iso.Files.First(file => file.Name.Equals(scriptArchiveEntry.File.Name, StringComparison.OrdinalIgnoreCase));
+        var refreshedArchive = context.ReadIsoFsysArchive(refreshedScriptArchiveEntry);
+        var refreshedScript = refreshedArchive.Entries.First(entry => entry.FileType == GameFileType.Script);
+        var refreshedScriptBytes = refreshedArchive.Extract(refreshedScript);
+        if (!GameCubeScriptCodec.TryDecompileXds(refreshedScriptBytes, refreshedScript.Name, out _, out var scriptError))
+        {
+            throw new InvalidDataException($"Repacked script did not decompile cleanly: {scriptError}");
+        }
+
+        var commonEntry = context.Iso.Files.FirstOrDefault(file => file.Name.Equals("common.fsys", StringComparison.OrdinalIgnoreCase));
+        if (commonEntry is not null)
+        {
+            var commonExport = context.ExportIsoFile(commonEntry, extractFsysContents: true, decode: true, overwrite: true);
+            var commonScriptText = commonExport.DecodedFiles.FirstOrDefault(path => path.EndsWith("common.rel.xds", StringComparison.OrdinalIgnoreCase));
+            if (commonScriptText is not null)
+            {
+                var commonImport = context.ImportIsoFile(commonEntry, encode: true);
+                Console.WriteLine($"XD Script codec common.rel: {Path.GetFileName(commonScriptText)}, wrote {commonImport.WrittenBytes:N0} bytes.");
+            }
+            else
+            {
+                Console.WriteLine("XD Script codec common.rel: skipped; no embedded TCOD block was found.");
+            }
         }
     }
     else if (operation.Equals("randomizer-data", StringComparison.OrdinalIgnoreCase))

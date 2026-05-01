@@ -333,9 +333,12 @@ public sealed class GameCubeIsoWorkspace
             throw new InvalidDataException($"Could not read message JSON: {jsonPath}");
         }
 
+        var validStrings = strings
+            .Where(message => message.Id is > 0 and <= 0x000f_ffff)
+            .ToArray();
         var table = File.Exists(messagePath)
-            ? GameStringTable.Parse(File.ReadAllBytes(messagePath)).WithStrings(strings)
-            : GameStringTable.FromStrings(strings);
+            ? GameStringTable.Parse(File.ReadAllBytes(messagePath)).WithStrings(validStrings)
+            : GameStringTable.FromStrings(validStrings);
         var bytes = table.ToArray(allowGrowth: _allowStringGrowth);
         File.WriteAllBytes(messagePath, bytes);
         LoadedStringTables[messagePath] = table;
@@ -423,6 +426,45 @@ public sealed class GameCubeIsoWorkspace
                     yield return decodedFile;
                 }
             }
+            else if (fileType == GameFileType.Script)
+            {
+                var xdsPath = filePath + ".xds";
+                if (File.Exists(xdsPath) && !overwrite)
+                {
+                    continue;
+                }
+
+                if (GameCubeScriptCodec.TryDecompileXds(
+                    File.ReadAllBytes(filePath),
+                    Path.GetFileName(filePath),
+                    out var scriptText,
+                    out _))
+                {
+                    File.WriteAllText(xdsPath, scriptText);
+                    yield return xdsPath;
+                }
+            }
+            else if (fileType == GameFileType.Rel
+                && Path.GetFileName(filePath).Equals("common.rel", StringComparison.OrdinalIgnoreCase))
+            {
+                var xdsPath = filePath + ".xds";
+                if (File.Exists(xdsPath) && !overwrite)
+                {
+                    continue;
+                }
+
+                var relBytes = File.ReadAllBytes(filePath);
+                if (GameCubeScriptCodec.TryFindEmbeddedScript(relBytes, out var scriptOffset, out var scriptLength)
+                    && GameCubeScriptCodec.TryDecompileXds(
+                        relBytes[scriptOffset..(scriptOffset + scriptLength)],
+                        Path.GetFileName(filePath),
+                        out var scriptText,
+                        out _))
+                {
+                    File.WriteAllText(xdsPath, scriptText);
+                    yield return xdsPath;
+                }
+            }
         }
 
         foreach (var modelPath in Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
@@ -495,6 +537,27 @@ public sealed class GameCubeIsoWorkspace
             {
                 yield return importedTexturePath;
             }
+        }
+
+        foreach (var xdsPath in Directory.EnumerateFiles(folder, "*.xds", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            if (!GameCubeScriptCodec.TryCompileXds(File.ReadAllText(xdsPath), out var scriptBytes, out _))
+            {
+                continue;
+            }
+
+            if (Path.GetFileName(xdsPath).EndsWith(".rel.xds", StringComparison.OrdinalIgnoreCase))
+            {
+                var relPath = xdsPath[..^".xds".Length];
+                WriteEmbeddedRelScript(relPath, scriptBytes);
+            }
+            else
+            {
+                var scriptPath = ScriptPathForXdsPath(xdsPath);
+                File.WriteAllBytes(scriptPath, scriptBytes);
+            }
+
+            yield return xdsPath;
         }
 
         foreach (var modelPath in Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
@@ -781,6 +844,46 @@ public sealed class GameCubeIsoWorkspace
         return Path.Combine(directory, $"{stem}_gsw_{textureId}.gtx");
     }
 
+    private static string ScriptPathForXdsPath(string xdsPath)
+    {
+        var directory = Path.GetDirectoryName(xdsPath) ?? string.Empty;
+        var fileName = Path.GetFileName(xdsPath);
+        if (fileName.EndsWith(".scd.xds", StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.Combine(directory, fileName[..^".xds".Length]);
+        }
+
+        return Path.Combine(directory, Path.GetFileNameWithoutExtension(fileName) + GameFileTypes.ExtensionFor(GameFileType.Script));
+    }
+
+    private static void WriteEmbeddedRelScript(string relPath, byte[] scriptBytes)
+    {
+        if (!File.Exists(relPath))
+        {
+            throw new FileNotFoundException($"Could not compile embedded script because {Path.GetFileName(relPath)} was not found.", relPath);
+        }
+
+        var relBytes = File.ReadAllBytes(relPath);
+        if (!GameCubeScriptCodec.TryFindEmbeddedScript(relBytes, out var offset, out var length))
+        {
+            throw new InvalidDataException($"{Path.GetFileName(relPath)} does not contain a TCOD script block.");
+        }
+
+        if (scriptBytes.Length > length)
+        {
+            throw new InvalidDataException(
+                $"{Path.GetFileName(relPath)} embedded script cannot grow from {length:N0} to {scriptBytes.Length:N0} bytes in this raw compiler path.");
+        }
+
+        scriptBytes.CopyTo(relBytes.AsSpan(offset));
+        if (scriptBytes.Length < length)
+        {
+            relBytes.AsSpan(offset + scriptBytes.Length, length - scriptBytes.Length).Clear();
+        }
+
+        File.WriteAllBytes(relPath, relBytes);
+    }
+
     private static IEnumerable<string> DecodeGswTextures(string gswPath, bool overwrite)
     {
         foreach (var texture in GameCubeGswTextureCodec.ExtractTextures(File.ReadAllBytes(gswPath)))
@@ -895,6 +998,10 @@ public sealed class GameCubeIsoWorkspace
                 continue;
             }
             catch (EndOfStreamException)
+            {
+                continue;
+            }
+            catch (ArgumentException)
             {
                 continue;
             }
