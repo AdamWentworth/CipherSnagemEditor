@@ -1064,7 +1064,7 @@ public static class GameCubeScriptCodec
             6 => $"pop {sub}",
             7 => $"call {LocationText(longParameter, functionNamesByOffset)}()",
             8 => "return",
-            9 => $"callstd class_{sub}.function_{param}",
+            9 => CallStdText(sub, param),
             10 => $"jmptrue {LocationText(longParameter, functionNamesByOffset)}",
             11 => $"jmpfalse {LocationText(longParameter, functionNamesByOffset)}",
             12 => $"goto {LocationText(longParameter, functionNamesByOffset)}",
@@ -1079,6 +1079,13 @@ public static class GameCubeScriptCodec
 
     private static string LocationText(int offset, IReadOnlyDictionary<int, string> functionNamesByOffset)
         => functionNamesByOffset.TryGetValue(offset, out var name) ? name : $"0x{offset:x6}";
+
+    private static string CallStdText(int classId, int functionId)
+    {
+        var name = GameCubeScriptCatalog.FunctionDisplayName(classId, functionId);
+        var comment = GameCubeScriptCatalog.FunctionComment(classId, functionId);
+        return string.IsNullOrWhiteSpace(comment) ? $"callstd {name}" : $"callstd {name} // {comment}";
+    }
 
     private static string StripInlineComment(string line)
     {
@@ -1233,12 +1240,7 @@ public static class GameCubeScriptCodec
 
     private static bool TryParseClassFunction(string text, out int classId, out int functionId)
     {
-        classId = 0;
-        functionId = 0;
-        var parts = text.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return parts.Length == 2
-            && TryParsePrefixedIndex(parts[0], "class_", out classId)
-            && TryParsePrefixedIndex(parts[1], "function_", out functionId);
+        return GameCubeScriptCatalog.TryResolveClassFunction(text, out classId, out functionId);
     }
 
     private static bool TryParseConstant(string text, out int type, out uint value)
@@ -1335,7 +1337,7 @@ public static class GameCubeScriptCodec
             6 => $"{opName} {sub}",
             7 => $"{opName} @0x{longParameter:x6}",
             8 => opName,
-            9 => $"{opName} class_{sub}.function_{param}",
+            9 => $"{opName} {GameCubeScriptCatalog.FunctionDisplayName(sub, param)}",
             10 => $"{opName} @0x{longParameter:x6}",
             11 => $"{opName} @0x{longParameter:x6}",
             12 => $"{opName} @0x{longParameter:x6}",

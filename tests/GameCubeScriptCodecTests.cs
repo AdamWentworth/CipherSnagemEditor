@@ -35,6 +35,31 @@ public sealed class GameCubeScriptCodecTests
         Assert.Equal(script, compiled);
     }
 
+    [Fact]
+    public void DecompilesAndCompilesNamedScriptClassFunctions()
+    {
+        var script = CreateSampleScript(Instruction(9, 35, 73), 0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("callstd Character.talk", text);
+        Assert.Contains("class_35.function_73", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void StillCompilesLegacyNumericScriptClassFunctions()
+    {
+        var script = CreateSampleScript(Instruction(9, 0, 17), 0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+        var legacyText = text.Replace("callstd pause", "callstd class_0.function_17", StringComparison.Ordinal);
+
+        Assert.True(GameCubeScriptCodec.TryCompileXds(legacyText, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
     private static uint FirstCodeWord(byte[] script)
     {
         var offset = 0x10;
@@ -52,6 +77,9 @@ public sealed class GameCubeScriptCodecTests
 
         throw new InvalidDataException("No CODE section was found.");
     }
+
+    private static uint Instruction(int op, int sub, int parameter)
+        => ((uint)(op & 0xff) << 24) | ((uint)(sub & 0xff) << 16) | (unchecked((uint)parameter) & 0xffff);
 
     private static byte[] CreateSampleScript(params uint[] codeWords)
     {
