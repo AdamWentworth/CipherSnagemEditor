@@ -133,13 +133,8 @@ This repository is not a general Pokemon asset-authoring suite. It intentionally
 does not try to own every future model, VFX, Blender, map, music, and audio
 workflow inside the stable editor codebase.
 
-Those experimental goals belong in a sibling project:
-
-- `Cipher Snagem Editor`: stable legacy editor parity.
-- `Cipher Snagem Lab`: future model/VFX/audio/project-pipeline research.
-
-The split keeps the working editor reliable while leaving room for deeper asset
-experiments to be messy, exploratory, and eventually productized.
+Those experimental workflows should live outside the stable editor until they
+are mature enough for normal users.
 
 This repository is also not a Nintendo, Genius Sonority, or Pokemon asset dump.
 No game files are included or required in source control.
@@ -165,7 +160,7 @@ assets/
   json/                               source-provided lookup data
   ui/                                 source-provided UI art from the original tools
 docs/
-  *.md                                parity notes, release notes, UI contracts
+  *.md                                scope, testing, and packaging notes
 scripts/
   *.ps1                               build, closeout, script, and smoke probes
 packaging/
@@ -284,25 +279,13 @@ Publish Linux x64 packages:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1
 ```
 
-The Linux package documentation is in `docs/linux-release.md`.
-
 ## 📚 Documentation
 
-- `NOTICE.md` credits the original StarsMMD tools and explains the fork/remake
-  relationship.
+- `docs/scope.md` describes supported editor workflows and what is out of scope.
+- `docs/testing.md` explains the normal test suite and optional local ISO/Dolphin
+  smoke checks.
 - `docs/release-packaging.md` explains tracked packaging files, ignored release
   artifacts, and GitHub release builds.
-- `docs/github-metadata.md` lists the recommended GitHub About description and
-  topics.
-- `docs/colosseum-backend-parity.md` tracks backend ISO Explorer/helper codec
-  parity for the Colosseum Tool.
-- `docs/colosseum-swift-parity-audit.md` tracks Colosseum UI/editor parity.
-- `docs/xd-swift-parity-audit.md` tracks XD/GoD Tool parity.
-- `docs/trainer-editor-ui-contract.md` documents the approved Trainer Editor
-  Pokemon card layout and its regression tests.
-- `docs/dolphin-smoke-testing.md` documents emulator smoke automation.
-- `docs/asset-lab-boundary.md` describes why model/VFX/audio research belongs
-  in a separate Lab repo.
 
 ## ⚖️ Legal And Data Hygiene
 

@@ -83,3 +83,19 @@ Each Windows zip contains:
 - `README-windows.txt`,
 - `install-windows-user.ps1` for optional Start Menu/Desktop shortcuts,
 - `uninstall-windows-user.ps1` for removing those per-user shortcuts/files.
+
+## Repository Metadata
+
+Suggested GitHub About description:
+
+```text
+Windows/Linux remake of StarsMMD's Pokemon Colosseum and Pokemon XD GoD Tool editors, built with .NET and Avalonia.
+```
+
+Suggested topics:
+
+```text
+pokemon, pokemon-colosseum, pokemon-xd, gale-of-darkness, gamecube, modding,
+romhacking, dotnet, avalonia, windows, linux, god-tool, colosseum-tool,
+pokemon-xd-code
+```
