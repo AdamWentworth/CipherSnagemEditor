@@ -1,0 +1,107 @@
+name: Release Packages
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the leading v, for example 0.1.0"
+        required: true
+        default: "0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package Windows and Linux builds
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            $version = "${{ github.ref_name }}"
+            if ($version.StartsWith("v")) {
+              $version = $version.Substring(1)
+            }
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build and test
+        shell: pwsh
+        run: |
+          dotnet build CipherSnagemEditor.slnx
+          dotnet test CipherSnagemEditor.slnx --no-build
+
+      - name: Publish Windows builds
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts\packages | Out-Null
+
+          dotnet publish src\CipherSnagemEditor.ColosseumTool\CipherSnagemEditor.ColosseumTool.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishReadyToRun=true `
+            -o artifacts\publish-win-x64-colosseum
+
+          dotnet publish src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishReadyToRun=true `
+            -o artifacts\publish-win-x64-god
+
+          Compress-Archive `
+            -Path artifacts\publish-win-x64-colosseum\* `
+            -DestinationPath "artifacts\packages\colosseum-tool-win-x64-${{ steps.version.outputs.version }}.zip" `
+            -Force
+
+          Compress-Archive `
+            -Path artifacts\publish-win-x64-god\* `
+            -DestinationPath "artifacts\packages\god-tool-win-x64-${{ steps.version.outputs.version }}.zip" `
+            -Force
+
+      - name: Publish Linux builds
+        shell: pwsh
+        run: |
+          .\scripts\publish-linux.ps1 -Tool Colosseum -Runtime linux-x64 -PackageVersion "${{ steps.version.outputs.version }}" -NoReadyToRun
+          .\scripts\publish-linux.ps1 -Tool GoD -Runtime linux-x64 -PackageVersion "${{ steps.version.outputs.version }}" -NoReadyToRun
+
+          Copy-Item `
+            -LiteralPath artifacts\packages\colosseum-tool-linux-x64.tar.gz `
+            -DestinationPath "artifacts\packages\colosseum-tool-linux-x64-${{ steps.version.outputs.version }}.tar.gz" `
+            -Force
+
+          Copy-Item `
+            -LiteralPath artifacts\packages\god-tool-linux-x64.tar.gz `
+            -DestinationPath "artifacts\packages\god-tool-linux-x64-${{ steps.version.outputs.version }}.tar.gz" `
+            -Force
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/packages/*-${{ steps.version.outputs.version }}.zip
+            artifacts/packages/*-${{ steps.version.outputs.version }}.tar.gz
+            artifacts/packages/*-${{ steps.version.outputs.version }}.deb
+          generate_release_notes: true

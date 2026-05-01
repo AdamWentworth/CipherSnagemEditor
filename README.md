@@ -1,5 +1,10 @@
 # Cipher Snagem Editor
 
+![.NET](https://img.shields.io/badge/.NET-10-512BD4)
+![Avalonia](https://img.shields.io/badge/UI-Avalonia-8B44AC)
+![License](https://img.shields.io/badge/license-GPL--2.0--only-blue)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)
+
 Cipher Snagem Editor is a Windows-first, cross-platform .NET/Avalonia remake of
 the legacy Pokemon Colosseum and Pokemon XD: Gale of Darkness modding tools from
 the `Pokemon-XD-Code` project.
@@ -13,7 +18,7 @@ The goal of this repository is preservation and practical parity with the
 original Swift/macOS tools: familiar editor windows, equivalent data behavior,
 safe ISO workspace flows, and repeatable rebuilds on modern Windows and Linux.
 
-## Status
+## ✅ Status
 
 This repo is treated as the stable legacy-editor parity line.
 
@@ -28,7 +33,7 @@ This repo is treated as the stable legacy-editor parity line.
 - macOS packaging is not the current focus, though the Avalonia codebase is
   intended to remain portable where practical.
 
-## Original Work And Credit
+## 🌟 Original Work And Credit
 
 This project exists because of the original **Gale of Darkness Tool** and
 **Colosseum Tool** created by **Stars Momodu** / **@StarsMMD**.
@@ -45,7 +50,7 @@ source, UI storyboards, data parsers, binary formats, and behavior of StarsMMD's
 original tools. The intent is to preserve that workflow for users who cannot or
 do not want to depend on the original macOS app.
 
-## What This Editor Does
+## 🧰 What This Editor Does
 
 Core workflows:
 
@@ -97,7 +102,7 @@ GoD Tool editor surface:
 - Table Editor
 - ISO Explorer
 
-## What This Editor Is Not
+## 🧪 What This Editor Is Not
 
 This repository is not a general Pokemon asset-authoring suite. It intentionally
 does not try to own every future model, VFX, Blender, map, music, and audio
@@ -114,7 +119,7 @@ experiments to be messy, exploratory, and eventually productized.
 This repository is also not a Nintendo, Genius Sonority, or Pokemon asset dump.
 No game files are included or required in source control.
 
-## Repository Layout
+## 📁 Repository Layout
 
 ```text
 CipherSnagemEditor.slnx
@@ -154,7 +159,7 @@ Ignored local folders:
   release files.
 - `bin/` and `obj/` for .NET build output.
 
-## Development Setup
+## 🛠️ Development Setup
 
 Install the .NET 10 SDK, then verify:
 
@@ -174,7 +179,7 @@ Test:
 dotnet test CipherSnagemEditor.slnx --no-build
 ```
 
-## Local Fixtures
+## 🔒 Local Fixtures
 
 Automated parity probes expect private clean ISO fixtures under `.local/fixtures`
 when you want full coverage:
@@ -188,7 +193,7 @@ when you want full coverage:
 
 These files are intentionally ignored and must never be committed.
 
-## Verification Commands
+## 🧾 Verification Commands
 
 Colosseum closeout:
 
@@ -226,7 +231,14 @@ XD Dolphin smoke matrix:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-smoke-matrix.ps1
 ```
 
-## Publishing
+## 📦 Publishing
+
+GitHub releases can provide ready-to-use Windows and Linux packages. The
+packaging recipes are tracked in this repo; generated packages are ignored under
+`artifacts/`.
+
+See `docs/release-packaging.md` for the release workflow and local packaging
+commands.
 
 Publish a Windows Colosseum Tool build:
 
@@ -248,8 +260,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1
 
 The Linux package documentation is in `docs/linux-release.md`.
 
-## Documentation
+## 📚 Documentation
 
+- `NOTICE.md` credits the original StarsMMD tools and explains the fork/remake
+  relationship.
+- `docs/release-packaging.md` explains tracked packaging files, ignored release
+  artifacts, and GitHub release builds.
+- `docs/github-metadata.md` lists the recommended GitHub About description and
+  topics.
 - `docs/colosseum-backend-parity.md` tracks backend ISO Explorer/helper codec
   parity for the Colosseum Tool.
 - `docs/colosseum-swift-parity-audit.md` tracks Colosseum UI/editor parity.
@@ -260,7 +278,7 @@ The Linux package documentation is in `docs/linux-release.md`.
 - `docs/asset-lab-boundary.md` describes why model/VFX/audio research belongs
   in a separate Lab repo.
 
-## Legal And Data Hygiene
+## ⚖️ Legal And Data Hygiene
 
 No Nintendo, Genius Sonority, or Pokemon game files belong in this repository.
 Do not commit ISOs, extracted ISO contents, save files, generated CM Tool
