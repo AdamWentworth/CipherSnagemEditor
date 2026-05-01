@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\CipherSnagemEditor.Core\CipherSnagemEditor.Core.csproj" />
-    <ProjectReference Include="..\CipherSnagemEditor.Colosseum\CipherSnagemEditor.Colosseum.csproj" />
   </ItemGroup>
 </Project>

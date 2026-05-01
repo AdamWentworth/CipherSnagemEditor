@@ -1,10 +1,10 @@
 using CipherSnagemEditor.Core.Binary;
 
-namespace CipherSnagemEditor.Colosseum;
+namespace CipherSnagemEditor.Core.GameCube;
 
-public sealed record ColosseumGswTexture(int Id, byte[] TextureBytes);
+public sealed record GameCubeGswTexture(int Id, byte[] TextureBytes);
 
-public static class ColosseumGswTextureCodec
+public static class GameCubeGswTextureCodec
 {
     private const int IdCountOffset = 0x18;
     private const int TextureHeaderRelativeOffset = 0x20;
@@ -28,7 +28,7 @@ public static class ColosseumGswTextureCodec
         0xb0
     ];
 
-    public static IReadOnlyList<ColosseumGswTexture> ExtractTextures(byte[] gsw)
+    public static IReadOnlyList<GameCubeGswTexture> ExtractTextures(byte[] gsw)
     {
         var sections = FindTextureSections(gsw);
         if (sections.Count == 0)
@@ -37,7 +37,7 @@ public static class ColosseumGswTextureCodec
         }
 
         return sections
-            .Select(section => new ColosseumGswTexture(section.Id, gsw.AsSpan(section.TextureOffset, section.Length).ToArray()))
+            .Select(section => new GameCubeGswTexture(section.Id, gsw.AsSpan(section.TextureOffset, section.Length).ToArray()))
             .ToArray();
     }
 

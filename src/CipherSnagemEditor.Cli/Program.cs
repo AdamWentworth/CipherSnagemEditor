@@ -773,7 +773,7 @@ static ProbeVertexResult ProbeVertexModels(GameCubeIso iso, int limit, ICollecti
             try
             {
                 wzxFiles++;
-                foreach (var model in ColosseumLegacyFileCodecs.ExtractWzxDatModels(archive.Extract(entry)))
+                foreach (var model in GameCubeLegacyFileCodecs.ExtractWzxDatModels(archive.Extract(entry)))
                 {
                     models++;
                     var parsed = ColosseumDatVertexColorModel.Parse(model.Data);

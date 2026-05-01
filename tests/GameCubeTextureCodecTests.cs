@@ -1,10 +1,10 @@
 using System.Buffers.Binary;
-using CipherSnagemEditor.Colosseum;
+using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Binary;
 
 namespace CipherSnagemEditor.Tests;
 
-public sealed class ColosseumTextureCodecTests
+public sealed class GameCubeTextureCodecTests
 {
     [Fact]
     public void DecodesAndImportsRgb565TexturePng()
@@ -22,12 +22,12 @@ public sealed class ColosseumTextureCodecTests
             BigEndian.WriteUInt16(texture, 0x80 + i * 2, rawColors[i]);
         }
 
-        Assert.True(ColosseumTextureCodec.TryDecodePng(texture, out var png));
+        Assert.True(GameCubeTextureCodec.TryDecodePng(texture, out var png));
         Assert.Equal([0x89, 0x50, 0x4e, 0x47], png[..4]);
         Assert.Equal(4u, BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(16, 4)));
         Assert.Equal(4u, BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(20, 4)));
 
-        Assert.True(ColosseumTextureCodec.TryImportPng(texture, png, out var imported));
+        Assert.True(GameCubeTextureCodec.TryImportPng(texture, png, out var imported));
         Assert.Equal(texture, imported);
     }
 
@@ -43,8 +43,8 @@ public sealed class ColosseumTextureCodecTests
         BigEndian.WriteUInt16(texture, 0x80 + 32, 0xfc00);
         BigEndian.WriteUInt16(texture, 0x80 + 34, 0x83e0);
 
-        Assert.True(ColosseumTextureCodec.TryDecodePng(texture, out var png));
-        Assert.True(ColosseumTextureCodec.TryImportPng(texture, png, out var imported));
+        Assert.True(GameCubeTextureCodec.TryDecodePng(texture, out var png));
+        Assert.True(GameCubeTextureCodec.TryImportPng(texture, png, out var imported));
         Assert.Equal(texture, imported);
     }
 
@@ -60,8 +60,8 @@ public sealed class ColosseumTextureCodecTests
             texture[0x80 + i * 8 + 7] = 0xff;
         }
 
-        Assert.True(ColosseumTextureCodec.TryDecodePng(texture, out var png));
-        Assert.True(ColosseumTextureCodec.TryImportPng(texture, png, out var imported));
+        Assert.True(GameCubeTextureCodec.TryDecodePng(texture, out var png));
+        Assert.True(GameCubeTextureCodec.TryImportPng(texture, png, out var imported));
         Assert.Equal(texture, imported);
     }
 
@@ -70,13 +70,13 @@ public sealed class ColosseumTextureCodecTests
     {
         var dat = CreateDatWithRgb565Texture();
 
-        var texture = Assert.Single(ColosseumDatTextureCodec.ExtractTextures(dat));
+        var texture = Assert.Single(GameCubeDatTextureCodec.ExtractTextures(dat));
         Assert.Equal(0, texture.Index);
-        Assert.True(ColosseumTextureCodec.TryDecodePng(texture.TextureBytes, out _));
+        Assert.True(GameCubeTextureCodec.TryDecodePng(texture.TextureBytes, out _));
 
         var replacement = texture.TextureBytes.ToArray();
         BigEndian.WriteUInt16(replacement, 0x80, 0x07e0);
-        Assert.True(ColosseumDatTextureCodec.TryImportTextures(
+        Assert.True(GameCubeDatTextureCodec.TryImportTextures(
             dat,
             new Dictionary<int, byte[]> { [texture.Index] = replacement },
             out var importedDat,
@@ -91,13 +91,13 @@ public sealed class ColosseumTextureCodecTests
     {
         var gsw = CreateGswWithC8Texture();
 
-        var texture = Assert.Single(ColosseumGswTextureCodec.ExtractTextures(gsw));
+        var texture = Assert.Single(GameCubeGswTextureCodec.ExtractTextures(gsw));
         Assert.Equal(1, texture.Id);
-        Assert.True(ColosseumTextureCodec.TryDecodePng(texture.TextureBytes, out _));
+        Assert.True(GameCubeTextureCodec.TryDecodePng(texture.TextureBytes, out _));
 
         var replacement = texture.TextureBytes.ToArray();
         replacement[0x80] = 1;
-        Assert.True(ColosseumGswTextureCodec.TryImportTextures(
+        Assert.True(GameCubeGswTextureCodec.TryImportTextures(
             gsw,
             new Dictionary<int, byte[]> { [texture.Id] = replacement },
             out var importedGsw,

@@ -1,9 +1,9 @@
 using System.Text;
 using CipherSnagemEditor.Core.Binary;
 
-namespace CipherSnagemEditor.Colosseum;
+namespace CipherSnagemEditor.Core.GameCube;
 
-public static class ColosseumLegacyFileCodecs
+public static class GameCubeLegacyFileCodecs
 {
     private static readonly byte[] WzxDatHeaderTail =
     [
@@ -14,7 +14,7 @@ public static class ColosseumLegacyFileCodecs
         0x00, 0x00, 0x00, 0x00
     ];
 
-    public static bool TryExportColosseumPkxDat(ReadOnlySpan<byte> pkx, out byte[] dat)
+    public static bool TryExportPkxDat(ReadOnlySpan<byte> pkx, out byte[] dat)
     {
         dat = [];
         if (pkx.Length < 0x44)
@@ -33,7 +33,7 @@ public static class ColosseumLegacyFileCodecs
         return true;
     }
 
-    public static bool TryImportColosseumPkxDat(ReadOnlySpan<byte> pkx, ReadOnlySpan<byte> dat, out byte[] importedPkx)
+    public static bool TryImportPkxDat(ReadOnlySpan<byte> pkx, ReadOnlySpan<byte> dat, out byte[] importedPkx)
     {
         importedPkx = [];
         if (pkx.Length < 0x40 || dat.Length == 0)

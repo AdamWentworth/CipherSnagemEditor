@@ -1,16 +1,16 @@
 using CipherSnagemEditor.Core.Binary;
 
-namespace CipherSnagemEditor.Colosseum;
+namespace CipherSnagemEditor.Core.GameCube;
 
-public sealed record ColosseumDatTexture(int Index, byte[] TextureBytes);
+public sealed record GameCubeDatTexture(int Index, byte[] TextureBytes);
 
-public static class ColosseumDatTextureCodec
+public static class GameCubeDatTextureCodec
 {
     private const int DatHeaderLength = 0x20;
     private const int TextureImageOffset = 0x4c;
     private const int TexturePaletteOffset = 0x50;
 
-    public static IReadOnlyList<ColosseumDatTexture> ExtractTextures(byte[] dat)
+    public static IReadOnlyList<GameCubeDatTexture> ExtractTextures(byte[] dat)
     {
         var scanner = DatTextureScanner.TryCreate(dat);
         if (scanner is null)
@@ -18,7 +18,7 @@ public static class ColosseumDatTextureCodec
             return [];
         }
 
-        var textures = new List<ColosseumDatTexture>();
+        var textures = new List<GameCubeDatTexture>();
         foreach (var reference in scanner.FindTextureReferences())
         {
             if (!IsReadableRange(dat, reference.DataOffset, reference.DataLength))
@@ -31,7 +31,7 @@ public static class ColosseumDatTextureCodec
                 ? dat.AsSpan(paletteOffset, reference.PaletteEntries * 2).ToArray()
                 : [];
 
-            if (ColosseumTextureCodec.TryCreateModelTexture(
+            if (GameCubeTextureCodec.TryCreateModelTexture(
                 reference.Width,
                 reference.Height,
                 reference.StandardFormat,
@@ -40,7 +40,7 @@ public static class ColosseumDatTextureCodec
                 paletteBytes,
                 out var textureBytes))
             {
-                textures.Add(new ColosseumDatTexture(reference.Index, textureBytes));
+                textures.Add(new GameCubeDatTexture(reference.Index, textureBytes));
             }
         }
 
@@ -68,7 +68,7 @@ public static class ColosseumDatTextureCodec
                 continue;
             }
 
-            if (!ColosseumTextureCodec.TryGetPayload(
+            if (!GameCubeTextureCodec.TryGetPayload(
                 replacement,
                 reference.PaletteEntries > 0 ? reference.PaletteEntries : null,
                 out var payload))

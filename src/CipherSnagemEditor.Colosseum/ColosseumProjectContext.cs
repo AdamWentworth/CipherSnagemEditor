@@ -135,7 +135,7 @@ public sealed partial class ColosseumProjectContext
         {
             var pngPath = targetPath + ".png";
             if ((!File.Exists(pngPath) || overwrite)
-                && ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(targetPath), out var pngBytes))
+                && GameCubeTextureCodec.TryDecodePng(File.ReadAllBytes(targetPath), out var pngBytes))
             {
                 File.WriteAllBytes(pngPath, pngBytes);
                 decodedFiles.Add(pngPath);
@@ -976,7 +976,7 @@ public sealed partial class ColosseumProjectContext
                 {
                     var pngPath = targetPath + ".png";
                     if (File.Exists(pngPath)
-                        && ColosseumTextureCodec.TryImportPng(File.ReadAllBytes(targetPath), File.ReadAllBytes(pngPath), out var importedTexture))
+                        && GameCubeTextureCodec.TryImportPng(File.ReadAllBytes(targetPath), File.ReadAllBytes(pngPath), out var importedTexture))
                     {
                         File.WriteAllBytes(targetPath, importedTexture);
                         encodedFiles.Add(pngPath);
@@ -1075,7 +1075,7 @@ public sealed partial class ColosseumProjectContext
                     continue;
                 }
 
-                if (ColosseumLegacyFileCodecs.TryExportColosseumPkxDat(File.ReadAllBytes(filePath), out var dat))
+                if (GameCubeLegacyFileCodecs.TryExportPkxDat(File.ReadAllBytes(filePath), out var dat))
                 {
                     File.WriteAllBytes(datPath, dat);
                     yield return datPath;
@@ -1083,7 +1083,7 @@ public sealed partial class ColosseumProjectContext
             }
             else if (fileType == GameFileType.Wzx)
             {
-                foreach (var model in ColosseumLegacyFileCodecs.ExtractWzxDatModels(File.ReadAllBytes(filePath)))
+                foreach (var model in GameCubeLegacyFileCodecs.ExtractWzxDatModels(File.ReadAllBytes(filePath)))
                 {
                     var modelPath = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(filePath)}_{model.Index}.wzx.dat");
                     if (File.Exists(modelPath) && !overwrite)
@@ -1112,7 +1112,7 @@ public sealed partial class ColosseumProjectContext
 
                 File.WriteAllBytes(
                     thpPath,
-                    ColosseumLegacyFileCodecs.CombineThp(
+                    GameCubeLegacyFileCodecs.CombineThp(
                         File.ReadAllBytes(filePath),
                         File.ReadAllBytes(bodyPath)));
                 yield return thpPath;
@@ -1125,7 +1125,7 @@ public sealed partial class ColosseumProjectContext
                     continue;
                 }
 
-                if (ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(filePath), out var pngBytes))
+                if (GameCubeTextureCodec.TryDecodePng(File.ReadAllBytes(filePath), out var pngBytes))
                 {
                     File.WriteAllBytes(pngPath, pngBytes);
                     yield return pngPath;
@@ -1144,7 +1144,7 @@ public sealed partial class ColosseumProjectContext
             .Where(path => GameFileTypes.FromExtension(path) is GameFileType.Dat or GameFileType.RoomData)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            foreach (var texture in ColosseumDatTextureCodec.ExtractTextures(File.ReadAllBytes(modelPath)))
+            foreach (var texture in GameCubeDatTextureCodec.ExtractTextures(File.ReadAllBytes(modelPath)))
             {
                 var texturePath = ModelTexturePath(modelPath, texture.Index);
                 if (!File.Exists(texturePath) || overwrite)
@@ -1155,7 +1155,7 @@ public sealed partial class ColosseumProjectContext
 
                 var pngPath = texturePath + ".png";
                 if ((!File.Exists(pngPath) || overwrite)
-                    && ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(texturePath), out var pngBytes))
+                    && GameCubeTextureCodec.TryDecodePng(File.ReadAllBytes(texturePath), out var pngBytes))
                 {
                     File.WriteAllBytes(pngPath, pngBytes);
                     yield return pngPath;
@@ -1173,7 +1173,7 @@ public sealed partial class ColosseumProjectContext
 
         foreach (var thpPath in Directory.EnumerateFiles(folder, "*.thp", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            if (!ColosseumLegacyFileCodecs.TrySplitThp(File.ReadAllBytes(thpPath), out var header, out var body))
+            if (!GameCubeLegacyFileCodecs.TrySplitThp(File.ReadAllBytes(thpPath), out var header, out var body))
             {
                 continue;
             }
@@ -1194,7 +1194,7 @@ public sealed partial class ColosseumProjectContext
                 continue;
             }
 
-            if (ColosseumTextureCodec.TryImportPng(
+            if (GameCubeTextureCodec.TryImportPng(
                 File.ReadAllBytes(texturePath),
                 File.ReadAllBytes(pngPath),
                 out var importedTexture))
@@ -1216,7 +1216,7 @@ public sealed partial class ColosseumProjectContext
             .Where(path => GameFileTypes.FromExtension(path) is GameFileType.Dat or GameFileType.RoomData)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            var replacements = ColosseumDatTextureCodec.ExtractTextures(File.ReadAllBytes(modelPath))
+            var replacements = GameCubeDatTextureCodec.ExtractTextures(File.ReadAllBytes(modelPath))
                 .Select(texture => (texture.Index, Path: ModelTexturePath(modelPath, texture.Index)))
                 .Where(texture => File.Exists(texture.Path))
                 .ToDictionary(texture => texture.Index, texture => File.ReadAllBytes(texture.Path));
@@ -1225,7 +1225,7 @@ public sealed partial class ColosseumProjectContext
                 continue;
             }
 
-            if (ColosseumDatTextureCodec.TryImportTextures(
+            if (GameCubeDatTextureCodec.TryImportTextures(
                 File.ReadAllBytes(modelPath),
                 replacements,
                 out var importedModel,
@@ -1245,7 +1245,7 @@ public sealed partial class ColosseumProjectContext
                 continue;
             }
 
-            if (ColosseumLegacyFileCodecs.TryImportColosseumPkxDat(
+            if (GameCubeLegacyFileCodecs.TryImportPkxDat(
                 File.ReadAllBytes(pkxPath),
                 File.ReadAllBytes(datPath),
                 out var importedPkx))
@@ -1258,7 +1258,7 @@ public sealed partial class ColosseumProjectContext
         foreach (var wzxPath in Directory.EnumerateFiles(folder, "*.wzx", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
             var wzxBytes = File.ReadAllBytes(wzxPath);
-            var models = ColosseumLegacyFileCodecs.ExtractWzxDatModels(wzxBytes);
+            var models = GameCubeLegacyFileCodecs.ExtractWzxDatModels(wzxBytes);
             var changed = false;
             foreach (var model in models)
             {
@@ -1268,7 +1268,7 @@ public sealed partial class ColosseumProjectContext
                     continue;
                 }
 
-                if (!ColosseumLegacyFileCodecs.TryImportWzxDatModel(
+                if (!GameCubeLegacyFileCodecs.TryImportWzxDatModel(
                     wzxBytes,
                     model.Index,
                     File.ReadAllBytes(modelPath),
@@ -1590,7 +1590,7 @@ public sealed partial class ColosseumProjectContext
 
     private static IEnumerable<string> DecodeGswTextures(string gswPath, bool overwrite)
     {
-        foreach (var texture in ColosseumGswTextureCodec.ExtractTextures(File.ReadAllBytes(gswPath)))
+        foreach (var texture in GameCubeGswTextureCodec.ExtractTextures(File.ReadAllBytes(gswPath)))
         {
             var texturePath = GswTexturePath(gswPath, texture.Id);
             if (!File.Exists(texturePath) || overwrite)
@@ -1601,7 +1601,7 @@ public sealed partial class ColosseumProjectContext
 
             var pngPath = texturePath + ".png";
             if ((!File.Exists(pngPath) || overwrite)
-                && ColosseumTextureCodec.TryDecodePng(File.ReadAllBytes(texturePath), out var pngBytes))
+                && GameCubeTextureCodec.TryDecodePng(File.ReadAllBytes(texturePath), out var pngBytes))
             {
                 File.WriteAllBytes(pngPath, pngBytes);
                 yield return pngPath;
@@ -1611,7 +1611,7 @@ public sealed partial class ColosseumProjectContext
 
     private static IEnumerable<string> EncodeGswTextures(string gswPath)
     {
-        var replacements = ColosseumGswTextureCodec.ExtractTextures(File.ReadAllBytes(gswPath))
+        var replacements = GameCubeGswTextureCodec.ExtractTextures(File.ReadAllBytes(gswPath))
             .Select(texture => (texture.Id, Path: GswTexturePath(gswPath, texture.Id)))
             .Where(texture => File.Exists(texture.Path))
             .ToDictionary(texture => texture.Id, texture => File.ReadAllBytes(texture.Path));
@@ -1620,7 +1620,7 @@ public sealed partial class ColosseumProjectContext
             yield break;
         }
 
-        if (ColosseumGswTextureCodec.TryImportTextures(
+        if (GameCubeGswTextureCodec.TryImportTextures(
             File.ReadAllBytes(gswPath),
             replacements,
             out var importedGsw,

@@ -1,9 +1,9 @@
-using CipherSnagemEditor.Colosseum;
+using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Binary;
 
 namespace CipherSnagemEditor.Tests;
 
-public sealed class ColosseumLegacyFileCodecsTests
+public sealed class GameCubeLegacyFileCodecsTests
 {
     [Fact]
     public void ExtractsAndImportsColosseumPkxDatPayload()
@@ -13,10 +13,10 @@ public sealed class ColosseumLegacyFileCodecsTests
         new byte[] { 1, 2, 3, 4, 5 }.CopyTo(pkx, 0x40);
         new byte[] { 0xaa, 0xbb, 0xcc }.CopyTo(pkx, 0x50);
 
-        Assert.True(ColosseumLegacyFileCodecs.TryExportColosseumPkxDat(pkx, out var dat));
+        Assert.True(GameCubeLegacyFileCodecs.TryExportPkxDat(pkx, out var dat));
         Assert.Equal([1, 2, 3, 4, 5], dat);
 
-        Assert.True(ColosseumLegacyFileCodecs.TryImportColosseumPkxDat(pkx, [9, 8, 7, 6, 5, 4, 3], out var imported));
+        Assert.True(GameCubeLegacyFileCodecs.TryImportPkxDat(pkx, [9, 8, 7, 6, 5, 4, 3], out var imported));
         Assert.Equal((uint)7, BigEndian.ReadUInt32(imported, 0));
         Assert.Equal([9, 8, 7, 6, 5, 4, 3], imported[0x40..0x47]);
         Assert.Equal([0xaa, 0xbb, 0xcc], imported[^3..]);
@@ -30,7 +30,7 @@ public sealed class ColosseumLegacyFileCodecsTests
         BigEndian.WriteUInt32(wzx, 0x08, 0x40);
         model.CopyTo(wzx, 0x10);
 
-        var models = ColosseumLegacyFileCodecs.ExtractWzxDatModels(wzx);
+        var models = GameCubeLegacyFileCodecs.ExtractWzxDatModels(wzx);
 
         var extracted = Assert.Single(models);
         Assert.Equal(0, extracted.Index);
@@ -38,7 +38,7 @@ public sealed class ColosseumLegacyFileCodecsTests
         Assert.Equal(model, extracted.Data);
 
         var replacement = CreateDatModel(0x40, fill: 0x50);
-        Assert.True(ColosseumLegacyFileCodecs.TryImportWzxDatModel(wzx, 0, replacement, out var imported));
+        Assert.True(GameCubeLegacyFileCodecs.TryImportWzxDatModel(wzx, 0, replacement, out var imported));
         Assert.Equal(replacement, imported[0x10..0x50]);
     }
 
@@ -55,13 +55,13 @@ public sealed class ColosseumLegacyFileCodecsTests
         thp[0x60] = 0xde;
         thp[0x61] = 0xad;
 
-        Assert.True(ColosseumLegacyFileCodecs.TrySplitThp(thp, out var header, out var body));
+        Assert.True(GameCubeLegacyFileCodecs.TrySplitThp(thp, out var header, out var body));
 
         Assert.Equal(0x60, header.Length);
         Assert.Equal(0x10, body.Length);
         Assert.Equal((uint)4, BigEndian.ReadUInt32(header, 0x28));
         Assert.Equal((uint)8, BigEndian.ReadUInt32(header, 0x2c));
-        Assert.Equal(thp, ColosseumLegacyFileCodecs.CombineThp(header, body));
+        Assert.Equal(thp, GameCubeLegacyFileCodecs.CombineThp(header, body));
     }
 
     private static byte[] CreateDatModel(int length, byte fill)

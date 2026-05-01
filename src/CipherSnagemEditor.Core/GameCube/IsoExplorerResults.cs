@@ -1,4 +1,4 @@
-namespace CipherSnagemEditor.Colosseum;
+namespace CipherSnagemEditor.Core.GameCube;
 
 public sealed record IsoExportResult(
     string FilePath,

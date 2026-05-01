@@ -2,6 +2,7 @@ using CipherSnagemEditor.Colosseum;
 using CipherSnagemEditor.Core.Archives;
 using CipherSnagemEditor.Core.Binary;
 using CipherSnagemEditor.Core.Files;
+using CipherSnagemEditor.Core.GameCube;
 using CipherSnagemEditor.Core.Text;
 using System.Text.Json;
 
@@ -241,7 +242,7 @@ public sealed class ProjectContextTests
         Assert.Contains(pkxPath, result.PackedFiles);
         var archive = FsysArchive.Load(export.FilePath);
         var archivedPkx = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "sample.pkx"));
-        Assert.True(ColosseumLegacyFileCodecs.TryExportColosseumPkxDat(archivedPkx, out var archivedDat));
+        Assert.True(GameCubeLegacyFileCodecs.TryExportPkxDat(archivedPkx, out var archivedDat));
         Assert.Equal(replacementDat, archivedDat);
         Assert.Equal([0xaa, 0xbb, 0xcc], archivedPkx[^3..]);
     }
@@ -277,7 +278,7 @@ public sealed class ProjectContextTests
         Assert.Contains(wzxPath, result.PackedFiles);
         var archive = FsysArchive.Load(export.FilePath);
         var archivedWzx = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "sample.wzx"));
-        var archivedModel = Assert.Single(ColosseumLegacyFileCodecs.ExtractWzxDatModels(archivedWzx));
+        var archivedModel = Assert.Single(GameCubeLegacyFileCodecs.ExtractWzxDatModels(archivedWzx));
         Assert.Equal(replacementModel, archivedModel.Data);
     }
 
@@ -288,7 +289,7 @@ public sealed class ProjectContextTests
         Directory.CreateDirectory(temp);
         var isoPath = Path.Combine(temp, "Sample.iso");
         var thp = CreateThp();
-        Assert.True(ColosseumLegacyFileCodecs.TrySplitThp(thp, out var thh, out var thd));
+        Assert.True(GameCubeLegacyFileCodecs.TrySplitThp(thp, out var thh, out var thd));
         var fsysBytes = CreateFsys(
             ("movie.thh", thh, GameFileType.Thh),
             ("movie.thd", thd, GameFileType.Thd));
@@ -320,7 +321,7 @@ public sealed class ProjectContextTests
         var archive = FsysArchive.Load(export.FilePath);
         var archivedHeader = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "movie.thh"));
         var archivedBody = archive.Extract(Assert.Single(archive.Entries, file => file.Name == "movie.thd"));
-        Assert.Equal(editedThp, ColosseumLegacyFileCodecs.CombineThp(archivedHeader, archivedBody));
+        Assert.Equal(editedThp, GameCubeLegacyFileCodecs.CombineThp(archivedHeader, archivedBody));
     }
 
     [Fact]

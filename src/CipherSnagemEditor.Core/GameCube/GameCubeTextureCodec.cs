@@ -3,11 +3,11 @@ using System.IO.Compression;
 using System.Text;
 using CipherSnagemEditor.Core.Binary;
 
-namespace CipherSnagemEditor.Colosseum;
+namespace CipherSnagemEditor.Core.GameCube;
 
-public sealed record ColosseumTexturePayload(byte[] PixelBytes, byte[] PaletteBytes);
+public sealed record GameCubeTexturePayload(byte[] PixelBytes, byte[] PaletteBytes);
 
-public static class ColosseumTextureCodec
+public static class GameCubeTextureCodec
 {
     private const int TextureWidthOffset = 0x00;
     private const int TextureHeightOffset = 0x02;
@@ -60,9 +60,9 @@ public static class ColosseumTextureCodec
         return true;
     }
 
-    public static bool TryGetPayload(byte[] textureBytes, int? maxPaletteEntries, out ColosseumTexturePayload payload)
+    public static bool TryGetPayload(byte[] textureBytes, int? maxPaletteEntries, out GameCubeTexturePayload payload)
     {
-        payload = new ColosseumTexturePayload([], []);
+        payload = new GameCubeTexturePayload([], []);
         if (!TryParse(textureBytes, out var info))
         {
             return false;
@@ -83,7 +83,7 @@ public static class ColosseumTextureCodec
             paletteBytes = info.Data.AsSpan(info.PaletteStart, paletteEntries * 2).ToArray();
         }
 
-        payload = new ColosseumTexturePayload(pixelBytes, paletteBytes);
+        payload = new GameCubeTexturePayload(pixelBytes, paletteBytes);
         return true;
     }
 
@@ -841,13 +841,13 @@ public static class ColosseumTextureCodec
         TextureFormat Format,
         TextureFormat PaletteFormat)
     {
-        public int BitsPerPixel => ColosseumTextureCodec.BitsPerPixel(Format);
+        public int BitsPerPixel => GameCubeTextureCodec.BitsPerPixel(Format);
 
-        public int BlockWidth => ColosseumTextureCodec.BlockWidth(Format);
+        public int BlockWidth => GameCubeTextureCodec.BlockWidth(Format);
 
-        public int BlockHeight => ColosseumTextureCodec.BlockHeight(Format);
+        public int BlockHeight => GameCubeTextureCodec.BlockHeight(Format);
 
-        public bool IsIndexed => ColosseumTextureCodec.IsIndexed(Format);
+        public bool IsIndexed => GameCubeTextureCodec.IsIndexed(Format);
     }
 
     private readonly record struct RgbaColor(byte R, byte G, byte B, byte A)
