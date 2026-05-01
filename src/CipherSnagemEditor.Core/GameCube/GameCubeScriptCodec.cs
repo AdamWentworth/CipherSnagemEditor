@@ -11,6 +11,8 @@ public static class GameCubeScriptCodec
     private const int TcodHeaderSize = 0x10;
     private const int SectionHeaderSize = 0x20;
     private const int ScriptIdentifierOffset = 0x28;
+    private const string HighLevelBeginMarker = "// cse_xds_begin";
+    private const string HighLevelEndMarker = "// cse_xds_end";
 
     private static readonly string[] OpNames =
     [
@@ -35,6 +37,9 @@ public static class GameCubeScriptCodec
     ];
 
     private static readonly Regex RawWordRegex = new(@"0x(?<value>[0-9a-fA-F]{8})", RegexOptions.Compiled);
+    private static readonly Regex FunctionHeaderRegex = new(
+        @"^function\s+(?<name>@?[A-Za-z_][A-Za-z0-9_]*)\s*\((?<args>[^)]*)\)\s*\{\s*$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public static bool TryDecompileXds(byte[] scriptBytes, string sourceName, out string text, out string? error)
     {
@@ -74,6 +79,7 @@ public static class GameCubeScriptCodec
         }
 
         AppendGlobals(builder, script);
+        AppendHighLevelSubset(builder, script);
         AppendDisassembly(builder, script);
         AppendRawWords(builder, scriptBytes);
         text = builder.ToString();
@@ -86,9 +92,15 @@ public static class GameCubeScriptCodec
         error = null;
 
         var block = ExtractRawWordsBlock(xdsText);
+        if (block is not null
+            && TryCompileHighLevelSubset(xdsText, block, out scriptBytes, out error))
+        {
+            return true;
+        }
+
         if (block is null)
         {
-            error = "No raw_scd_words block was found. This compiler currently supports Cipher Snagem's lossless raw XDS/SCD format.";
+            error = "No editable XDS subset or raw_scd_words block was found.";
             return false;
         }
 
@@ -193,6 +205,486 @@ public static class GameCubeScriptCodec
             var values = string.Join(", ", script.Arrays[index].Select(value => ConstantText(value.Type, value.Value)));
             builder.AppendLine($"// array_{index:00} = [{values}]");
         }
+    }
+
+    private static void AppendHighLevelSubset(StringBuilder builder, ParsedScript script)
+    {
+        if (script.Functions.Count == 0 || script.Instructions.Count == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("// Editable XDS subset");
+        builder.AppendLine("// This mirrors the legacy function-block shape and takes priority over raw_scd_words when it compiles.");
+        builder.AppendLine(HighLevelBeginMarker);
+
+        var functions = script.Functions
+            .OrderBy(function => function.CodeOffset)
+            .ToArray();
+        var instructionMap = script.Instructions.ToDictionary(instruction => instruction.WordIndex);
+        var functionNamesByOffset = functions
+            .GroupBy(function => function.CodeOffset)
+            .ToDictionary(group => group.Key, group => "@" + group.First().Name);
+        var totalWords = script.Instructions.Sum(instruction => instruction.Words.Count);
+
+        for (var index = 0; index < functions.Length; index++)
+        {
+            var function = functions[index];
+            var endOffset = index + 1 < functions.Length ? functions[index + 1].CodeOffset : totalWords;
+            builder.AppendLine($"function @{function.Name}() {{");
+            var wordIndex = function.CodeOffset;
+            while (wordIndex < endOffset)
+            {
+                if (!instructionMap.TryGetValue(wordIndex, out var instruction))
+                {
+                    builder.AppendLine($"    // missing instruction at 0x{wordIndex:x6}");
+                    wordIndex++;
+                    continue;
+                }
+
+                builder.AppendLine("    " + HighLevelInstructionText(instruction.Words, functionNamesByOffset));
+                wordIndex += instruction.Words.Count;
+            }
+
+            builder.AppendLine("}");
+            builder.AppendLine();
+        }
+
+        builder.AppendLine(HighLevelEndMarker);
+    }
+
+    private static bool TryCompileHighLevelSubset(string xdsText, string rawWordsBlock, out byte[] scriptBytes, out string? error)
+    {
+        scriptBytes = [];
+        error = null;
+
+        var highLevelBlock = ExtractHighLevelBlock(xdsText);
+        if (string.IsNullOrWhiteSpace(highLevelBlock))
+        {
+            return false;
+        }
+
+        var templateWords = RawWordRegex.Matches(rawWordsBlock);
+        if (templateWords.Count == 0)
+        {
+            error = "The raw_scd_words template block did not contain any 32-bit words.";
+            return false;
+        }
+
+        var templateBytes = new byte[templateWords.Count * 4];
+        for (var index = 0; index < templateWords.Count; index++)
+        {
+            if (!uint.TryParse(templateWords[index].Groups["value"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var word))
+            {
+                error = $"Invalid raw SCD word: 0x{templateWords[index].Groups["value"].Value}.";
+                return false;
+            }
+
+            BigEndian.WriteUInt32(templateBytes, index * 4, word);
+        }
+
+        if (!TryParse(templateBytes, out var template, out error))
+        {
+            return false;
+        }
+
+        if (!TryParseHighLevelFunctions(highLevelBlock, out var functions, out error))
+        {
+            return false;
+        }
+
+        if (functions.Count == 0)
+        {
+            return false;
+        }
+
+        if (!TryBuildCodeWords(functions, out var functionOffsets, out var codeWords, out error))
+        {
+            return false;
+        }
+
+        scriptBytes = RebuildScript(templateBytes, template, functions, functionOffsets, codeWords);
+        return TryParse(scriptBytes, out _, out error);
+    }
+
+    private static bool TryParseHighLevelFunctions(string block, out List<HighLevelFunction> functions, out string? error)
+    {
+        functions = [];
+        error = null;
+
+        HighLevelFunction? currentFunction = null;
+        var lineNumber = 0;
+        foreach (var rawLine in block.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        {
+            lineNumber++;
+            var line = StripInlineComment(rawLine).Trim();
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            var match = FunctionHeaderRegex.Match(line);
+            if (match.Success)
+            {
+                if (currentFunction is not null)
+                {
+                    error = $"Nested function at editable XDS line {lineNumber}.";
+                    return false;
+                }
+
+                currentFunction = new HighLevelFunction(NormalizeFunctionName(match.Groups["name"].Value), []);
+                continue;
+            }
+
+            if (line == "}")
+            {
+                if (currentFunction is null)
+                {
+                    error = $"Unexpected function close at editable XDS line {lineNumber}.";
+                    return false;
+                }
+
+                functions.Add(currentFunction);
+                currentFunction = null;
+                continue;
+            }
+
+            if (currentFunction is null)
+            {
+                error = $"Instruction outside function at editable XDS line {lineNumber}: {line}";
+                return false;
+            }
+
+            if (!TryParseHighLevelInstruction(line, out var instruction, out error))
+            {
+                error = $"Editable XDS line {lineNumber}: {error}";
+                return false;
+            }
+
+            currentFunction.Instructions.Add(instruction);
+        }
+
+        if (currentFunction is not null)
+        {
+            error = $"Function @{currentFunction.Name} was not closed.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryParseHighLevelInstruction(string line, out HighLevelInstruction instruction, out string? error)
+    {
+        instruction = HighLevelInstruction.Empty;
+        error = null;
+
+        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+        {
+            error = "Empty instruction.";
+            return false;
+        }
+
+        var op = parts[0].ToLowerInvariant();
+        if (op == "raw")
+        {
+            var rawWords = RawWordRegex.Matches(line)
+                .Select(match => uint.Parse(match.Groups["value"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture))
+                .ToArray();
+            if (rawWords.Length == 0)
+            {
+                error = "raw requires at least one 32-bit word.";
+                return false;
+            }
+
+            instruction = new HighLevelInstruction(rawWords.Length, _ => rawWords);
+            return true;
+        }
+
+        if (op is "nop" or "return" or "exit")
+        {
+            var opcode = op switch
+            {
+                "nop" => 0,
+                "return" => 8,
+                _ => 15
+            };
+            instruction = SingleWord(opcode, 0, 0);
+            return true;
+        }
+
+        if (op is "operator" or "pop" or "reserve" or "release")
+        {
+            if (parts.Length < 2 || !TryParseInteger(parts[1], out var value))
+            {
+                error = $"{op} requires an integer parameter.";
+                return false;
+            }
+
+            var opcode = op switch
+            {
+                "operator" => 1,
+                "pop" => 6,
+                "reserve" => 13,
+                _ => 14
+            };
+            instruction = SingleWord(opcode, value, 0);
+            return true;
+        }
+
+        if (op == "setline")
+        {
+            if (parts.Length < 2 || !TryParseInteger(parts[1], out var lineNumber))
+            {
+                error = "setline requires an integer parameter.";
+                return false;
+            }
+
+            instruction = SingleWord(16, 0, lineNumber);
+            return true;
+        }
+
+        if (op is "ldvar" or "setvar" or "ldncpvar")
+        {
+            if (parts.Length < 2 || !TryParseVariable(parts[1], out var level, out var parameter))
+            {
+                error = $"{op} requires a known variable name.";
+                return false;
+            }
+
+            var opcode = op switch
+            {
+                "ldvar" => 3,
+                "setvar" => 4,
+                _ => 17
+            };
+            instruction = SingleWord(opcode, level, parameter);
+            return true;
+        }
+
+        if (op == "setvector")
+        {
+            if (parts.Length < 3 || !TryParseVectorDimension(parts[1], out var dimension) || !TryParseVariable(parts[2], out var level, out var parameter))
+            {
+                error = "setvector requires a dimension and variable name.";
+                return false;
+            }
+
+            instruction = SingleWord(5, (dimension << 4) | level, parameter);
+            return true;
+        }
+
+        if (op == "ldimm")
+        {
+            var constantText = line["ldimm".Length..].Trim();
+            if (!TryParseConstant(constantText, out var type, out var value))
+            {
+                error = $"Unsupported immediate constant: {constantText}";
+                return false;
+            }
+
+            if (type is 3 or 4)
+            {
+                instruction = SingleWord(2, type, unchecked((int)value));
+            }
+            else
+            {
+                var first = BuildWord(2, type, 0);
+                instruction = new HighLevelInstruction(2, _ => [first, value]);
+            }
+
+            return true;
+        }
+
+        if (op == "callstd")
+        {
+            if (parts.Length < 2 || !TryParseClassFunction(parts[1], out var classId, out var functionId))
+            {
+                error = "callstd requires class_<id>.function_<id>.";
+                return false;
+            }
+
+            instruction = SingleWord(9, classId, functionId);
+            return true;
+        }
+
+        if (op is "call" or "goto" or "jmptrue" or "jmpfalse")
+        {
+            if (parts.Length < 2)
+            {
+                error = $"{op} requires a target.";
+                return false;
+            }
+
+            var opcode = op switch
+            {
+                "call" => 7,
+                "jmptrue" => 10,
+                "jmpfalse" => 11,
+                _ => 12
+            };
+            var target = parts[1].TrimEnd('(', ')');
+            instruction = new HighLevelInstruction(1, offsets =>
+            {
+                var resolved = ResolveLocation(target, offsets);
+                return [BuildLongWord(opcode, resolved)];
+            });
+            return true;
+        }
+
+        if (op.StartsWith('@') && line.EndsWith("()", StringComparison.Ordinal))
+        {
+            var target = op.TrimEnd('(', ')');
+            instruction = new HighLevelInstruction(1, offsets => [BuildLongWord(7, ResolveLocation(target, offsets))]);
+            return true;
+        }
+
+        error = $"Unsupported editable XDS instruction: {line}";
+        return false;
+    }
+
+    private static bool TryBuildCodeWords(
+        IReadOnlyList<HighLevelFunction> functions,
+        out Dictionary<string, int> functionOffsets,
+        out List<uint> codeWords,
+        out string? error)
+    {
+        error = null;
+        functionOffsets = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        codeWords = [];
+
+        var currentOffset = 0;
+        foreach (var function in functions)
+        {
+            functionOffsets[function.Name] = currentOffset;
+            functionOffsets["@" + function.Name] = currentOffset;
+            currentOffset += function.Instructions.Sum(instruction => instruction.WordLength);
+        }
+
+        try
+        {
+            foreach (var function in functions)
+            {
+                foreach (var instruction in function.Instructions)
+                {
+                    codeWords.AddRange(instruction.ToWords(functionOffsets));
+                }
+            }
+        }
+        catch (InvalidDataException ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static byte[] RebuildScript(
+        byte[] templateBytes,
+        ParsedScript template,
+        IReadOnlyList<HighLevelFunction> functions,
+        IReadOnlyDictionary<string, int> functionOffsets,
+        IReadOnlyList<uint> codeWords)
+    {
+        var sections = new List<byte[]>
+        {
+            BuildFtblSection(functions, functionOffsets, template.ScriptIdentifier),
+            BuildHeadSection(functions, functionOffsets),
+            BuildCodeSection(functions.Count, codeWords)
+        };
+
+        foreach (var section in template.Sections.Where(section => section.Name is not ("FTBL" or "HEAD" or "CODE")))
+        {
+            sections.Add(templateBytes[section.Offset..(section.Offset + section.Size)]);
+        }
+
+        var totalLength = TcodHeaderSize + sections.Sum(section => section.Length);
+        var bytes = new byte[totalLength];
+        BigEndian.WriteUInt32(bytes, 0, TcodMagic);
+        BigEndian.WriteUInt32(bytes, 4, checked((uint)totalLength));
+        var offset = TcodHeaderSize;
+        foreach (var section in sections)
+        {
+            section.CopyTo(bytes.AsSpan(offset));
+            offset += section.Length;
+        }
+
+        return bytes;
+    }
+
+    private static byte[] BuildFtblSection(
+        IReadOnlyList<HighLevelFunction> functions,
+        IReadOnlyDictionary<string, int> functionOffsets,
+        uint scriptIdentifier)
+    {
+        var uniqueNames = functions
+            .Select(function => function.Name)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var nameOffsets = new Dictionary<string, int>(StringComparer.Ordinal);
+        var stringBytes = new List<byte>();
+        foreach (var name in uniqueNames)
+        {
+            nameOffsets[name] = stringBytes.Count;
+            stringBytes.AddRange(Encoding.ASCII.GetBytes(name));
+            stringBytes.Add(0);
+        }
+
+        var entryBytes = functions.Count * 8;
+        var firstStringOffset = SectionHeaderSize + entryBytes;
+        var sectionSize = Align16(firstStringOffset + stringBytes.Count);
+        var bytes = new byte[sectionSize];
+        BigEndian.WriteUInt32(bytes, 0x00, 0x4654424c);
+        BigEndian.WriteUInt32(bytes, 0x04, checked((uint)sectionSize));
+        BigEndian.WriteUInt32(bytes, 0x10, checked((uint)functions.Count));
+        BigEndian.WriteUInt32(bytes, 0x14, checked((uint)firstStringOffset));
+        BigEndian.WriteUInt32(bytes, 0x18, scriptIdentifier);
+
+        for (var index = 0; index < functions.Count; index++)
+        {
+            var entryOffset = SectionHeaderSize + (index * 8);
+            var function = functions[index];
+            BigEndian.WriteUInt32(bytes, entryOffset, checked((uint)functionOffsets[function.Name]));
+            BigEndian.WriteUInt32(bytes, entryOffset + 4, checked((uint)(firstStringOffset + nameOffsets[function.Name])));
+        }
+
+        stringBytes.ToArray().CopyTo(bytes.AsSpan(firstStringOffset));
+        return bytes;
+    }
+
+    private static byte[] BuildHeadSection(
+        IReadOnlyList<HighLevelFunction> functions,
+        IReadOnlyDictionary<string, int> functionOffsets)
+    {
+        var sectionSize = Align16(SectionHeaderSize + (functions.Count * 4));
+        var bytes = new byte[sectionSize];
+        BigEndian.WriteUInt32(bytes, 0x00, 0x48454144);
+        BigEndian.WriteUInt32(bytes, 0x04, checked((uint)sectionSize));
+        BigEndian.WriteUInt32(bytes, 0x10, checked((uint)functions.Count));
+        for (var index = 0; index < functions.Count; index++)
+        {
+            BigEndian.WriteUInt32(bytes, SectionHeaderSize + (index * 4), checked((uint)functionOffsets[functions[index].Name]));
+        }
+
+        return bytes;
+    }
+
+    private static byte[] BuildCodeSection(int functionCount, IReadOnlyList<uint> codeWords)
+    {
+        var sectionSize = Align16(SectionHeaderSize + (codeWords.Count * 4));
+        var bytes = new byte[sectionSize];
+        BigEndian.WriteUInt32(bytes, 0x00, 0x434f4445);
+        BigEndian.WriteUInt32(bytes, 0x04, checked((uint)sectionSize));
+        BigEndian.WriteUInt32(bytes, 0x10, checked((uint)functionCount));
+        BigEndian.WriteUInt32(bytes, 0x14, checked((uint)codeWords.Count));
+        for (var index = 0; index < codeWords.Count; index++)
+        {
+            BigEndian.WriteUInt32(bytes, SectionHeaderSize + (index * 4), codeWords[index]);
+        }
+
+        return bytes;
     }
 
     private static void AppendDisassembly(StringBuilder builder, ParsedScript script)
@@ -522,13 +1014,13 @@ public static class GameCubeScriptCodec
 
     private static string? ExtractRawWordsBlock(string xdsText)
     {
-        var markerIndex = xdsText.IndexOf("raw_scd_words", StringComparison.OrdinalIgnoreCase);
-        if (markerIndex < 0)
+        var marker = Regex.Match(xdsText, @"(?im)^\s*raw_scd_words\s*\{");
+        if (!marker.Success)
         {
             return null;
         }
 
-        var openIndex = xdsText.IndexOf('{', markerIndex);
+        var openIndex = xdsText.IndexOf('{', marker.Index);
         if (openIndex < 0)
         {
             return null;
@@ -536,6 +1028,290 @@ public static class GameCubeScriptCodec
 
         var closeIndex = xdsText.IndexOf('}', openIndex + 1);
         return closeIndex < 0 ? null : xdsText[(openIndex + 1)..closeIndex];
+    }
+
+    private static string? ExtractHighLevelBlock(string xdsText)
+    {
+        var begin = xdsText.IndexOf(HighLevelBeginMarker, StringComparison.OrdinalIgnoreCase);
+        if (begin < 0)
+        {
+            return null;
+        }
+
+        begin += HighLevelBeginMarker.Length;
+        var end = xdsText.IndexOf(HighLevelEndMarker, begin, StringComparison.OrdinalIgnoreCase);
+        return end < 0 ? null : xdsText[begin..end];
+    }
+
+    private static string HighLevelInstructionText(IReadOnlyList<uint> words, IReadOnlyDictionary<int, string> functionNamesByOffset)
+    {
+        var word = words[0];
+        var op = (int)((word >> 24) & 0xff);
+        var sub = (int)((word >> 16) & 0xff);
+        var param = unchecked((short)(word & 0xffff));
+        var longParameter = (int)(word & 0x00ff_ffff);
+
+        return op switch
+        {
+            0 => "nop",
+            1 => $"operator {sub}",
+            2 => words.Count == 2
+                ? $"ldimm {ConstantText((ushort)sub, words[1])}"
+                : $"ldimm {ConstantText((ushort)sub, unchecked((uint)param))}",
+            3 => $"ldvar {VariableText(sub, param)}",
+            4 => $"setvar {VariableText(sub, param)}",
+            5 => $"setvector {VectorDimensionText(sub)} {VariableText(sub, param)}",
+            6 => $"pop {sub}",
+            7 => $"call {LocationText(longParameter, functionNamesByOffset)}()",
+            8 => "return",
+            9 => $"callstd class_{sub}.function_{param}",
+            10 => $"jmptrue {LocationText(longParameter, functionNamesByOffset)}",
+            11 => $"jmpfalse {LocationText(longParameter, functionNamesByOffset)}",
+            12 => $"goto {LocationText(longParameter, functionNamesByOffset)}",
+            13 => $"reserve {sub}",
+            14 => $"release {sub}",
+            15 => "exit",
+            16 => $"setline {param}",
+            17 => $"ldncpvar {VariableText(sub, param)}",
+            _ => "raw " + string.Join(" ", words.Select(raw => $"0x{raw:x8}"))
+        };
+    }
+
+    private static string LocationText(int offset, IReadOnlyDictionary<int, string> functionNamesByOffset)
+        => functionNamesByOffset.TryGetValue(offset, out var name) ? name : $"0x{offset:x6}";
+
+    private static string StripInlineComment(string line)
+    {
+        var quoted = false;
+        for (var index = 0; index + 1 < line.Length; index++)
+        {
+            if (line[index] == '"')
+            {
+                quoted = !quoted;
+                continue;
+            }
+
+            if (!quoted && line[index] == '/' && line[index + 1] == '/')
+            {
+                return line[..index];
+            }
+        }
+
+        return line;
+    }
+
+    private static string NormalizeFunctionName(string value)
+        => value.Trim().TrimStart('@');
+
+    private static HighLevelInstruction SingleWord(int op, int sub, int parameter)
+        => new(1, _ => [BuildWord(op, sub, parameter)]);
+
+    private static uint BuildWord(int op, int sub, int parameter)
+        => ((uint)(op & 0xff) << 24) | ((uint)(sub & 0xff) << 16) | (unchecked((uint)parameter) & 0xffff);
+
+    private static uint BuildLongWord(int op, int parameter)
+        => ((uint)(op & 0xff) << 24) | (unchecked((uint)parameter) & 0x00ff_ffff);
+
+    private static int ResolveLocation(string target, IReadOnlyDictionary<string, int> functionOffsets)
+    {
+        target = target.Trim().TrimEnd('(', ')');
+        if (functionOffsets.TryGetValue(target, out var offset)
+            || functionOffsets.TryGetValue(NormalizeFunctionName(target), out offset))
+        {
+            return offset;
+        }
+
+        if (TryParseInteger(target, out offset))
+        {
+            return offset;
+        }
+
+        throw new InvalidDataException($"Unknown XDS location target: {target}");
+    }
+
+    private static bool TryParseInteger(string text, out int value)
+    {
+        text = text.Trim();
+        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            return int.TryParse(text[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value);
+        }
+
+        return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool TryParseVariable(string text, out int level, out int parameter)
+    {
+        level = 0;
+        parameter = 0;
+        text = text.Trim().TrimEnd(',', ';');
+
+        if (text.Equals("LastResult", StringComparison.OrdinalIgnoreCase))
+        {
+            level = 2;
+            return true;
+        }
+
+        if (text.Equals("player_character", StringComparison.OrdinalIgnoreCase))
+        {
+            level = 3;
+            parameter = 0x80;
+            return true;
+        }
+
+        if (TryParsePrefixedIndex(text, "gvar_", out parameter))
+        {
+            level = 0;
+            return true;
+        }
+
+        if (TryParsePrefixedIndex(text, "arg_", out parameter))
+        {
+            level = 1;
+            parameter++;
+            return true;
+        }
+
+        if (TryParsePrefixedIndex(text, "var_", out parameter))
+        {
+            level = 1;
+            parameter = -parameter;
+            return true;
+        }
+
+        if (TryParsePrefixedIndex(text, "character_", out parameter))
+        {
+            level = 3;
+            parameter += 0x80;
+            return true;
+        }
+
+        if (TryParsePrefixedIndex(text, "array_", out parameter))
+        {
+            level = 3;
+            parameter += 0x200;
+            return true;
+        }
+
+        if (TryParsePrefixedIndex(text, "class_object_", out parameter))
+        {
+            level = 3;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParsePrefixedIndex(string text, string prefix, out int value)
+    {
+        value = 0;
+        return text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(text[prefix.Length..], NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool TryParseVectorDimension(string text, out int dimension)
+    {
+        dimension = text.ToLowerInvariant() switch
+        {
+            "x" => 0,
+            "y" => 1,
+            "z" => 2,
+            _ => -1
+        };
+        if (dimension >= 0)
+        {
+            return true;
+        }
+
+        if (text.StartsWith("dim", StringComparison.OrdinalIgnoreCase))
+        {
+            return int.TryParse(text[3..], NumberStyles.Integer, CultureInfo.InvariantCulture, out dimension);
+        }
+
+        return false;
+    }
+
+    private static bool TryParseClassFunction(string text, out int classId, out int functionId)
+    {
+        classId = 0;
+        functionId = 0;
+        var parts = text.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length == 2
+            && TryParsePrefixedIndex(parts[0], "class_", out classId)
+            && TryParsePrefixedIndex(parts[1], "function_", out functionId);
+    }
+
+    private static bool TryParseConstant(string text, out int type, out uint value)
+    {
+        type = 0;
+        value = 0;
+        text = text.Trim();
+        if (text.Equals("Null", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var open = text.IndexOf('(');
+        var close = text.LastIndexOf(')');
+        if (open <= 0 || close <= open)
+        {
+            return false;
+        }
+
+        var kind = text[..open].Trim();
+        var rawValue = text[(open + 1)..close].Trim();
+        type = kind.ToLowerInvariant() switch
+        {
+            "int" => 1,
+            "float" => 2,
+            "string" => 3,
+            "vector" => 4,
+            "matrix" => 5,
+            "object" => 6,
+            "array" => 7,
+            "text" => 8,
+            "character" => 35,
+            "pokemon" => 37,
+            "pointer" => 53,
+            _ when kind.StartsWith("type", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(kind[4..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var customType) => customType,
+            _ => -1
+        };
+        if (type < 0)
+        {
+            return false;
+        }
+
+        if (type == 2)
+        {
+            if (!float.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var single))
+            {
+                return false;
+            }
+
+            value = SingleToUInt32(single);
+            return true;
+        }
+
+        if (!TryParseInteger(rawValue, out var parsed))
+        {
+            return false;
+        }
+
+        value = unchecked((uint)parsed);
+        return true;
+    }
+
+    private static uint SingleToUInt32(float value)
+    {
+        Span<byte> bytes = stackalloc byte[4];
+        BitConverter.TryWriteBytes(bytes, value);
+        if (BitConverter.IsLittleEndian)
+        {
+            return BitConverter.ToUInt32(bytes);
+        }
+
+        return BigEndian.ReadUInt32(bytes, 0);
     }
 
     private static string InstructionText(IReadOnlyList<uint> words)
@@ -674,6 +1450,16 @@ public static class GameCubeScriptCodec
             .Replace("\"", "\\\"", StringComparison.Ordinal)
             .Replace("\r", "\\r", StringComparison.Ordinal)
             .Replace("\n", "\\n", StringComparison.Ordinal);
+
+    private static int Align16(int value)
+        => (value + 0x0f) & ~0x0f;
+
+    private sealed record HighLevelFunction(string Name, List<HighLevelInstruction> Instructions);
+
+    private sealed record HighLevelInstruction(int WordLength, Func<IReadOnlyDictionary<string, int>, IReadOnlyList<uint>> ToWords)
+    {
+        public static HighLevelInstruction Empty { get; } = new(0, _ => []);
+    }
 
     private sealed record ParsedScript(
         uint ScriptIdentifier,
