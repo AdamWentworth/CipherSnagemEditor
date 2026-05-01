@@ -35,4 +35,7 @@ This note tracks the backend behaviors copied from the Swift Colosseum Tool so t
 
 - Colosseum script decompile/compile is not treated as stable parity yet. The Swift tool only decompiles Colosseum scripts behind experimental settings, and the Colosseum compiler path is stubbed/incomplete in the referenced source.
 - Broad "dump every texture from every file" behavior is covered for the formats we currently identify and edit in the app, but it is not a promise that every possible binary blob in the ISO has a typed texture parser.
-- XD/PBR-specific script, model, and texture helpers remain out of scope until the XD mode is started.
+- Full model, VFX, audio, and map authoring pipelines are intentionally out of
+  scope for the stable Colosseum Tool parity target. Those belong in the future
+  Cipher Snagem Lab line until they are mature enough to become normal editor
+  workflows.

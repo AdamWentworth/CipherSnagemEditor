@@ -1,47 +1,67 @@
 # Cipher Snagem Editor
 
 Cipher Snagem Editor is a Windows-first, cross-platform .NET/Avalonia remake of
-the legacy Pokemon Colosseum and Pokemon XD modding tools from the
-`Pokemon-XD-Code` project.
+the legacy Pokemon Colosseum and Pokemon XD: Gale of Darkness modding tools from
+the `Pokemon-XD-Code` project.
 
-The first milestone is 1:1 Colosseum Tool parity: same editor windows, same
-data model behavior, same ISO workspace flow, and the same practical workflows
-that made the original macOS Swift app useful. XD support is now being built as
-the sibling `GoD Tool` path in the same repository with shared core code.
+The repository contains one shared codebase and two desktop release targets:
+
+- `Colosseum Tool` for Pokemon Colosseum.
+- `GoD Tool` for Pokemon XD: Gale of Darkness.
+
+The goal of this repository is preservation and practical parity with the
+original Swift/macOS tools: familiar editor windows, equivalent data behavior,
+safe ISO workspace flows, and repeatable rebuilds on modern Windows and Linux.
+
+## Status
+
+This repo is treated as the stable legacy-editor parity line.
+
+- Colosseum Tool: priority editor, patch, randomizer, table, ISO Explorer, and
+  helper codec parity are implemented and covered by tests/probes.
+- GoD Tool: XD editor parity is implemented for the legacy editor surface,
+  including Shadow Pokemon, Pokespot, patch/randomizer, ISO Explorer, and XD
+  script codec workflows.
+- Windows x64 is the primary release target.
+- Linux x64 packages are supported experimentally with a `.deb` and portable
+  archive.
+- macOS packaging is not the current focus, though the Avalonia codebase is
+  intended to remain portable where practical.
 
 ## Original Work And Credit
 
 This project exists because of the original **Gale of Darkness Tool** and
-**Colosseum Tool** created by **Stars Momodu** / **@StarsMmd**.
+**Colosseum Tool** created by **Stars Momodu** / **@StarsMMD**.
 
-The legacy source identifies the tools as:
+The legacy project identifies the tools as:
 
 - `GoD Tool` for Pokemon XD: Gale of Darkness
 - `Colosseum Tool` for Pokemon Colosseum
-- source code: `https://github.com/PekanMmd/Pokemon-XD-Code.git`
+- source repository: `https://github.com/PekanMmd/Pokemon-XD-Code.git`
 
 Cipher Snagem Editor is not an attempt to erase or rebrand that work. It is a
-Windows and cross-platform C# remake/fork effort built from studying the Swift
-code, UI storyboards, data parsers, and behavior of StarsMmd's original tools.
-The goal is to preserve that workflow on modern Windows while gradually making
-the codebase easier to maintain and extend.
+Windows and cross-platform C# remake/fork effort built by studying the Swift
+source, UI storyboards, data parsers, binary formats, and behavior of StarsMMD's
+original tools. The intent is to preserve that workflow for users who cannot or
+do not want to depend on the original macOS app.
 
-## Current Scope
+## What This Editor Does
 
-Current target:
+Core workflows:
 
-- Pokemon Colosseum
-- Pokemon XD shell/open-path support
-- Windows desktop
-- .NET 10
-- Avalonia UI
-- 1:1 parity with the Swift Colosseum Tool where practical
+- Open Pokemon Colosseum and Pokemon XD ISO/GCM images.
+- Create and reuse the legacy sibling workspace folder beside the opened ISO.
+- Detect supported GameCube regions.
+- Extract, edit, import, and rebuild game files through the ISO Explorer.
+- Decode/repack FSYS archives and LZSS-compressed entries.
+- Decode/re-encode message tables.
+- Export/import supported texture containers.
+- Export/import supported PKX, WZX, DAT, GSW, and THP-style helper formats.
+- Apply supported patches and randomizer writes.
+- Save editor changes back into the workspace and rebuild them into the ISO.
 
-Implemented or in progress:
+Colosseum Tool editor surface:
 
-- ISO loading and region detection
-- CM Tool workspace creation
-- Main tool menu
 - Trainer Editor
 - Pokemon Stats Editor
 - Move Editor
@@ -49,69 +69,94 @@ Implemented or in progress:
 - Gift Pokemon Editor
 - Type Editor
 - Treasure Editor
+- Patches
+- Randomizer
+- Message Editor
+- Collision Viewer
 - Interaction Editor
+- Vertex Filters
 - Table Editor
 - ISO Explorer
 
-Future scope:
+GoD Tool editor surface:
 
-- 1:1 Pokemon XD: Gale of Darkness editor parity
-- cross-platform packaging for macOS and Linux
-
-XD-specific legacy editors already represented in the GoD Tool shell:
-
+- Trainer Editor
+- Pokemon Stats Editor
+- Move Editor
+- Item Editor
+- Gift Pokemon Editor
+- Type Editor
+- Treasure Editor
+- Patches
+- Randomizer
+- Message Editor
+- Interaction Editor
 - Shadow Pokemon Editor
 - Pokespot Editor
-- Script Compiler
+- Script compiler/decompiler workflows
+- Table Editor
+- ISO Explorer
+
+## What This Editor Is Not
+
+This repository is not a general Pokemon asset-authoring suite. It intentionally
+does not try to own every future model, VFX, Blender, map, music, and audio
+workflow inside the stable editor codebase.
+
+Those experimental goals belong in a sibling project:
+
+- `Cipher Snagem Editor`: stable legacy editor parity.
+- `Cipher Snagem Lab`: future model/VFX/audio/project-pipeline research.
+
+The split keeps the working editor reliable while leaving room for deeper asset
+experiments to be messy, exploratory, and eventually productized.
+
+This repository is also not a Nintendo, Genius Sonority, or Pokemon asset dump.
+No game files are included or required in source control.
 
 ## Repository Layout
 
 ```text
 CipherSnagemEditor.slnx
+Directory.Build.props
 src/
-  CipherSnagemEditor.App/         shared Avalonia desktop UI
-  CipherSnagemEditor.ColosseumTool/ Colosseum Tool executable launcher
-  CipherSnagemEditor.GoDTool/     GoD Tool executable launcher
-  CipherSnagemEditor.Core/        binary, ISO, FSYS, text, and shared logic
-  CipherSnagemEditor.Colosseum/   Colosseum-specific tables and models
-  CipherSnagemEditor.XD/          XD-specific tool shell, tables, and models
-  CipherSnagemEditor.Cli/         command-line inspection/test harness
+  CipherSnagemEditor.App/             shared Avalonia desktop UI
+  CipherSnagemEditor.ColosseumTool/   Colosseum Tool executable launcher
+  CipherSnagemEditor.GoDTool/         GoD Tool executable launcher
+  CipherSnagemEditor.Core/            binary, ISO, FSYS, script, text, shared logic
+  CipherSnagemEditor.Colosseum/       Colosseum-specific tables and models
+  CipherSnagemEditor.XD/              XD-specific tables, patches, scripts, models
+  CipherSnagemEditor.Cli/             command-line inspection/test harness
 tests/
-  CipherSnagemEditor.Tests.csproj unit and parity-focused test project
-  *Tests.cs                       unit and parity-focused tests
-```
-
-Asset folders:
-
-- `assets/` is tracked when the files come from the original source repo and
-  are needed for parity. This keeps reusable images, JSON labels, and UI art in
-  one place instead of duplicating them per project.
-- `assets/extracted/`, `assets/generated/`, and `assets/workspaces/` are
-  ignored scratch space for anything produced from a user's ISO or local tools.
-- `artifacts/` is ignored and used for local publish builds, screenshots, and
-  temporary outputs.
-
-Tracked `assets/` layout:
-
-```text
+  CipherSnagemEditor.Tests.csproj     unit and parity-focused test project
+  *Tests.cs                           unit and parity-focused tests
 assets/
-  images/   source-provided Pokemon, trainer, type, and pokeball images
-  json/     source-provided Colosseum/XD lookup data
-  ui/       source-provided UI art from the original tool
+  images/                             source-provided Pokemon/trainer/type art
+  json/                               source-provided lookup data
+  ui/                                 source-provided UI art from the original tools
+docs/
+  *.md                                parity notes, release notes, UI contracts
+scripts/
+  *.ps1                               build, closeout, script, and smoke probes
+packaging/
+  linux/                              Linux desktop/package helper files
 ```
 
-Packaging-only app assets belong under `src/CipherSnagemEditor.App/Assets`.
-When the app needs reusable art from root `assets/`, the project links it into
-the Avalonia bundle instead of keeping a second physical copy.
+Packaging-only app assets live under `src/CipherSnagemEditor.App/Assets` or the
+specific launcher project that needs them. Reusable legacy art belongs under the
+root `assets/` tree and is linked into the app bundle.
 
-```text
-Assets/
-  AppIcon.ico
-```
+Ignored local folders:
+
+- `.local/` for clean ISO fixtures, copied test ISOs, Dolphin sandboxes, and
+  other private local data.
+- `artifacts/` for publish output, packages, logs, screenshots, and temporary
+  release files.
+- `bin/` and `obj/` for .NET build output.
 
 ## Development Setup
 
-Install the .NET 10 SDK from Microsoft, then verify:
+Install the .NET 10 SDK, then verify:
 
 ```powershell
 dotnet --info
@@ -129,19 +174,59 @@ Test:
 dotnet test CipherSnagemEditor.slnx --no-build
 ```
 
-Run the local Colosseum closeout probes, if `.local\fixtures\Pokemon Colosseum.iso`
-exists:
+## Local Fixtures
+
+Automated parity probes expect private clean ISO fixtures under `.local/fixtures`
+when you want full coverage:
+
+```text
+.local/
+  fixtures/
+    Pokemon Colosseum.iso
+    Pokemon XD - Gale of Darkness.iso
+```
+
+These files are intentionally ignored and must never be committed.
+
+## Verification Commands
+
+Colosseum closeout:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-colosseum-closeout.ps1
 ```
 
-Run the local XD open probe, if
-`.local\fixtures\Pokemon XD - Gale of Darkness.iso` exists:
+Colosseum Dolphin smoke matrix:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-open-probe.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-colosseum-smoke-matrix.ps1
 ```
+
+XD closeout:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-closeout.ps1
+```
+
+XD strict script recompilation sweep:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-script-sweep.ps1 -StrictByteMatch
+```
+
+XD patch matrix:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-patch-matrix.ps1
+```
+
+XD Dolphin smoke matrix:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-xd-smoke-matrix.ps1
+```
+
+## Publishing
 
 Publish a Windows Colosseum Tool build:
 
@@ -155,18 +240,31 @@ Publish a Windows GoD Tool build:
 dotnet publish src\CipherSnagemEditor.GoDTool\CipherSnagemEditor.GoDTool.csproj -c Release -r win-x64 --self-contained false -o artifacts\publish-win-x64-god
 ```
 
-Publish an experimental self-contained Linux build for Ubuntu-style x64
-machines:
+Publish Linux x64 packages:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1
 ```
 
+The Linux package documentation is in `docs/linux-release.md`.
+
+## Documentation
+
+- `docs/colosseum-backend-parity.md` tracks backend ISO Explorer/helper codec
+  parity for the Colosseum Tool.
+- `docs/colosseum-swift-parity-audit.md` tracks Colosseum UI/editor parity.
+- `docs/xd-swift-parity-audit.md` tracks XD/GoD Tool parity.
+- `docs/trainer-editor-ui-contract.md` documents the approved Trainer Editor
+  Pokemon card layout and its regression tests.
+- `docs/dolphin-smoke-testing.md` documents emulator smoke automation.
+- `docs/asset-lab-boundary.md` describes why model/VFX/audio research belongs
+  in a separate Lab repo.
+
 ## Legal And Data Hygiene
 
 No Nintendo, Genius Sonority, or Pokemon game files belong in this repository.
 Do not commit ISOs, extracted ISO contents, save files, generated CM Tool
-workspaces, or local reference asset dumps.
+workspaces, Dolphin user folders, or local reference dumps.
 
 This repository carries GPL-2.0-only licensing metadata to remain compatible
 with the legacy source. See `LICENSE`.
