@@ -1594,7 +1594,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanUseVertexFilter))]
     private async Task SaveVertexFilterAsync()
     {
-        if (CurrentProject is null || SelectedVertexFilterFile is null)
+        if ((CurrentProject is null && CurrentXdProject is null) || SelectedVertexFilterFile is null)
         {
             return;
         }
@@ -1606,7 +1606,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var result = await Task.Run(() => CurrentProject.ApplyVertexFilter(selectedFile.File, filter));
+            var result = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.ApplyVertexFilter(selectedFile.File, filter))
+                : await Task.Run(() => ApplyVertexFilterToWorkspaceFile(selectedFile.File, filter));
             VertexFilterStatus = $"{result.FilterName} saved to {result.FileName}: {result.ColorCount} vertex colours updated.";
             Logs.Add(VertexFilterStatus);
             OnPropertyChanged(nameof(SelectedVertexFilterFilePath));
@@ -1756,7 +1758,7 @@ public partial class MainWindowViewModel : ViewModelBase
         => !IsBusy && (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null);
 
     private bool CanUseVertexFilter()
-        => CurrentProject is not null && SelectedVertexFilterFile is not null && !IsBusy;
+        => (CurrentProject is not null || CurrentXdProject is not null) && SelectedVertexFilterFile is not null && !IsBusy;
 
     private void LogTableEditorAction(string action)
     {
@@ -1917,6 +1919,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     break;
                 case "Interaction Editor":
                     LoadInteractionRows();
+                    break;
+                case "Collision Viewer":
+                    LoadCollisionRows();
+                    break;
+                case "Vertex Filters":
+                    LoadVertexFilterRows();
                     break;
                 case "Table Editor":
                     LoadXdTableEditorRows();
@@ -3343,7 +3351,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadCollisionRows()
     {
         var totalTimer = Stopwatch.StartNew();
-        if (CurrentProject?.Iso is null)
+        var workspaceDirectory = CurrentProject?.WorkspaceDirectory ?? CurrentXdProject?.WorkspaceDirectory;
+        if (workspaceDirectory is null)
         {
             _allCollisionFiles.Clear();
             CollisionFiles.Clear();
@@ -3351,7 +3360,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedCollisionData = null;
             CollisionInteractionOptions.Clear();
             CollisionSectionOptions.Clear();
-            CollisionStatus = "Open a Colosseum ISO before launching the Collision Viewer.";
+            CollisionStatus = "Open an ISO before launching the Collision Viewer.";
             return;
         }
 
@@ -3359,7 +3368,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var rowTimer = Stopwatch.StartNew();
             _allCollisionFiles.Clear();
-            foreach (var file in CurrentProject.LoadCollisionFiles())
+            foreach (var file in LoadCollisionFilesFromWorkspace(workspaceDirectory))
             {
                 _allCollisionFiles.Add(new CollisionFileEntryViewModel(file));
             }
@@ -3370,7 +3379,7 @@ public partial class MainWindowViewModel : ViewModelBase
             LogPerformance("Collision Viewer apply filter", filterTimer, CollisionFiles.Count);
             SelectedCollisionFile = CollisionFiles.FirstOrDefault();
             CollisionStatus = _allCollisionFiles.Count == 0
-                ? $"No .col files found in {Path.Combine(CurrentProject.WorkspaceDirectory ?? string.Empty, "Game Files")}. Extract ISO files and try again."
+                ? $"No .col files found in {Path.Combine(workspaceDirectory, "Game Files")}. Export and decode room FSYS archives, then try again."
                 : $"Collision files loaded: {_allCollisionFiles.Count}.";
             Logs.Add(CollisionStatus);
             LogPerformance("Collision Viewer load total", totalTimer, _allCollisionFiles.Count);
@@ -3391,12 +3400,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private void LoadVertexFilterRows()
     {
         var totalTimer = Stopwatch.StartNew();
-        if (CurrentProject?.Iso is null)
+        var workspaceDirectory = CurrentProject?.WorkspaceDirectory ?? CurrentXdProject?.WorkspaceDirectory;
+        if (workspaceDirectory is null)
         {
             _allVertexFilterFiles.Clear();
             VertexFilterFiles.Clear();
             SelectedVertexFilterFile = null;
-            VertexFilterStatus = "Open a Colosseum ISO before launching Vertex Filters.";
+            VertexFilterStatus = "Open an ISO before launching Vertex Filters.";
             return;
         }
 
@@ -3404,7 +3414,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var rowTimer = Stopwatch.StartNew();
             _allVertexFilterFiles.Clear();
-            foreach (var file in CurrentProject.LoadVertexFilterFiles())
+            foreach (var file in LoadVertexFilterFilesFromWorkspace(workspaceDirectory))
             {
                 _allVertexFilterFiles.Add(new VertexFilterFileEntryViewModel(file));
             }
@@ -5081,7 +5091,7 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedCollisionInteraction = null;
         SelectedCollisionSection = null;
 
-        if (value is null || CurrentProject is null)
+        if (value is null || (CurrentProject is null && CurrentXdProject is null))
         {
             SelectedCollisionData = null;
             CollisionStatus = _allCollisionFiles.Count == 0
@@ -5092,7 +5102,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var data = CurrentProject.LoadCollisionData(value.File);
+            var data = ColosseumCollisionData.Parse(File.ReadAllBytes(value.File.Path));
             SelectedCollisionData = data;
             CollisionInteractionOptions.Add(new PickerOptionViewModel(-1, "-"));
             foreach (var index in data.InteractableIndexes)
@@ -5428,6 +5438,62 @@ public partial class MainWindowViewModel : ViewModelBase
 
         identifier = value;
         return true;
+    }
+
+    private static IReadOnlyList<ColosseumCollisionFile> LoadCollisionFilesFromWorkspace(string workspaceDirectory)
+    {
+        var gameFilesDirectory = Path.Combine(workspaceDirectory, "Game Files");
+        if (!Directory.Exists(gameFilesDirectory))
+        {
+            return [];
+        }
+
+        return Directory
+            .EnumerateFiles(gameFilesDirectory, "*.col", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                var fileName = Path.GetFileName(path);
+                var mapCode = fileName.Length >= 2 ? fileName[..2] : string.Empty;
+                return new ColosseumCollisionFile(path, fileName, mapCode, ColosseumRoomCatalog.MapNameForRoom(mapCode));
+            })
+            .OrderBy(file => file.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ColosseumVertexFilterFile> LoadVertexFilterFilesFromWorkspace(string workspaceDirectory)
+    {
+        var gameFilesDirectory = Path.Combine(workspaceDirectory, "Game Files");
+        if (!Directory.Exists(gameFilesDirectory))
+        {
+            return [];
+        }
+
+        return Directory
+            .EnumerateFiles(gameFilesDirectory, "*.wzx.dat", SearchOption.AllDirectories)
+            .Select(path => new ColosseumVertexFilterFile(
+                path,
+                Path.GetFileName(path),
+                Path.GetRelativePath(gameFilesDirectory, path)))
+            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static ColosseumVertexFilterApplyResult ApplyVertexFilterToWorkspaceFile(
+        ColosseumVertexFilterFile file,
+        ColosseumVertexColorFilter filter)
+    {
+        if (!File.Exists(file.Path))
+        {
+            throw new FileNotFoundException($"Vertex filter file not found: {file.Path}", file.Path);
+        }
+
+        var model = ColosseumDatVertexColorModel.Load(file.Path);
+        var count = model.ApplyFilter(filter);
+        model.Save(file.Path);
+        return new ColosseumVertexFilterApplyResult(
+            file.FileName,
+            ColosseumDatVertexColorModel.FilterName(filter),
+            count);
     }
 
     private static string BuildIsoExportStatus(string fileName, IsoExportResult result)
