@@ -257,6 +257,25 @@ public enum XdInteractionInfoKind
     CommonScript
 }
 
+public sealed record XdTrainerPokemonUpdate(
+    string DeckName,
+    int TrainerIndex,
+    int Slot,
+    int DeckPokemonIndex,
+    int SpeciesId,
+    int Level,
+    int ShadowId,
+    int ItemId,
+    int Ability,
+    int Nature,
+    int Gender,
+    int Happiness,
+    int Iv,
+    IReadOnlyList<int> Evs,
+    IReadOnlyList<int> MoveIds,
+    int ShadowHeartGauge,
+    int ShadowCatchRate);
+
 public sealed record XdShadowPokemonUpdate(
     int Index,
     int StoryPokemonIndex,

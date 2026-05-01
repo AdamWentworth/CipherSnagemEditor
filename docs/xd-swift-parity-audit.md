@@ -12,8 +12,9 @@ the Colosseum Tool, but ships as a separate GoD Tool release.
 - XD editor parser checks for trainer, Pokemon stats, moves, TM/HM rows, items,
   Pokespots, gift Pokemon, message tables, types, treasures, interactions, and
   shadow Pokemon.
-- Editor save/reopen checks for Pokemon stats, moves, items, types, treasures,
-  gift Pokemon, shadow Pokemon, Pokespots, interactions, and messages.
+- Editor save/reopen checks for trainer Pokemon, Pokemon stats, moves, items,
+  types, treasures, gift Pokemon, shadow Pokemon, Pokespots, interactions, and
+  messages.
 - Trainer Editor data resolution checks for battle metadata and party species.
 - Representative patch apply/reopen check using the max catch-rate patch.
 - Randomizer write/reopen check for common data, TM/HM, treasure, and type paths.
@@ -31,9 +32,6 @@ The probe mutates only the copied ISO under `.local\closeout-work`.
 
 ## Known Gaps
 
-- XD Trainer Editor currently has parser/header/party parity checks, but not a
-  save/reopen probe. The backend does not yet expose a dedicated XD trainer
-  Pokemon save method equivalent to the Colosseum trainer save path.
 - Script codec coverage is strong enough for smoke confidence, but not yet a
   full every-script sweep.
 - Runtime patch proof still ultimately needs manual Dolphin checks or a deeper

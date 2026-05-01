@@ -8,6 +8,91 @@ namespace CipherSnagemEditor.XD;
 
 public sealed partial class XdProjectContext
 {
+    public string SaveTrainerPokemon(IEnumerable<XdTrainerPokemonUpdate> updates)
+    {
+        var updateList = updates.ToArray();
+        if (updateList.Length == 0)
+        {
+            throw new InvalidOperationException("No XD trainer Pokemon updates were provided.");
+        }
+
+        var archive = TryReadFsys("deck_archive.fsys", out var error)
+            ?? throw new InvalidDataException(error ?? "deck_archive.fsys was not found.");
+        var replacements = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+
+        byte[] BytesFor(FsysEntry entry)
+        {
+            if (!replacements.TryGetValue(entry.Name, out var bytes))
+            {
+                bytes = archive.Extract(entry);
+                replacements[entry.Name] = bytes;
+            }
+
+            return bytes;
+        }
+
+        foreach (var update in updateList)
+        {
+            var deckEntryName = XdDeckEntryName(update.DeckName);
+            var deckEntry = FindDeckEntry(archive, deckEntryName)
+                ?? throw new InvalidDataException($"{deckEntryName} was not found in deck_archive.fsys.");
+            var deckBytes = BytesFor(deckEntry);
+            if (!TryReadDeckLayout(deckBytes, out var deckLayout, out var deckError))
+            {
+                throw new InvalidDataException($"{deckEntry.Name} could not be parsed: {deckError}");
+            }
+
+            if (update.TrainerIndex < 0 || update.TrainerIndex >= deckLayout.TrainerEntries)
+            {
+                throw new ArgumentOutOfRangeException(nameof(update), $"Trainer #{update.TrainerIndex} is outside {deckEntry.Name}.");
+            }
+
+            if (update.Slot is < 0 or >= 6)
+            {
+                throw new ArgumentOutOfRangeException(nameof(update), $"Trainer Pokemon slot {update.Slot} is outside the 0-5 range.");
+            }
+
+            var trainerStart = deckLayout.TrainerDataOffset + (update.TrainerIndex * XdTrainerSize);
+            if (trainerStart < 0 || trainerStart + XdTrainerSize > deckBytes.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(update), $"Trainer #{update.TrainerIndex} row is outside {deckEntry.Name}.");
+            }
+
+            var pokemonReference = update.ShadowId > 0 ? update.ShadowId : update.DeckPokemonIndex;
+            if (update.SpeciesId <= 0)
+            {
+                WriteU16(deckBytes, trainerStart + XdTrainerFirstPokemonOffset + (update.Slot * 2), 0);
+                deckBytes[trainerStart + XdTrainerShadowMaskOffset] = checked((byte)(deckBytes[trainerStart + XdTrainerShadowMaskOffset] & ~(1 << update.Slot)));
+                continue;
+            }
+
+            if (pokemonReference <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(update), "Cannot save a populated XD trainer slot without an existing deck Pokemon or shadow row.");
+            }
+
+            WriteU16(deckBytes, trainerStart + XdTrainerFirstPokemonOffset + (update.Slot * 2), pokemonReference);
+            if (update.ShadowId > 0)
+            {
+                deckBytes[trainerStart + XdTrainerShadowMaskOffset] = checked((byte)(deckBytes[trainerStart + XdTrainerShadowMaskOffset] | (1 << update.Slot)));
+                SaveShadowTrainerPokemon(archive, replacements, update);
+            }
+            else
+            {
+                deckBytes[trainerStart + XdTrainerShadowMaskOffset] = checked((byte)(deckBytes[trainerStart + XdTrainerShadowMaskOffset] & ~(1 << update.Slot)));
+                var pokemonStart = deckLayout.PokemonDataOffset + (update.DeckPokemonIndex * XdDeckPokemonSize);
+                if (pokemonStart < 0 || pokemonStart + XdDeckPokemonSize > deckBytes.Length)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(update), $"Deck Pokemon #{update.DeckPokemonIndex} is outside {deckEntry.Name}.");
+                }
+
+                WriteTrainerDeckPokemonRow(deckBytes, pokemonStart, update, writeMoves: true);
+            }
+        }
+
+        return WriteFsysEntries("deck_archive.fsys", replacements);
+    }
+
     public string SavePokemonStats(XdPokemonStatsUpdate update)
     {
         var (data, table, _) = ReadCommonRelOrThrow();
@@ -462,6 +547,102 @@ public sealed partial class XdProjectContext
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllBytes(path, bytes);
         return path;
+    }
+
+    private static string XdDeckEntryName(string deckName)
+    {
+        var normalized = deckName.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)
+            ? Path.GetFileNameWithoutExtension(deckName)
+            : deckName;
+        return normalized.StartsWith("DeckData_", StringComparison.OrdinalIgnoreCase)
+            ? normalized
+            : $"DeckData_{normalized}";
+    }
+
+    private void SaveShadowTrainerPokemon(
+        FsysArchive archive,
+        IDictionary<string, byte[]> replacements,
+        XdTrainerPokemonUpdate update)
+    {
+        var darkEntry = FindDeckEntry(archive, "DeckData_DarkPokemon")
+            ?? throw new InvalidDataException("DeckData_DarkPokemon was not found in deck_archive.fsys.");
+        var storyEntry = FindDeckEntry(archive, "DeckData_Story")
+            ?? throw new InvalidDataException("DeckData_Story was not found in deck_archive.fsys.");
+
+        var darkBytes = BytesForReplacement(archive, replacements, darkEntry);
+        var storyBytes = BytesForReplacement(archive, replacements, storyEntry);
+        if (!TryReadDeckLayout(storyBytes, out var storyLayout, out var storyError))
+        {
+            throw new InvalidDataException(storyError);
+        }
+
+        var darkStart = 0x20 + (update.ShadowId * XdShadowPokemonSize);
+        if (darkStart < 0 || darkStart + XdShadowPokemonSize > darkBytes.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(update), $"Shadow Pokemon #{update.ShadowId} is outside DeckData_DarkPokemon.");
+        }
+
+        var storyIndex = ReadU16(darkBytes, darkStart + XdShadowStoryIndexOffset);
+        var storyStart = storyLayout.PokemonDataOffset + (storyIndex * XdDeckPokemonSize);
+        if (storyStart < 0 || storyStart + XdDeckPokemonSize > storyBytes.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(update), $"Story Pokemon #{storyIndex} is outside DeckData_Story.");
+        }
+
+        darkBytes[darkStart + XdShadowCatchRateOffset] = ClampByte(update.ShadowCatchRate);
+        darkBytes[darkStart + XdShadowLevelOffset] = ClampByte(update.Level);
+        WriteU16(darkBytes, darkStart + XdShadowHeartGaugeOffset, update.ShadowHeartGauge);
+        for (var slot = 0; slot < 4; slot++)
+        {
+            WriteU16(darkBytes, darkStart + XdShadowFirstMoveOffset + (slot * 2), ValueAt(update.MoveIds, slot));
+        }
+
+        WriteTrainerDeckPokemonRow(storyBytes, storyStart, update, writeMoves: false);
+    }
+
+    private static byte[] BytesForReplacement(
+        FsysArchive archive,
+        IDictionary<string, byte[]> replacements,
+        FsysEntry entry)
+    {
+        if (!replacements.TryGetValue(entry.Name, out var bytes))
+        {
+            bytes = archive.Extract(entry);
+            replacements[entry.Name] = bytes;
+        }
+
+        return bytes;
+    }
+
+    private static void WriteTrainerDeckPokemonRow(byte[] bytes, int start, XdTrainerPokemonUpdate update, bool writeMoves)
+    {
+        WriteU16(bytes, start + XdDeckPokemonSpeciesOffset, update.SpeciesId);
+        bytes[start + XdDeckPokemonLevelOffset] = ClampByte(update.Level);
+        bytes[start + 0x03] = ClampByte(update.Happiness);
+        WriteU16(bytes, start + XdDeckPokemonItemOffset, update.ItemId);
+        for (var iv = 0; iv < 6; iv++)
+        {
+            bytes[start + 0x08 + iv] = ClampByte(update.Iv);
+        }
+
+        for (var ev = 0; ev < 6; ev++)
+        {
+            bytes[start + 0x0e + ev] = ClampByte(ValueAt(update.Evs, ev));
+        }
+
+        if (writeMoves)
+        {
+            for (var slot = 0; slot < 4; slot++)
+            {
+                WriteU16(bytes, start + XdDeckPokemonFirstMoveOffset + (slot * 2), ValueAt(update.MoveIds, slot));
+            }
+        }
+
+        var originalPid = bytes[start + 0x1e];
+        var ability = update.Ability is 0 or 1 ? update.Ability : originalPid % 2;
+        var gender = update.Gender is >= 0 and <= 3 ? update.Gender : (originalPid / 2) % 4;
+        var nature = update.Nature is >= 0 and <= 24 ? update.Nature : originalPid / 8;
+        bytes[start + 0x1e] = checked((byte)((nature << 3) + (gender << 1) + ability));
     }
 
     private string WorkspaceFsysEntryPath(string fsysName, string entryName)

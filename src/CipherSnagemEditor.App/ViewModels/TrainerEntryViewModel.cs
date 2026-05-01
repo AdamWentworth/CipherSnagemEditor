@@ -32,13 +32,15 @@ public sealed partial class TrainerEntryViewModel : ObservableObject
         string imageFolder,
         string imageFileName,
         string rowText,
-        IBrush? normalBrush = null)
+        IBrush? normalBrush = null,
+        string? sourceDeckName = null)
     {
         Trainer = trainer;
         _imageFolder = imageFolder;
         _imageFileName = imageFileName;
         RowText = rowText;
         _normalBrush = normalBrush ?? StoryBrush;
+        SourceDeckName = sourceDeckName;
     }
 
     [ObservableProperty]
@@ -46,6 +48,8 @@ public sealed partial class TrainerEntryViewModel : ObservableObject
     private bool _isSelected;
 
     public ColosseumTrainer Trainer { get; }
+
+    public string? SourceDeckName { get; }
 
     public Bitmap? TrainerImage
     {

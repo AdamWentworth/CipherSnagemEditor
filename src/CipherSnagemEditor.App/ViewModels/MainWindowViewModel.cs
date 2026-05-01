@@ -1031,7 +1031,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSaveTrainer))]
     private async Task SaveTrainerAsync()
     {
-        if (CurrentProject is null || SelectedTrainer is null || SelectedTrainerPokemon.Count == 0)
+        if ((CurrentProject is null && CurrentXdProject is null) || SelectedTrainer is null || SelectedTrainerPokemon.Count == 0)
         {
             return;
         }
@@ -1041,8 +1041,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var updates = SelectedTrainerPokemon.Select(pokemon => pokemon.ToUpdate()).ToArray();
-            var path = await Task.Run(() => CurrentProject.SaveTrainerPokemon(updates));
+            var path = CurrentProject is not null
+                ? await Task.Run(() => CurrentProject.SaveTrainerPokemon(SelectedTrainerPokemon.Select(pokemon => pokemon.ToUpdate()).ToArray()))
+                : await Task.Run(() => CurrentXdProject!.SaveTrainerPokemon(SelectedTrainerPokemon.Select(ToXdTrainerPokemonUpdate).ToArray()));
             foreach (var pokemon in SelectedTrainerPokemon)
             {
                 pokemon.MarkSaved();
@@ -1717,7 +1718,7 @@ public partial class MainWindowViewModel : ViewModelBase
         => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedIsoFile is not null && !IsBusy;
 
     private bool CanSaveTrainer()
-        => CurrentProject?.Iso is not null && SelectedTrainer is not null && !IsBusy;
+        => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedTrainer is not null && !IsBusy;
 
     private bool CanSavePokemonStats()
         => (CurrentProject?.Iso is not null || CurrentXdProject?.Iso is not null) && SelectedPokemonStatsDetail is not null && !IsBusy;
@@ -2954,7 +2955,8 @@ public partial class MainWindowViewModel : ViewModelBase
                     "Trainers",
                     $"trainer_{trainer.ModelId}.png",
                     $"{trainer.Index}: {trainer.ClassName} {trainer.Name}{Environment.NewLine}{trainer.Location}",
-                    BrushForXdTrainerDeck(trainer.DeckName)));
+                    BrushForXdTrainerDeck(trainer.DeckName),
+                    trainer.DeckName));
             }
 
             ApplyTrainerFilter(TrainerSearchText, selectFirstWhenMissing: false);
@@ -4831,6 +4833,34 @@ public partial class MainWindowViewModel : ViewModelBase
             row.Parameter3,
             row.Parameter4,
             row.Description);
+
+    private XdTrainerPokemonUpdate ToXdTrainerPokemonUpdate(TrainerPokemonSlotViewModel pokemon)
+    {
+        if (SelectedTrainer?.SourceDeckName is not { Length: > 0 } deckName)
+        {
+            throw new InvalidOperationException("Selected XD trainer does not include a source deck.");
+        }
+
+        var update = pokemon.ToUpdate();
+        return new XdTrainerPokemonUpdate(
+            deckName,
+            SelectedTrainer.Trainer.Index,
+            pokemon.Pokemon.Slot,
+            update.Index,
+            update.SpeciesId,
+            update.Level,
+            update.ShadowId,
+            update.ItemId,
+            update.Ability,
+            update.Nature,
+            update.Gender,
+            update.Happiness,
+            update.Iv,
+            update.Evs,
+            update.MoveIds,
+            update.ShadowHeartGauge,
+            update.ShadowCatchRate);
+    }
 
     private static IBrush BrushForXdTrainerDeck(string deckName)
         => SolidColorBrush.Parse(deckName switch

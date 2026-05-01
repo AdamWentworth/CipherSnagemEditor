@@ -512,6 +512,23 @@ static void ProbeXdPriorityEditorRoundTrips(string isoPath, ICollection<string> 
     {
         var context = XdProjectContext.Open(isoPath);
 
+        var trainer = context.LoadTrainerRecords()
+            .First(candidate => candidate.Pokemon.Any(pokemon => pokemon.DeckIndex > 0 && pokemon.ShadowId == 0));
+        var trainerPokemon = trainer.Pokemon.First(pokemon => pokemon.DeckIndex > 0 && pokemon.ShadowId == 0);
+        var trainerLevel = trainerPokemon.Level >= 99 ? trainerPokemon.Level - 1 : trainerPokemon.Level + 1;
+        context.SaveTrainerPokemon(
+        [
+            XdTrainerPokemonUpdateFor(trainer.DeckName, trainer.Index, trainerPokemon, level: trainerLevel)
+        ]);
+
+        context = XdProjectContext.Open(isoPath);
+        var reopenedTrainerPokemon = context.LoadTrainerRecords()
+            .First(candidate => candidate.DeckName.Equals(trainer.DeckName, StringComparison.OrdinalIgnoreCase)
+                && candidate.Index == trainer.Index)
+            .Pokemon
+            .First(candidate => candidate.Slot == trainerPokemon.Slot);
+        Expect(reopenedTrainerPokemon.Level == trainerLevel, failures, $"XD Trainer Editor did not persist Pokemon level for {trainer.DeckName} #{trainer.Index} slot {trainerPokemon.Slot}.");
+
         var stats = context.LoadPokemonStatsRecords().First(candidate => candidate.Index > 0 && candidate.NameId > 0 && candidate.CatchRate > 0);
         var hp = stats.Hp >= 255 ? stats.Hp - 1 : stats.Hp + 1;
         context.SavePokemonStats(XdPokemonStatsUpdateFor(stats, hp: hp));
@@ -608,10 +625,10 @@ static void ProbeXdPriorityEditorRoundTrips(string isoPath, ICollection<string> 
             .First(candidate => candidate.Id == message.Id);
         Expect(reopenedMessage.Text == messageText, failures, $"XD Message Editor did not persist message {message.IdHex} in {messageTable.DisplayName}.");
 
-        var trainer = context.LoadTrainerRecords()
+        var trainerWithBattle = context.LoadTrainerRecords()
             .First(candidate => candidate.Battle is not null && candidate.Pokemon.Any(pokemon => pokemon.DeckIndex > 0));
-        Expect(trainer.Battle is not null, failures, $"XD Trainer Editor did not resolve battle metadata for {trainer.ClassName} {trainer.Name}.");
-        Expect(trainer.Pokemon.Any(pokemon => pokemon.SpeciesId > 0 && !pokemon.SpeciesName.StartsWith("Pokemon ", StringComparison.Ordinal)), failures, $"XD Trainer Editor did not resolve party species for {trainer.ClassName} {trainer.Name}.");
+        Expect(trainerWithBattle.Battle is not null, failures, $"XD Trainer Editor did not resolve battle metadata for {trainerWithBattle.ClassName} {trainerWithBattle.Name}.");
+        Expect(trainerWithBattle.Pokemon.Any(pokemon => pokemon.SpeciesId > 0 && !pokemon.SpeciesName.StartsWith("Pokemon ", StringComparison.Ordinal)), failures, $"XD Trainer Editor did not resolve party species for {trainerWithBattle.ClassName} {trainerWithBattle.Name}.");
 
         Console.WriteLine("XD priority editor save/reopen probe passed.");
     }
@@ -1287,6 +1304,30 @@ static XdPokemonStatsUpdate XdPokemonStatsUpdateFor(XdPokemonStatsRecord pokemon
         pokemon.LearnableTms,
         pokemon.LevelUpMoves.Select(move => new XdPokemonLevelUpMoveUpdate(move.Level, move.MoveId)).ToArray(),
         pokemon.Evolutions.Select(evolution => new XdPokemonEvolutionUpdate(evolution.Method, evolution.Condition, evolution.EvolvedSpeciesId)).ToArray());
+
+static XdTrainerPokemonUpdate XdTrainerPokemonUpdateFor(
+    string deckName,
+    int trainerIndex,
+    XdTrainerPokemonRecord pokemon,
+    int? level = null)
+    => new(
+        deckName,
+        trainerIndex,
+        pokemon.Slot,
+        pokemon.DeckIndex,
+        pokemon.SpeciesId,
+        level ?? pokemon.Level,
+        pokemon.ShadowId,
+        pokemon.ItemId,
+        pokemon.Ability,
+        pokemon.Nature,
+        pokemon.Gender,
+        pokemon.Happiness,
+        pokemon.Iv,
+        pokemon.Evs,
+        pokemon.MoveIds,
+        pokemon.ShadowData?.HeartGauge ?? 0,
+        pokemon.ShadowData?.CatchRate ?? 0);
 
 static XdMoveUpdate XdMoveUpdateFor(XdMoveRecord move, int? pp = null)
     => new(
