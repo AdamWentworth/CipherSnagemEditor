@@ -54,9 +54,14 @@ Run a smaller development sample:
 .\scripts\run-xd-script-sweep.ps1 -Limit 25
 ```
 
-`-StrictByteMatch` is available when we intentionally want to fail on any
-non-identical rebuild, but normal parity work treats rebuilt parseable scripts as
-useful evidence rather than a failure.
+Run the strict parity proof:
+
+```powershell
+.\scripts\run-xd-script-sweep.ps1 -StrictByteMatch
+```
+
+The current strict sweep checks all 235 XD scripts from the clean ISO fixture and
+requires byte-identical compile output for every generated `.xds` file.
 
 ## Patch Matrix
 
@@ -127,8 +132,9 @@ Each case writes a copied ISO under `.local\xd-smoke-work` and Dolphin logs unde
 
 ## Known Gaps
 
-- Script codec coverage is now broad enough to catch decode/compile regressions,
-  but byte-identical high-level recompilation is not required yet.
+- Script codec coverage now includes full strict byte-identical recompilation for
+  all 235 XD scripts in the clean ISO fixture. Remaining script work is focused
+  on expanding the editable high-level language, not preserving unedited bytes.
 - Patch matrix coverage proves application/reopen stability and table-visible
   effects, plus direct `Start.dol` byte-state readback for DOL/ASM patches. The
   Dolphin runtime smoke matrix proves patched ISOs boot without obvious emulator

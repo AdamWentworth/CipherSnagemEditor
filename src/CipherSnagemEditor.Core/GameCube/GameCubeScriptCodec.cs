@@ -825,16 +825,29 @@ public static class GameCubeScriptCodec
         IReadOnlyDictionary<string, int> functionOffsets,
         IReadOnlyList<uint> codeWords)
     {
-        var sections = new List<byte[]>
+        var replacements = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
         {
-            BuildFtblSection(functions, functionOffsets, template.ScriptIdentifier),
-            BuildHeadSection(functions, functionOffsets),
-            BuildCodeSection(functions.Count, codeWords)
+            ["FTBL"] = BuildFtblSection(functions, functionOffsets, template.ScriptIdentifier, templateBytes, template.Sections.FirstOrDefault(section => section.Name.Equals("FTBL", StringComparison.OrdinalIgnoreCase))),
+            ["HEAD"] = BuildHeadSection(functions, functionOffsets, templateBytes, template.Sections.FirstOrDefault(section => section.Name.Equals("HEAD", StringComparison.OrdinalIgnoreCase))),
+            ["CODE"] = BuildCodeSection(functions.Count, codeWords, templateBytes, template.Sections.FirstOrDefault(section => section.Name.Equals("CODE", StringComparison.OrdinalIgnoreCase)))
         };
 
-        foreach (var section in template.Sections.Where(section => section.Name is not ("FTBL" or "HEAD" or "CODE")))
+        var sections = new List<byte[]>();
+        foreach (var section in template.Sections)
         {
-            sections.Add(templateBytes[section.Offset..(section.Offset + section.Size)]);
+            if (replacements.Remove(section.Name, out var replacement))
+            {
+                sections.Add(replacement);
+            }
+            else
+            {
+                sections.Add(templateBytes[section.Offset..(section.Offset + section.Size)]);
+            }
+        }
+
+        foreach (var replacement in replacements.Values)
+        {
+            sections.Add(replacement);
         }
 
         var totalLength = TcodHeaderSize + sections.Sum(section => section.Length);
@@ -854,7 +867,9 @@ public static class GameCubeScriptCodec
     private static byte[] BuildFtblSection(
         IReadOnlyList<HighLevelFunction> functions,
         IReadOnlyDictionary<string, int> functionOffsets,
-        uint scriptIdentifier)
+        uint scriptIdentifier,
+        byte[] templateBytes,
+        ScriptSection? templateSection)
     {
         var uniqueNames = functions
             .Select(function => function.Name)
@@ -871,8 +886,8 @@ public static class GameCubeScriptCodec
 
         var entryBytes = functions.Count * 8;
         var firstStringOffset = SectionHeaderSize + entryBytes;
-        var sectionSize = Align16(firstStringOffset + stringBytes.Count);
-        var bytes = new byte[sectionSize];
+        var sectionSize = SectionSizeForTemplate(firstStringOffset + stringBytes.Count, templateSection);
+        var bytes = SectionBytesForTemplate(templateBytes, templateSection, sectionSize);
         BigEndian.WriteUInt32(bytes, 0x00, 0x4654424c);
         BigEndian.WriteUInt32(bytes, 0x04, checked((uint)sectionSize));
         BigEndian.WriteUInt32(bytes, 0x10, checked((uint)functions.Count));
@@ -893,10 +908,12 @@ public static class GameCubeScriptCodec
 
     private static byte[] BuildHeadSection(
         IReadOnlyList<HighLevelFunction> functions,
-        IReadOnlyDictionary<string, int> functionOffsets)
+        IReadOnlyDictionary<string, int> functionOffsets,
+        byte[] templateBytes,
+        ScriptSection? templateSection)
     {
-        var sectionSize = Align16(SectionHeaderSize + (functions.Count * 4));
-        var bytes = new byte[sectionSize];
+        var sectionSize = SectionSizeForTemplate(SectionHeaderSize + (functions.Count * 4), templateSection);
+        var bytes = SectionBytesForTemplate(templateBytes, templateSection, sectionSize);
         BigEndian.WriteUInt32(bytes, 0x00, 0x48454144);
         BigEndian.WriteUInt32(bytes, 0x04, checked((uint)sectionSize));
         BigEndian.WriteUInt32(bytes, 0x10, checked((uint)functions.Count));
@@ -908,10 +925,14 @@ public static class GameCubeScriptCodec
         return bytes;
     }
 
-    private static byte[] BuildCodeSection(int functionCount, IReadOnlyList<uint> codeWords)
+    private static byte[] BuildCodeSection(
+        int functionCount,
+        IReadOnlyList<uint> codeWords,
+        byte[] templateBytes,
+        ScriptSection? templateSection)
     {
-        var sectionSize = Align16(SectionHeaderSize + (codeWords.Count * 4));
-        var bytes = new byte[sectionSize];
+        var sectionSize = SectionSizeForTemplate(SectionHeaderSize + (codeWords.Count * 4), templateSection);
+        var bytes = SectionBytesForTemplate(templateBytes, templateSection, sectionSize);
         BigEndian.WriteUInt32(bytes, 0x00, 0x434f4445);
         BigEndian.WriteUInt32(bytes, 0x04, checked((uint)sectionSize));
         BigEndian.WriteUInt32(bytes, 0x10, checked((uint)functionCount));
@@ -921,6 +942,22 @@ public static class GameCubeScriptCodec
             BigEndian.WriteUInt32(bytes, SectionHeaderSize + (index * 4), codeWords[index]);
         }
 
+        return bytes;
+    }
+
+    private static int SectionSizeForTemplate(int minimumSize, ScriptSection? templateSection)
+        => Math.Max(Align16(minimumSize), templateSection?.Size ?? 0);
+
+    private static byte[] SectionBytesForTemplate(byte[] templateBytes, ScriptSection? templateSection, int sectionSize)
+    {
+        var bytes = new byte[sectionSize];
+        if (templateSection is null)
+        {
+            return bytes;
+        }
+
+        var copyLength = Math.Min(templateSection.Size, sectionSize);
+        templateBytes.AsSpan(templateSection.Offset, copyLength).CopyTo(bytes);
         return bytes;
     }
 
@@ -1456,7 +1493,8 @@ public static class GameCubeScriptCodec
 
         if (parameterType is not null
             && argument.Constant is { Type: 1 } boolConstant
-            && parameterType.Equals("bool", StringComparison.OrdinalIgnoreCase))
+            && parameterType.Equals("bool", StringComparison.OrdinalIgnoreCase)
+            && boolConstant.Value is 0 or 1)
         {
             return boolConstant.Value == 0 ? "NO" : "YES";
         }

@@ -36,6 +36,17 @@ public sealed class GameCubeScriptCodecTests
     }
 
     [Fact]
+    public void CompilesUneditedEditableSubsetWithLegacyCodePaddingBackToOriginalBytes()
+    {
+        var script = AddExtraCodePadding(CreateSampleScript(0x1000002a, 0x08000000), extraBytes: 0x10);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
     public void DecompilesAndCompilesNamedScriptClassFunctions()
     {
         var script = CreateSampleScript(Instruction(9, 35, 73), 0x08000000);
@@ -44,6 +55,18 @@ public sealed class GameCubeScriptCodecTests
 
         Assert.Contains("callstd Character.talk", text);
         Assert.Contains("class_35.function_73", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void DecompilesAmbiguousStandardCallNamesAsLegacyNumericIds()
+    {
+        var script = CreateSampleScript(Instruction(9, 35, 39), 0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("callstd class_35.function_39", text);
         Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
         Assert.Equal(script, compiled);
     }
@@ -72,6 +95,24 @@ public sealed class GameCubeScriptCodecTests
         Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
 
         Assert.Contains("callstd yield(Int(1))", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void DecompilesNonCanonicalBoolStandardCallArgumentsAsIntegers()
+    {
+        var script = CreateSampleScript(
+            Instruction(2, 1, 0), 2,
+            Instruction(17, 3, 35),
+            Instruction(9, 35, 16),
+            Instruction(6, 2, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("callstd Character.setVisibility(ptr(class_object_35), Int(2))", text);
+        Assert.DoesNotContain("callstd Character.setVisibility(ptr(class_object_35), YES)", text);
         Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
         Assert.Equal(script, compiled);
     }
@@ -289,5 +330,28 @@ public sealed class GameCubeScriptCodecTests
         words[5] = checked((uint)codeWords.Length);
         codeWords.CopyTo(words.AsSpan(8));
         return words;
+    }
+
+    private static byte[] AddExtraCodePadding(byte[] script, int extraBytes)
+    {
+        var offset = 0x10;
+        while (offset + 0x20 <= script.Length)
+        {
+            var magic = BigEndian.ReadUInt32(script, offset);
+            var size = checked((int)BigEndian.ReadUInt32(script, offset + 4));
+            if (magic == 0x434f4445)
+            {
+                var bytes = new byte[script.Length + extraBytes];
+                script.AsSpan(0, offset + size).CopyTo(bytes);
+                script.AsSpan(offset + size).CopyTo(bytes.AsSpan(offset + size + extraBytes));
+                BigEndian.WriteUInt32(bytes, 4, checked((uint)bytes.Length));
+                BigEndian.WriteUInt32(bytes, offset + 4, checked((uint)(size + extraBytes)));
+                return bytes;
+            }
+
+            offset += size;
+        }
+
+        throw new InvalidDataException("No CODE section was found.");
     }
 }

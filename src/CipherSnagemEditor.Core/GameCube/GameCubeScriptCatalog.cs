@@ -592,6 +592,12 @@ internal static class GameCubeScriptCatalog
             .GroupBy(function => (function.ClassId, function.Name), ValueTupleComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), ValueTupleComparer.OrdinalIgnoreCase));
 
+    private static readonly IReadOnlySet<(int ClassId, string FunctionName)> AmbiguousFunctionNames = FunctionsById.Values
+        .GroupBy(function => (function.ClassId, function.Name), ValueTupleComparer.OrdinalIgnoreCase)
+        .Where(group => group.Count() > 1)
+        .Select(group => group.Key)
+        .ToHashSet(ValueTupleComparer.OrdinalIgnoreCase);
+
     public static string ClassName(int classId)
         => ClassNames.TryGetValue(classId, out var name) ? name : $"Class{classId}";
 
@@ -601,9 +607,17 @@ internal static class GameCubeScriptCatalog
     public static string FunctionDisplayName(int classId, int functionId)
     {
         var function = Function(classId, functionId);
-        return function is null
-            ? $"class_{classId}.function_{functionId}"
-            : classId == 0 ? function.Name : function.QualifiedName;
+        if (function is null)
+        {
+            return $"class_{classId}.function_{functionId}";
+        }
+
+        if (AmbiguousFunctionNames.Contains((classId, function.Name)))
+        {
+            return function.LegacyName;
+        }
+
+        return classId == 0 ? function.Name : function.QualifiedName;
     }
 
     public static string FunctionComment(int classId, int functionId)
