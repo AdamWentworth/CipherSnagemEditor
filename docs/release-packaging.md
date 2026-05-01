@@ -10,7 +10,8 @@ Generated packages belong under ignored `artifacts/`.
 - GitHub Actions workflows in `.github/workflows/`.
 - Linux desktop entry and launcher templates under `packaging/linux/`.
 - Windows package README and shortcut helpers under `packaging/windows/`.
-- Publish/package scripts under `scripts/`.
+- Publish/package scripts under `scripts/`, including the local PowerShell
+  scripts and the Ubuntu CI Linux packaging script.
 - Documentation describing the release process.
 
 ## What Does Not Get Tracked

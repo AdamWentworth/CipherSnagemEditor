@@ -104,20 +104,18 @@ jobs:
           python-version: "3.x"
 
       - name: Publish Linux builds
-        shell: pwsh
+        shell: bash
         run: |
-          ./scripts/publish-linux.ps1 -Tool Colosseum -Runtime linux-x64 -PackageVersion "${{ needs.version.outputs.version }}" -NoReadyToRun
-          ./scripts/publish-linux.ps1 -Tool GoD -Runtime linux-x64 -PackageVersion "${{ needs.version.outputs.version }}" -NoReadyToRun
+          bash scripts/publish-linux.sh Colosseum linux-x64 "${{ needs.version.outputs.version }}"
+          bash scripts/publish-linux.sh GoD linux-x64 "${{ needs.version.outputs.version }}"
 
-          Copy-Item `
-            -LiteralPath artifacts/packages/colosseum-tool-linux-x64.tar.gz `
-            -DestinationPath "artifacts/packages/colosseum-tool-linux-x64-${{ needs.version.outputs.version }}.tar.gz" `
-            -Force
+          cp \
+            artifacts/packages/colosseum-tool-linux-x64.tar.gz \
+            "artifacts/packages/colosseum-tool-linux-x64-${{ needs.version.outputs.version }}.tar.gz"
 
-          Copy-Item `
-            -LiteralPath artifacts/packages/god-tool-linux-x64.tar.gz `
-            -DestinationPath "artifacts/packages/god-tool-linux-x64-${{ needs.version.outputs.version }}.tar.gz" `
-            -Force
+          cp \
+            artifacts/packages/god-tool-linux-x64.tar.gz \
+            "artifacts/packages/god-tool-linux-x64-${{ needs.version.outputs.version }}.tar.gz"
 
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
