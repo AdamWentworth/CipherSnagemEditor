@@ -33,9 +33,11 @@ $launcherExecutable = if ($Tool -eq "GoD") { "GoDTool" } else { "ColosseumTool" 
 $outputRootFull = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputRoot))
 $publishDir = Join-Path $outputRootFull "publish-$toolSlug-$Runtime"
 $packageDir = Join-Path $outputRootFull "packages\$toolSlug-$Runtime"
-$archivePath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime.tar.gz"
-$debPath = Join-Path $outputRootFull "packages\$packageName-$Runtime.deb"
-$versionedDebPath = Join-Path $outputRootFull "packages\$packageName-$Runtime-$PackageVersion.deb"
+$runtimeLabel = $Runtime.Replace("linux-", "")
+$archivePath = Join-Path $outputRootFull "packages\$toolSlug-linux-portable-$runtimeLabel.tar.gz"
+$debPath = Join-Path $outputRootFull "packages\$toolSlug-ubuntu-debian-$runtimeLabel.deb"
+$archiveFileName = Split-Path -Leaf $archivePath
+$debFileName = Split-Path -Leaf $debPath
 $projectPath = Join-Path $repoRoot $projectRelativePath
 $linuxTemplateDir = Join-Path $repoRoot "packaging/linux"
 $iconPath = if ($Tool -eq "GoD") {
@@ -75,7 +77,6 @@ Assert-UnderPath -Path $publishDir -Root $outputRootFull
 Assert-UnderPath -Path $packageDir -Root $outputRootFull
 Assert-UnderPath -Path $archivePath -Root $outputRootFull
 Assert-UnderPath -Path $debPath -Root $outputRootFull
-Assert-UnderPath -Path $versionedDebPath -Root $outputRootFull
 
 foreach ($path in @($publishDir, $packageDir)) {
     if (Test-Path -LiteralPath $path) {
@@ -87,9 +88,6 @@ if (Test-Path -LiteralPath $archivePath) {
 }
 if (Test-Path -LiteralPath $debPath) {
     Remove-Item -LiteralPath $debPath -Force
-}
-if (Test-Path -LiteralPath $versionedDebPath) {
-    Remove-Item -LiteralPath $versionedDebPath -Force
 }
 
 $selfContained = if ($FrameworkDependent) { "false" } else { "true" }
@@ -117,6 +115,9 @@ $templateReplacements = @{
     "@APP_SLUG@" = $packageName
     "@EXECUTABLE@" = $launcherExecutable
     "@ICON_NAME@" = $iconName
+    "@DEB_FILE@" = $debFileName
+    "@ARCHIVE_FILE@" = $archiveFileName
+    "@PACKAGE_DIR@" = "$toolSlug-$Runtime"
 }
 
 foreach ($templateFile in @(
@@ -168,7 +169,6 @@ if (-not $NoDeb) {
         throw "Failed to create Ubuntu package: $debPath"
     }
 
-    Copy-Item -LiteralPath $debPath -Destination $versionedDebPath -Force
 }
 
 Write-Host "Linux publish complete."
@@ -182,5 +182,4 @@ if (-not $NoArchive) {
 }
 if (-not $NoDeb) {
     Write-Host "Ubuntu package: $debPath"
-    Write-Host "Versioned Ubuntu package: $versionedDebPath"
 }

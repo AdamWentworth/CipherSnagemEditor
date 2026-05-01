@@ -39,5 +39,9 @@ pokemon-xd-code
 - Enable Issues if public support/bug tracking is wanted.
 - Enable Discussions only if community support is desired.
 - Keep Releases enabled.
+- GitHub Packages is not needed for user downloads. Use Releases for the
+  Windows zips, Ubuntu/Debian packages, and portable Linux archives. Only enable
+  Packages later if the project publishes a developer-facing NuGet package or
+  container image.
 - Do not add a GitHub-generated README, license, or gitignore after pushing;
   this repo already contains those files.

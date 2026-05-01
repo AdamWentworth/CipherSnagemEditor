@@ -62,12 +62,17 @@ git push origin v0.1.0
 
 The workflow builds and uploads:
 
-- `colosseum-tool-win-x64-<version>.zip`
-- `god-tool-win-x64-<version>.zip`
-- `cipher-snagem-colosseum-tool-linux-x64-<version>.deb`
-- `cipher-snagem-god-tool-linux-x64-<version>.deb`
-- `colosseum-tool-linux-x64-<version>.tar.gz`
-- `god-tool-linux-x64-<version>.tar.gz`
+- `colosseum-tool-windows-portable-x64.zip`
+- `god-tool-windows-portable-x64.zip`
+- `colosseum-tool-ubuntu-debian-x64.deb`
+- `god-tool-ubuntu-debian-x64.deb`
+- `colosseum-tool-linux-portable-x64.tar.gz`
+- `god-tool-linux-portable-x64.tar.gz`
+
+These files all belong on GitHub Releases, even though some are installers and
+some are portable archives. The GitHub Packages tab is not a general app
+download area; it is for package registries such as NuGet, npm, Maven, Docker,
+and similar developer feeds.
 
 The Windows packages are self-contained so normal users should not need to
 install the .NET runtime separately.

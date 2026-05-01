@@ -39,11 +39,14 @@ icon_name="$package_name"
 publish_dir="$output_root/publish-$tool_slug-$runtime"
 package_dir="$output_root/packages/$tool_slug-$runtime"
 archive_path="$output_root/packages/$tool_slug-$runtime.tar.gz"
-deb_path="$output_root/packages/$package_name-$runtime.deb"
-versioned_deb_path="$output_root/packages/$package_name-$runtime-$package_version.deb"
+runtime_label="${runtime#linux-}"
+archive_path="$output_root/packages/$tool_slug-linux-portable-$runtime_label.tar.gz"
+deb_path="$output_root/packages/$tool_slug-ubuntu-debian-$runtime_label.deb"
+archive_file="$(basename "$archive_path")"
+deb_file="$(basename "$deb_path")"
 
 rm -rf "$publish_dir" "$package_dir"
-rm -f "$archive_path" "$deb_path" "$versioned_deb_path"
+rm -f "$archive_path" "$deb_path"
 mkdir -p "$output_root/packages"
 
 dotnet publish "$project_path" \
@@ -65,6 +68,9 @@ export APP_COMMENT="$app_comment"
 export APP_SLUG="$package_name"
 export EXECUTABLE="$launcher_executable"
 export ICON_NAME="$icon_name"
+export DEB_FILE="$deb_file"
+export ARCHIVE_FILE="$archive_file"
+export PACKAGE_DIR="$tool_slug-$runtime"
 
 for template in \
   "$package_dir/run-cipher-snagem-editor.sh" \
@@ -78,6 +84,9 @@ do
     s/\@APP_SLUG\@/$ENV{APP_SLUG}/g;
     s/\@EXECUTABLE\@/$ENV{EXECUTABLE}/g;
     s/\@ICON_NAME\@/$ENV{ICON_NAME}/g;
+    s/\@DEB_FILE\@/$ENV{DEB_FILE}/g;
+    s/\@ARCHIVE_FILE\@/$ENV{ARCHIVE_FILE}/g;
+    s/\@PACKAGE_DIR\@/$ENV{PACKAGE_DIR}/g;
   ' "$template"
 done
 
@@ -98,12 +107,9 @@ python scripts/create-linux-deb.py \
   --icon-name "$icon_name" \
   --executable "$launcher_executable"
 
-cp "$deb_path" "$versioned_deb_path"
-
 echo "Linux publish complete."
 echo "Tool: $tool"
 echo "Runtime: $runtime"
 echo "Package directory: $package_dir"
 echo "Archive: $archive_path"
 echo "Ubuntu package: $deb_path"
-echo "Versioned Ubuntu package: $versioned_deb_path"

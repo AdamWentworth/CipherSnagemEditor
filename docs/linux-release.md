@@ -34,10 +34,10 @@ artifacts/
   packages/
     colosseum-tool-linux-x64/
     god-tool-linux-x64/
-    cipher-snagem-colosseum-tool-linux-x64-0.1.12.deb
-    cipher-snagem-god-tool-linux-x64-0.1.12.deb
-    colosseum-tool-linux-x64.tar.gz
-    god-tool-linux-x64.tar.gz
+    colosseum-tool-ubuntu-debian-x64.deb
+    god-tool-ubuntu-debian-x64.deb
+    colosseum-tool-linux-portable-x64.tar.gz
+    god-tool-linux-portable-x64.tar.gz
 ```
 
 By default the package is self-contained, so the Ubuntu test machine should not
@@ -58,12 +58,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-linux.ps1 -F
 
 ## Ubuntu Test
 
-Copy the versioned `.deb`, for example
-`artifacts/packages/cipher-snagem-colosseum-tool-linux-x64-0.1.12.deb`, to the
+Copy the `.deb`, for example
+`artifacts/packages/colosseum-tool-ubuntu-debian-x64.deb`, to the
 Ubuntu machine, then double-click it in GNOME Files or run:
 
 ```bash
-sudo apt install ./cipher-snagem-colosseum-tool-linux-x64-0.1.12.deb
+sudo apt install ./colosseum-tool-ubuntu-debian-x64.deb
 ```
 
 Launch `Colosseum Tool` or `GoD Tool` from the app grid.
@@ -71,7 +71,7 @@ Launch `Colosseum Tool` or `GoD Tool` from the app grid.
 Portable fallback:
 
 ```bash
-tar -xzf colosseum-tool-linux-x64.tar.gz
+tar -xzf colosseum-tool-linux-portable-x64.tar.gz
 cd colosseum-tool-linux-x64
 chmod +x ColosseumTool run-cipher-snagem-editor.sh install-linux-user.sh
 ./run-cipher-snagem-editor.sh

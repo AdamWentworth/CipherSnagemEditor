@@ -79,7 +79,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-packages
-          path: artifacts/packages/*-${{ needs.version.outputs.version }}.zip
+          path: artifacts/packages/*.zip
           if-no-files-found: error
 
   package-linux:
@@ -109,21 +109,13 @@ jobs:
           bash scripts/publish-linux.sh Colosseum linux-x64 "${{ needs.version.outputs.version }}"
           bash scripts/publish-linux.sh GoD linux-x64 "${{ needs.version.outputs.version }}"
 
-          cp \
-            artifacts/packages/colosseum-tool-linux-x64.tar.gz \
-            "artifacts/packages/colosseum-tool-linux-x64-${{ needs.version.outputs.version }}.tar.gz"
-
-          cp \
-            artifacts/packages/god-tool-linux-x64.tar.gz \
-            "artifacts/packages/god-tool-linux-x64-${{ needs.version.outputs.version }}.tar.gz"
-
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:
           name: linux-packages
           path: |
-            artifacts/packages/*-${{ needs.version.outputs.version }}.tar.gz
-            artifacts/packages/*-${{ needs.version.outputs.version }}.deb
+            artifacts/packages/*.tar.gz
+            artifacts/packages/*.deb
           if-no-files-found: error
 
   release:
@@ -146,17 +138,38 @@ jobs:
         with:
           tag_name: v${{ needs.version.outputs.version }}
           target_commitish: ${{ github.sha }}
-          name: Cipher Snagem Editor v${{ needs.version.outputs.version }}
+          name: Cipher Snagem Editor
           body: |
-            Download the package for the tool and platform you want:
+            ## Recommended Downloads
 
-            - `colosseum-tool-win-x64-${{ needs.version.outputs.version }}.zip`
-            - `god-tool-win-x64-${{ needs.version.outputs.version }}.zip`
-            - `cipher-snagem-colosseum-tool-linux-x64-${{ needs.version.outputs.version }}.deb`
-            - `cipher-snagem-god-tool-linux-x64-${{ needs.version.outputs.version }}.deb`
-            - portable Linux `.tar.gz` packages are also attached.
+            Choose one tool and one platform:
+
+            ### Windows
+
+            Portable builds. Extract the zip, then run `ColosseumTool.exe` or `GoDTool.exe`.
+
+            - Colosseum Tool: `colosseum-tool-windows-portable-x64.zip`
+            - GoD Tool / Pokemon XD: `god-tool-windows-portable-x64.zip`
+
+            ### Ubuntu / Debian Linux
+
+            Installer packages with app launcher and icon integration.
+
+            - Colosseum Tool: `colosseum-tool-ubuntu-debian-x64.deb`
+            - GoD Tool / Pokemon XD: `god-tool-ubuntu-debian-x64.deb`
+
+            ### Other Linux / Portable Linux
+
+            Portable archives. Extract, `chmod +x`, and run the included launcher script.
+
+            - Colosseum Tool: `colosseum-tool-linux-portable-x64.tar.gz`
+            - GoD Tool / Pokemon XD: `god-tool-linux-portable-x64.tar.gz`
 
             No game files are included.
+
+            These downloads are intentionally attached to GitHub Releases. The
+            GitHub Packages tab is for developer package registries, not normal
+            desktop app downloads.
           files: release-assets/*
           generate_release_notes: true
           fail_on_unmatched_files: true

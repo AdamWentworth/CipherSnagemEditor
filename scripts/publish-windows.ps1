@@ -25,8 +25,8 @@ $windowsTemplateDir = Join-Path $repoRoot "packaging\windows"
 $outputRootFull = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputRoot))
 $publishDir = Join-Path $outputRootFull "publish-$toolSlug-$Runtime"
 $packageDir = Join-Path $outputRootFull "packages\$toolSlug-$Runtime"
-$archivePath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime.zip"
-$versionedArchivePath = Join-Path $outputRootFull "packages\$toolSlug-$Runtime-$PackageVersion.zip"
+$runtimeLabel = $Runtime.Replace("win-", "")
+$archivePath = Join-Path $outputRootFull "packages\$toolSlug-windows-portable-$runtimeLabel.zip"
 
 function Assert-UnderPath([string]$Path, [string]$Root) {
     $fullPath = [System.IO.Path]::GetFullPath($Path)
@@ -51,14 +51,13 @@ New-Item -ItemType Directory -Force -Path $outputRootFull | Out-Null
 Assert-UnderPath -Path $publishDir -Root $outputRootFull
 Assert-UnderPath -Path $packageDir -Root $outputRootFull
 Assert-UnderPath -Path $archivePath -Root $outputRootFull
-Assert-UnderPath -Path $versionedArchivePath -Root $outputRootFull
 
 foreach ($path in @($publishDir, $packageDir)) {
     if (Test-Path -LiteralPath $path) {
         Remove-Item -LiteralPath $path -Recurse -Force
     }
 }
-foreach ($path in @($archivePath, $versionedArchivePath)) {
+foreach ($path in @($archivePath)) {
     if (Test-Path -LiteralPath $path) {
         Remove-Item -LiteralPath $path -Force
     }
@@ -85,7 +84,6 @@ Copy-Item -LiteralPath (Join-Path $windowsTemplateDir "uninstall-windows-user.ps
 if (-not $NoArchive) {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $archivePath) | Out-Null
     Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath $archivePath -Force
-    Copy-Item -LiteralPath $archivePath -Destination $versionedArchivePath -Force
 }
 
 Write-Host "Windows publish complete."
@@ -96,5 +94,4 @@ Write-Host "ReadyToRun: $readyToRun"
 Write-Host "Package directory: $packageDir"
 if (-not $NoArchive) {
     Write-Host "Archive: $archivePath"
-    Write-Host "Versioned archive: $versionedArchivePath"
 }

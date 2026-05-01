@@ -24,13 +24,24 @@ Most users should download a prebuilt package from the
 [GitHub Releases page](https://github.com/AdamWentworth/CipherSnagemEditor/releases)
 instead of cloning the source.
 
-- Windows Colosseum: `colosseum-tool-win-x64-<version>.zip`
-- Windows XD/GoD: `god-tool-win-x64-<version>.zip`
-- Ubuntu/Linux Colosseum: `cipher-snagem-colosseum-tool-linux-x64-<version>.deb`
-- Ubuntu/Linux XD/GoD: `cipher-snagem-god-tool-linux-x64-<version>.deb`
+Recommended downloads:
+
+- Windows Colosseum: `colosseum-tool-windows-portable-x64.zip`
+- Windows XD/GoD: `god-tool-windows-portable-x64.zip`
+- Ubuntu/Debian Colosseum: `colosseum-tool-ubuntu-debian-x64.deb`
+- Ubuntu/Debian XD/GoD: `god-tool-ubuntu-debian-x64.deb`
+
+Optional portable Linux archives are also attached for non-Debian systems:
+
+- Linux Colosseum: `colosseum-tool-linux-portable-x64.tar.gz`
+- Linux XD/GoD: `god-tool-linux-portable-x64.tar.gz`
 
 Windows zips are self-contained: extract the zip and run `ColosseumTool.exe` or
 `GoDTool.exe`. Each zip also includes an optional per-user shortcut installer.
+
+GitHub's **Packages** tab is not used for app downloads. Releases are the right
+place for both installer-style downloads and portable archives; Packages is for
+developer package registries such as NuGet or containers.
 
 ## ✅ Status
 

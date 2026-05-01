@@ -8,16 +8,18 @@ Easiest Ubuntu install:
 
   Use the .deb package next to this archive:
 
-    @APP_SLUG@-linux-x64.deb
+    @DEB_FILE@
 
   In GNOME Files, double-click the .deb and install it. From a terminal:
 
-    sudo apt install ./@APP_SLUG@-linux-x64.deb
+    sudo apt install ./@DEB_FILE@
 
   Then launch "@APP_NAME@" from the app grid.
 
 Portable fallback:
 
+  tar -xzf @ARCHIVE_FILE@
+  cd @PACKAGE_DIR@
   chmod +x @EXECUTABLE@ run-cipher-snagem-editor.sh install-linux-user.sh
   ./run-cipher-snagem-editor.sh
 
