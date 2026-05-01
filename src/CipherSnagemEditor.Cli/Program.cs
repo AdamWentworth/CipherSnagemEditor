@@ -16,6 +16,7 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem xd-editors-probe <iso>");
     Console.WriteLine("       ciphersnagem xd-trainer-probe <iso> <search>");
     Console.WriteLine("       ciphersnagem xd-closeout-probe <iso>");
+    Console.WriteLine("       ciphersnagem xd-patch-matrix <iso> [--work-root PATH] [--patch Kind] [--keep-isos]");
     Console.WriteLine("       ciphersnagem xd-script-sweep <iso> [--limit N] [--strict-byte-match]");
     Console.WriteLine("       ciphersnagem xd-smoke-apply <iso> <patch:Kind|editor-interaction|iso-explorer|script-codec|randomizer-data|randomizer-species|randomizer-bingo|randomizer-shiny-hues>");
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
@@ -122,6 +123,22 @@ try
             args[1],
             ReadIntOption(args, "--limit", 0),
             args.Any(arg => arg.Equals("--strict-byte-match", StringComparison.OrdinalIgnoreCase)));
+        return 0;
+    }
+
+    if (args[0].Equals("xd-patch-matrix", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length < 2)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem xd-patch-matrix <iso> [--work-root PATH] [--patch Kind] [--keep-isos]");
+            return 1;
+        }
+
+        RunXdPatchMatrix(
+            args[1],
+            ReadStringOption(args, "--work-root", null),
+            ReadStringOption(args, "--patch", null),
+            args.Any(arg => arg.Equals("--keep-isos", StringComparison.OrdinalIgnoreCase)));
         return 0;
     }
 
@@ -506,6 +523,284 @@ static void RunXdCloseoutProbe(string isoPath)
     }
 
     throw new InvalidDataException($"XD closeout probe failed with {failures.Count} failure(s).");
+}
+
+static void RunXdPatchMatrix(string isoPath, string? workRootOption, string? patchFilter, bool keepIsos)
+{
+    isoPath = Path.GetFullPath(isoPath);
+    if (!File.Exists(isoPath))
+    {
+        throw new FileNotFoundException($"XD ISO fixture was not found: {isoPath}");
+    }
+
+    var cleanContext = XdProjectContext.Open(isoPath);
+    if (!cleanContext.Iso.IsPokemonXD)
+    {
+        throw new InvalidDataException($"Patch matrix requires a Pokemon XD ISO, but found {cleanContext.Iso.GameId}.");
+    }
+
+    var workRoot = Path.GetFullPath(workRootOption ?? Path.Combine(Path.GetDirectoryName(isoPath) ?? Environment.CurrentDirectory, ".xd-patch-matrix"));
+    Directory.CreateDirectory(workRoot);
+
+    var patches = ResolveXdPatchDefinitions(patchFilter);
+    var failures = new List<string>();
+    var results = new List<XdPatchMatrixResult>();
+
+    Console.WriteLine($"XD patch matrix ISO: {isoPath}");
+    Console.WriteLine($"Work root: {workRoot}");
+    Console.WriteLine($"Patches: {patches.Count}");
+
+    foreach (var patch in patches)
+    {
+        var safeName = SafeMatrixFileName(patch.Kind.ToString());
+        var patchIsoPath = Path.Combine(workRoot, $"{safeName}.iso");
+        if (File.Exists(patchIsoPath))
+        {
+            File.Delete(patchIsoPath);
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"== {patch.Kind} ==");
+        Console.WriteLine(patch.Name);
+        File.Copy(isoPath, patchIsoPath, overwrite: true);
+
+        try
+        {
+            var patchFailures = new List<string>();
+            var context = XdProjectContext.Open(patchIsoPath);
+            var result = context.ApplyPatch(patch.Kind);
+            var writtenFileCount = result.WrittenFiles
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(Path.GetFullPath)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+
+            foreach (var message in result.Messages)
+            {
+                Console.WriteLine(message);
+            }
+
+            if (writtenFileCount == 0 && !XdPatchMayBeNoOpOnVanilla(patch.Kind))
+            {
+                patchFailures.Add($"{patch.Kind}: patch wrote no files against a clean XD ISO.");
+            }
+
+            var reopened = XdProjectContext.Open(patchIsoPath);
+            ProbeXdPatchMatrixCoreTables(reopened, patch.Kind.ToString(), patchFailures);
+            ProbeXdPatchMatrixEffect(patch.Kind, reopened, patchFailures);
+
+            if (patchFailures.Count == 0)
+            {
+                results.Add(new XdPatchMatrixResult(patch.Kind.ToString(), "PASS", writtenFileCount, patchIsoPath));
+
+                Console.WriteLine($"PASS {patch.Kind}: wrote {writtenFileCount:N0} workspace file(s).");
+                if (!keepIsos)
+                {
+                    TryDeleteMatrixIso(patchIsoPath);
+                }
+            }
+            else
+            {
+                failures.AddRange(patchFailures);
+                results.Add(new XdPatchMatrixResult(patch.Kind.ToString(), "FAIL", writtenFileCount, patchIsoPath));
+                foreach (var failure in patchFailures)
+                {
+                    Console.WriteLine($"FAIL {failure}");
+                }
+
+                Console.WriteLine($"Preserved failed ISO: {patchIsoPath}");
+            }
+        }
+        catch (Exception ex) when (IsExpectedProbeException(ex))
+        {
+            failures.Add($"{patch.Kind}: {ex.Message}");
+            results.Add(new XdPatchMatrixResult(patch.Kind.ToString(), "FAIL", 0, patchIsoPath));
+            Console.WriteLine($"FAIL {patch.Kind}: {ex.Message}");
+            Console.WriteLine($"Preserved failed ISO: {patchIsoPath}");
+        }
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("XD patch matrix summary:");
+    foreach (var result in results)
+    {
+        var isoLabel = result.Status.Equals("PASS", StringComparison.OrdinalIgnoreCase) && !keepIsos
+            ? "(deleted after pass)"
+            : result.IsoPath;
+        Console.WriteLine($"{result.Status,-4} {result.Kind,-32} writes={result.WrittenFiles,2} iso={isoLabel}");
+    }
+
+    if (failures.Count == 0)
+    {
+        Console.WriteLine("XD patch matrix passed.");
+        return;
+    }
+
+    foreach (var failure in failures)
+    {
+        Console.Error.WriteLine($"XD patch matrix failure: {failure}");
+    }
+
+    throw new InvalidDataException($"XD patch matrix failed with {failures.Count} failure(s).");
+}
+
+static IReadOnlyList<XdPatchDefinition> ResolveXdPatchDefinitions(string? patchFilter)
+{
+    if (string.IsNullOrWhiteSpace(patchFilter))
+    {
+        return XdPatchDefinition.XdPatches;
+    }
+
+    var kind = ParseXdPatchKind(patchFilter);
+    return new[] { XdPatchDefinition.ForKind(kind) };
+}
+
+static void ProbeXdPatchMatrixCoreTables(XdProjectContext context, string label, ICollection<string> failures)
+{
+    var trainers = context.LoadTrainerRecords();
+    var shadows = context.LoadShadowPokemonRecords();
+    var stats = context.LoadPokemonStatsRecords();
+    var moves = context.LoadMoveRecords();
+    var tms = context.LoadTmMoveRecords();
+    var items = context.LoadItemRecords();
+    var pokespots = context.LoadPokespotRecords();
+    var gifts = context.LoadGiftPokemonRecords();
+    var types = context.LoadTypeRecords();
+    var treasures = context.LoadTreasureRecords();
+    var interactions = context.LoadInteractionPointRecords();
+
+    Expect(trainers.Count > 100, failures, $"{label}: trainer table did not reload after patch.");
+    Expect(trainers.Any(trainer => trainer.Battle is not null), failures, $"{label}: trainer battle lookup did not reload after patch.");
+    Expect(shadows.Count > 40, failures, $"{label}: shadow Pokemon table did not reload after patch.");
+    Expect(stats.Count > 300, failures, $"{label}: Pokemon stats table did not reload after patch.");
+    Expect(moves.Count > 350, failures, $"{label}: move table did not reload after patch.");
+    Expect(tms.Count == 58, failures, $"{label}: TM/HM table did not reload after patch.");
+    Expect(items.Count > 300, failures, $"{label}: item table did not reload after patch.");
+    Expect(pokespots.Count > 0, failures, $"{label}: Pokespot table did not reload after patch.");
+    Expect(gifts.Count == 15, failures, $"{label}: gift Pokemon table did not reload after patch.");
+    Expect(types.Count >= 18 && types.All(type => type.Effectiveness.Count == 18), failures, $"{label}: type matchup table did not reload after patch.");
+    Expect(treasures.Count > 0, failures, $"{label}: treasure table did not reload after patch.");
+    Expect(interactions.Count > 0, failures, $"{label}: interaction table did not reload after patch.");
+}
+
+static void ProbeXdPatchMatrixEffect(XdPatchKind kind, XdProjectContext context, ICollection<string> failures)
+{
+    switch (kind)
+    {
+        case XdPatchKind.PhysicalSpecialSplitApply:
+            {
+                var damagingMoves = context.LoadMoveRecords()
+                    .Where(move => move.Index > 0 && !move.IsShadow && move.Power > 0)
+                    .ToArray();
+                Expect(damagingMoves.Any(move => move.CategoryId == 1), failures, "PhysicalSpecialSplitApply: no damaging moves resolved as physical after patch.");
+                Expect(damagingMoves.Any(move => move.CategoryId == 2), failures, "PhysicalSpecialSplitApply: no damaging moves resolved as special after patch.");
+                break;
+            }
+
+        case XdPatchKind.TradeEvolutions:
+            {
+                var evolutions = context.LoadPokemonStatsRecords()
+                    .Where(stats => stats.NameId > 0)
+                    .SelectMany(stats => stats.Evolutions)
+                    .Where(evolution => evolution.EvolvedSpeciesId > 0)
+                    .ToArray();
+                Expect(!evolutions.Any(evolution => evolution.Method is 5 or 6), failures, "TradeEvolutions: trade evolution methods remained after patch.");
+                Expect(evolutions.Any(evolution => evolution.Method == 4 && evolution.Condition == 40), failures, "TradeEvolutions: no evolution was converted to level 40.");
+                break;
+            }
+
+        case XdPatchKind.RemoveItemEvolutions:
+            {
+                var evolutions = context.LoadPokemonStatsRecords()
+                    .Where(stats => stats.NameId > 0)
+                    .SelectMany(stats => stats.Evolutions)
+                    .Where(evolution => evolution.EvolvedSpeciesId > 0)
+                    .ToArray();
+                Expect(!evolutions.Any(evolution => evolution.Method == 7), failures, "RemoveItemEvolutions: stone evolution methods remained after patch.");
+                Expect(evolutions.Any(evolution => evolution.Method == 4 && evolution.Condition == 40), failures, "RemoveItemEvolutions: no evolution was converted to level 40.");
+                break;
+            }
+
+        case XdPatchKind.PokemonCanLearnAnyTm:
+            {
+                var stats = context.LoadPokemonStatsRecords()
+                    .Where(candidate => candidate.NameId > 0)
+                    .ToArray();
+                Expect(stats.Length > 0, failures, "PokemonCanLearnAnyTm: no Pokemon stat rows were available to verify.");
+                Expect(stats.All(candidate => candidate.LearnableTms.Count == 58 && candidate.LearnableTms.All(canLearn => canLearn)), failures, "PokemonCanLearnAnyTm: at least one Pokemon still cannot learn every TM/HM.");
+                break;
+            }
+
+        case XdPatchKind.PokemonHaveMaxCatchRate:
+            {
+                var stats = context.LoadPokemonStatsRecords()
+                    .Where(candidate => candidate.NameId > 0 && candidate.CatchRate > 0)
+                    .ToArray();
+                var shadows = context.LoadShadowPokemonRecords()
+                    .Where(candidate => candidate.SpeciesId > 0 && candidate.CatchRate > 0)
+                    .ToArray();
+                Expect(stats.Length > 0 && stats.All(candidate => candidate.CatchRate == 255), failures, "PokemonHaveMaxCatchRate: base Pokemon catch rates were not all 255.");
+                Expect(shadows.Length > 0 && shadows.All(candidate => candidate.CatchRate == 255), failures, "PokemonHaveMaxCatchRate: shadow Pokemon catch rates were not all 255.");
+                break;
+            }
+
+        case XdPatchKind.AllSingleBattles:
+            {
+                var battles = XdPatchMatrixPatchableBattles(context);
+                Expect(battles.Length > 0, failures, "AllSingleBattles: no battle records were available to verify.");
+                Expect(battles.All(battle => battle.BattleStyle == 1), failures, "AllSingleBattles: at least one battle remained non-single.");
+                break;
+            }
+
+        case XdPatchKind.AllDoubleBattles:
+            {
+                var battles = XdPatchMatrixPatchableBattles(context);
+                Expect(battles.Length > 0, failures, "AllDoubleBattles: no battle records were available to verify.");
+                Expect(battles.All(battle => battle.BattleStyle == 2), failures, "AllDoubleBattles: at least one battle remained non-double.");
+                break;
+            }
+    }
+}
+
+static XdBattleRecord[] XdPatchMatrixPatchableBattles(XdProjectContext context)
+    => context.LoadTrainerRecords()
+        .Select(trainer => trainer.Battle)
+        .OfType<XdBattleRecord>()
+        .GroupBy(battle => battle.Index)
+        .Select(group => group.First())
+        .Where(battle => battle.Players.Count < 2 || battle.Players[1].DeckId is not (4 or 5))
+        .ToArray();
+
+static bool XdPatchMayBeNoOpOnVanilla(XdPatchKind kind)
+    => kind is XdPatchKind.PhysicalSpecialSplitRemove
+        or XdPatchKind.BetaStartersRemove
+        or XdPatchKind.ReplaceShinyGlitch
+        or XdPatchKind.ShinyLockShadowPokemon;
+
+static string SafeMatrixFileName(string value)
+{
+    var invalid = Path.GetInvalidFileNameChars();
+    var characters = value.Select(character => invalid.Contains(character) ? '-' : character).ToArray();
+    return new string(characters).Trim('-', ' ', '.');
+}
+
+static void TryDeleteMatrixIso(string path)
+{
+    try
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+    catch (IOException ex)
+    {
+        Console.WriteLine($"Warning: could not delete matrix ISO {path}: {ex.Message}");
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        Console.WriteLine($"Warning: could not delete matrix ISO {path}: {ex.Message}");
+    }
 }
 
 static void RunXdScriptSweep(string isoPath, int limit, bool strictByteMatch)
@@ -1265,6 +1560,20 @@ static int ReadIntOption(string[] args, string name, int fallback)
             && parsed > 0)
         {
             return parsed;
+        }
+    }
+
+    return fallback;
+}
+
+static string? ReadStringOption(string[] args, string name, string? fallback)
+{
+    for (var index = 0; index < args.Length - 1; index++)
+    {
+        if (args[index].Equals(name, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(args[index + 1]))
+        {
+            return args[index + 1];
         }
     }
 
@@ -2106,6 +2415,8 @@ internal sealed record ProbeMessageResult(int Tables, int Strings, long Bytes);
 internal sealed record ProbeCollisionResult(int Files, int NonEmptyFiles, int Triangles);
 
 internal sealed record ProbeVertexResult(int WzxFiles, int Models, int VertexColours);
+
+internal sealed record XdPatchMatrixResult(string Kind, string Status, int WrittenFiles, string IsoPath);
 
 internal sealed record XdScriptSweepResult(
     string Location,

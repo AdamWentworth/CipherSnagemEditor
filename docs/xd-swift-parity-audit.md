@@ -58,9 +58,39 @@ Run a smaller development sample:
 non-identical rebuild, but normal parity work treats rebuilt parseable scripts as
 useful evidence rather than a failure.
 
+## Patch Matrix
+
+`scripts/run-xd-patch-matrix.ps1` copies the ignored clean XD ISO fixture once per
+patch, applies the patch, reopens the ISO, and verifies that the shared XD editor
+tables still parse. It also checks direct table effects where we can prove them
+without Dolphin, including:
+
+- physical/special split move category data,
+- trade and item evolution rewrites,
+- any-Pokemon-can-learn-any-TM flags,
+- max catch-rate writes for base and shadow Pokemon,
+- all-single and all-double battle style rewrites.
+
+Run the full matrix:
+
+```powershell
+.\scripts\run-xd-patch-matrix.ps1
+```
+
+Run one patch while developing:
+
+```powershell
+.\scripts\run-xd-patch-matrix.ps1 -Patch PokemonHaveMaxCatchRate
+```
+
+Successful patch ISO copies are deleted by default so the matrix does not keep
+dozens of full disc images. Use `-KeepIsos` when a specific run needs preserved
+outputs.
+
 ## Known Gaps
 
 - Script codec coverage is now broad enough to catch decode/compile regressions,
   but byte-identical high-level recompilation is not required yet.
-- Runtime patch proof still ultimately needs manual Dolphin checks or a deeper
-  save-state/DTM automation layer.
+- Patch matrix coverage proves application/reopen stability and table-visible
+  effects. Runtime-only assembly effects still ultimately need manual Dolphin
+  checks or a deeper save-state/DTM automation layer.
