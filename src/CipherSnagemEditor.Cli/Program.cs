@@ -588,6 +588,16 @@ static void RunXdPatchMatrix(string isoPath, string? workRootOption, string? pat
             var reopened = XdProjectContext.Open(patchIsoPath);
             ProbeXdPatchMatrixCoreTables(reopened, patch.Kind.ToString(), patchFailures);
             ProbeXdPatchMatrixEffect(patch.Kind, reopened, patchFailures);
+            var stateVerification = reopened.VerifyPatchState(patch.Kind);
+            if (stateVerification.Checks > 0)
+            {
+                Console.WriteLine($"State readback checks: {stateVerification.Checks:N0}");
+            }
+
+            foreach (var failure in stateVerification.Failures)
+            {
+                patchFailures.Add(failure);
+            }
 
             if (patchFailures.Count == 0)
             {

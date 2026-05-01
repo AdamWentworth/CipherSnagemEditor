@@ -71,6 +71,12 @@ without Dolphin, including:
 - max catch-rate writes for base and shadow Pokemon,
 - all-single and all-double battle style rewrites.
 
+For DOL/ASM patches, the matrix now also performs direct `Start.dol` state
+readback. Most runtime patches are verified by applying the same patcher to an
+in-memory clone and requiring byte-identical output; the Gen 6 critical-hit
+multiplier patch is verified by checking its patched entry branch and allocated
+free-space routine.
+
 Run the full matrix:
 
 ```powershell
@@ -124,7 +130,7 @@ Each case writes a copied ISO under `.local\xd-smoke-work` and Dolphin logs unde
 - Script codec coverage is now broad enough to catch decode/compile regressions,
   but byte-identical high-level recompilation is not required yet.
 - Patch matrix coverage proves application/reopen stability and table-visible
-  effects. The Dolphin runtime smoke matrix proves patched ISOs boot without
-  obvious emulator crash/log failure. Exact in-battle behavior for runtime-only
-  assembly patches still needs manual Dolphin checks or a deeper save-state/DTM
-  automation layer.
+  effects, plus direct `Start.dol` byte-state readback for DOL/ASM patches. The
+  Dolphin runtime smoke matrix proves patched ISOs boot without obvious emulator
+  crash/log failure. Exact in-battle behavior for runtime-only assembly patches
+  still needs manual Dolphin checks or a deeper save-state/DTM automation layer.
