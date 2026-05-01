@@ -233,25 +233,94 @@ public static class GameCubeScriptCodec
             var function = functions[index];
             var endOffset = index + 1 < functions.Length ? functions[index + 1].CodeOffset : totalWords;
             builder.AppendLine($"function @{function.Name}() {{");
-            var wordIndex = function.CodeOffset;
-            while (wordIndex < endOffset)
-            {
-                if (!instructionMap.TryGetValue(wordIndex, out var instruction))
-                {
-                    builder.AppendLine($"    // missing instruction at 0x{wordIndex:x6}");
-                    wordIndex++;
-                    continue;
-                }
-
-                builder.AppendLine("    " + HighLevelInstructionText(instruction.Words, functionNamesByOffset));
-                wordIndex += instruction.Words.Count;
-            }
-
+            AppendHighLevelFunctionBody(builder, instructionMap, functionNamesByOffset, function.CodeOffset, endOffset);
             builder.AppendLine("}");
             builder.AppendLine();
         }
 
         builder.AppendLine(HighLevelEndMarker);
+    }
+
+    private static void AppendHighLevelFunctionBody(
+        StringBuilder builder,
+        IReadOnlyDictionary<int, ScriptInstruction> instructionMap,
+        IReadOnlyDictionary<int, string> functionNamesByOffset,
+        int startOffset,
+        int endOffset)
+    {
+        var instructions = new List<ScriptInstruction>();
+        var wordIndex = startOffset;
+        while (wordIndex < endOffset)
+        {
+            if (!instructionMap.TryGetValue(wordIndex, out var instruction))
+            {
+                AppendHighLevelInstructionBlock(builder, instructions, functionNamesByOffset);
+                instructions.Clear();
+                builder.AppendLine($"    // missing instruction at 0x{wordIndex:x6}");
+                wordIndex++;
+                continue;
+            }
+
+            instructions.Add(instruction);
+            wordIndex += instruction.Words.Count;
+        }
+
+        AppendHighLevelInstructionBlock(builder, instructions, functionNamesByOffset);
+    }
+
+    private static void AppendHighLevelInstructionBlock(
+        StringBuilder builder,
+        IReadOnlyList<ScriptInstruction> instructions,
+        IReadOnlyDictionary<int, string> functionNamesByOffset)
+    {
+        var pendingStack = new List<StackValueExpression>();
+        for (var index = 0; index < instructions.Count; index++)
+        {
+            var instruction = instructions[index];
+            if (TryStackValueExpression(instruction.Words, out var stackValue))
+            {
+                pendingStack.Add(stackValue);
+                continue;
+            }
+
+            if (TryPopCount(index + 1 < instructions.Count ? instructions[index + 1].Words : [], out var popCount)
+                && TryCallStd(instruction.Words, out var classId, out var functionId)
+                && pendingStack.Count >= popCount)
+            {
+                var firstArgumentIndex = pendingStack.Count - popCount;
+                FlushStackValues(builder, pendingStack.Take(firstArgumentIndex));
+                var arguments = pendingStack.Skip(firstArgumentIndex).Reverse().ToArray();
+                pendingStack.Clear();
+                builder.AppendLine("    " + StandardCallText(classId, functionId, arguments));
+                index++;
+                continue;
+            }
+
+            if (TrySetVariable(instruction.Words, out var variable)
+                && pendingStack.Count > 0)
+            {
+                var firstArgumentIndex = pendingStack.Count - 1;
+                FlushStackValues(builder, pendingStack.Take(firstArgumentIndex));
+                var value = pendingStack[^1];
+                pendingStack.Clear();
+                builder.AppendLine($"    set {variable} = {value.Text}");
+                continue;
+            }
+
+            FlushStackValues(builder, pendingStack);
+            pendingStack.Clear();
+            builder.AppendLine("    " + HighLevelInstructionText(instruction.Words, functionNamesByOffset));
+        }
+
+        FlushStackValues(builder, pendingStack);
+    }
+
+    private static void FlushStackValues(StringBuilder builder, IEnumerable<StackValueExpression> values)
+    {
+        foreach (var value in values)
+        {
+            builder.AppendLine("    " + value.SourceLine);
+        }
     }
 
     private static bool TryCompileHighLevelSubset(string xdsText, string rawWordsBlock, out byte[] scriptBytes, out string? error)
@@ -463,6 +532,17 @@ public static class GameCubeScriptCodec
             return true;
         }
 
+        if (op == "set")
+        {
+            var assignmentText = line["set".Length..].Trim();
+            if (!TryParseSetInstruction(assignmentText, out instruction, out error))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         if (op == "setvector")
         {
             if (parts.Length < 3 || !TryParseVectorDimension(parts[1], out var dimension) || !TryParseVariable(parts[2], out var level, out var parameter))
@@ -499,13 +579,12 @@ public static class GameCubeScriptCodec
 
         if (op == "callstd")
         {
-            if (parts.Length < 2 || !TryParseClassFunction(parts[1], out var classId, out var functionId))
+            var callText = line["callstd".Length..].Trim();
+            if (!TryParseStandardCallInstruction(callText, out instruction, out error))
             {
-                error = "callstd requires class_<id>.function_<id>.";
                 return false;
             }
 
-            instruction = SingleWord(9, classId, functionId);
             return true;
         }
 
@@ -1087,6 +1166,275 @@ public static class GameCubeScriptCodec
         return string.IsNullOrWhiteSpace(comment) ? $"callstd {name}" : $"callstd {name} // {comment}";
     }
 
+    private static string StandardCallText(int classId, int functionId, IReadOnlyList<StackValueExpression> arguments)
+    {
+        var name = GameCubeScriptCatalog.FunctionDisplayName(classId, functionId);
+        var argumentText = string.Join(", ", arguments.Select(argument => argument.Text));
+        var comment = GameCubeScriptCatalog.FunctionComment(classId, functionId);
+        var call = $"callstd {name}({argumentText})";
+        return string.IsNullOrWhiteSpace(comment) ? call : $"{call} // {comment}";
+    }
+
+    private static bool TryCallStd(IReadOnlyList<uint> words, out int classId, out int functionId)
+    {
+        classId = 0;
+        functionId = 0;
+        if (words.Count != 1)
+        {
+            return false;
+        }
+
+        var word = words[0];
+        if (((word >> 24) & 0xff) != 9)
+        {
+            return false;
+        }
+
+        classId = (int)((word >> 16) & 0xff);
+        functionId = unchecked((short)(word & 0xffff));
+        return true;
+    }
+
+    private static bool TryPopCount(IReadOnlyList<uint> words, out int count)
+    {
+        count = 0;
+        if (words.Count != 1)
+        {
+            return false;
+        }
+
+        var word = words[0];
+        if (((word >> 24) & 0xff) != 6)
+        {
+            return false;
+        }
+
+        count = (int)((word >> 16) & 0xff);
+        return true;
+    }
+
+    private static bool TrySetVariable(IReadOnlyList<uint> words, out string variable)
+    {
+        variable = string.Empty;
+        if (words.Count != 1)
+        {
+            return false;
+        }
+
+        var word = words[0];
+        if (((word >> 24) & 0xff) != 4)
+        {
+            return false;
+        }
+
+        var sub = (int)((word >> 16) & 0xff);
+        var param = unchecked((short)(word & 0xffff));
+        variable = VariableText(sub, param);
+        return true;
+    }
+
+    private static bool TryStackValueExpression(IReadOnlyList<uint> words, out StackValueExpression value)
+    {
+        value = StackValueExpression.Empty;
+        if (words.Count == 0)
+        {
+            return false;
+        }
+
+        var word = words[0];
+        var op = (int)((word >> 24) & 0xff);
+        var sub = (int)((word >> 16) & 0xff);
+        var param = unchecked((short)(word & 0xffff));
+        if (op == 2)
+        {
+            var text = words.Count == 2
+                ? ConstantText((ushort)sub, words[1])
+                : ConstantText((ushort)sub, unchecked((uint)param));
+            value = new StackValueExpression(text, HighLevelInstructionText(words, new Dictionary<int, string>()));
+            return true;
+        }
+
+        if (op is 3 or 17)
+        {
+            var variable = VariableText(sub, param);
+            var text = op == 17 ? $"ptr({variable})" : variable;
+            value = new StackValueExpression(text, HighLevelInstructionText(words, new Dictionary<int, string>()));
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseStandardCallInstruction(string callText, out HighLevelInstruction instruction, out string? error)
+    {
+        instruction = HighLevelInstruction.Empty;
+        error = null;
+        callText = callText.Trim();
+        if (callText.Length == 0)
+        {
+            error = "callstd requires a class/function name.";
+            return false;
+        }
+
+        var openIndex = callText.IndexOf('(');
+        if (openIndex < 0)
+        {
+            if (!TryParseClassFunction(callText, out var classId, out var functionId))
+            {
+                error = "callstd requires class_<id>.function_<id> or a known script function name.";
+                return false;
+            }
+
+            instruction = SingleWord(9, classId, functionId);
+            return true;
+        }
+
+        var closeIndex = callText.LastIndexOf(')');
+        if (closeIndex < openIndex)
+        {
+            error = $"Malformed callstd argument list: {callText}";
+            return false;
+        }
+
+        var functionText = callText[..openIndex].Trim();
+        if (!TryParseClassFunction(functionText, out var parsedClassId, out var parsedFunctionId))
+        {
+            error = $"Unknown script function: {functionText}";
+            return false;
+        }
+
+        var argumentText = callText[(openIndex + 1)..closeIndex].Trim();
+        var argumentWords = new List<IReadOnlyList<uint>>();
+        if (argumentText.Length > 0)
+        {
+            foreach (var argument in SplitTopLevelArguments(argumentText))
+            {
+                if (!TryParseStackArgument(argument, out var words, out error))
+                {
+                    return false;
+                }
+
+                argumentWords.Add(words);
+            }
+        }
+
+        var wordLength = argumentWords.Sum(words => words.Count) + 1 + (argumentWords.Count > 0 ? 1 : 0);
+        instruction = new HighLevelInstruction(wordLength, _ =>
+        {
+            var words = new List<uint>(wordLength);
+            foreach (var argument in argumentWords.AsEnumerable().Reverse())
+            {
+                words.AddRange(argument);
+            }
+
+            words.Add(BuildWord(9, parsedClassId, parsedFunctionId));
+            if (argumentWords.Count > 0)
+            {
+                words.Add(BuildWord(6, argumentWords.Count, 0));
+            }
+
+            return words;
+        });
+        return true;
+    }
+
+    private static bool TryParseStackArgument(string text, out IReadOnlyList<uint> words, out string? error)
+    {
+        words = [];
+        error = null;
+        text = text.Trim();
+        if (text.StartsWith("ptr(", StringComparison.OrdinalIgnoreCase) && text.EndsWith(')'))
+        {
+            var variable = text[4..^1].Trim();
+            if (!TryParseVariable(variable, out var pointerLevel, out var pointerParameter))
+            {
+                error = $"Invalid pointer argument: {text}";
+                return false;
+            }
+
+            words = [BuildWord(17, pointerLevel, pointerParameter)];
+            return true;
+        }
+
+        if (TryParseConstant(text, out var type, out var value))
+        {
+            words = type is 3 or 4
+                ? [BuildWord(2, type, unchecked((int)value))]
+                : [BuildWord(2, type, 0), value];
+            return true;
+        }
+
+        if (TryParseVariable(text, out var level, out var parameter))
+        {
+            words = [BuildWord(3, level, parameter)];
+            return true;
+        }
+
+        error = $"Unsupported callstd argument: {text}";
+        return false;
+    }
+
+    private static bool TryParseSetInstruction(string assignmentText, out HighLevelInstruction instruction, out string? error)
+    {
+        instruction = HighLevelInstruction.Empty;
+        error = null;
+        var equalsIndex = assignmentText.IndexOf('=');
+        if (equalsIndex < 0)
+        {
+            error = "set requires '<variable> = <value>'.";
+            return false;
+        }
+
+        var variable = assignmentText[..equalsIndex].Trim();
+        var valueText = assignmentText[(equalsIndex + 1)..].Trim();
+        if (!TryParseVariable(variable, out var level, out var parameter))
+        {
+            error = $"Invalid set variable: {variable}";
+            return false;
+        }
+
+        if (!TryParseStackArgument(valueText, out var valueWords, out error))
+        {
+            return false;
+        }
+
+        instruction = new HighLevelInstruction(valueWords.Count + 1, _ =>
+        {
+            var words = new List<uint>(valueWords.Count + 1);
+            words.AddRange(valueWords);
+            words.Add(BuildWord(4, level, parameter));
+            return words;
+        });
+        return true;
+    }
+
+    private static IReadOnlyList<string> SplitTopLevelArguments(string text)
+    {
+        var arguments = new List<string>();
+        var depth = 0;
+        var start = 0;
+        for (var index = 0; index < text.Length; index++)
+        {
+            var character = text[index];
+            if (character == '(')
+            {
+                depth++;
+            }
+            else if (character == ')')
+            {
+                depth--;
+            }
+            else if (character == ',' && depth == 0)
+            {
+                arguments.Add(text[start..index].Trim());
+                start = index + 1;
+            }
+        }
+
+        arguments.Add(text[start..].Trim());
+        return arguments.Where(argument => argument.Length > 0).ToArray();
+    }
+
     private static string StripInlineComment(string line)
     {
         var quoted = false;
@@ -1461,6 +1809,11 @@ public static class GameCubeScriptCodec
     private sealed record HighLevelInstruction(int WordLength, Func<IReadOnlyDictionary<string, int>, IReadOnlyList<uint>> ToWords)
     {
         public static HighLevelInstruction Empty { get; } = new(0, _ => []);
+    }
+
+    private sealed record StackValueExpression(string Text, string SourceLine)
+    {
+        public static StackValueExpression Empty { get; } = new(string.Empty, string.Empty);
     }
 
     private sealed record ParsedScript(

@@ -60,6 +60,56 @@ public sealed class GameCubeScriptCodecTests
         Assert.Equal(script, compiled);
     }
 
+    [Fact]
+    public void DecompilesSimpleStandardCallArguments()
+    {
+        var script = CreateSampleScript(
+            Instruction(2, 1, 0), 1,
+            Instruction(9, 0, 18),
+            Instruction(6, 1, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("callstd yield(Int(1))", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void DecompilesPointerStandardCallArgumentsWithoutChangingBytes()
+    {
+        var script = CreateSampleScript(
+            Instruction(3, 1, 3),
+            Instruction(3, 1, 2),
+            Instruction(3, 1, 1),
+            Instruction(17, 3, 38),
+            Instruction(9, 38, 23),
+            Instruction(6, 4, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("callstd Map.warpToMapWithSoundEffect(ptr(class_object_38), arg_0, arg_1, arg_2)", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void DecompilesSimpleAssignmentsWithoutChangingBytes()
+    {
+        var script = CreateSampleScript(
+            Instruction(3, 2, 0),
+            Instruction(4, 0, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError), decompileError);
+
+        Assert.Contains("set gvar_00 = LastResult", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
     private static uint FirstCodeWord(byte[] script)
     {
         var offset = 0x10;
