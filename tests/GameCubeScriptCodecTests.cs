@@ -127,6 +127,45 @@ public sealed class GameCubeScriptCodecTests
     }
 
     [Fact]
+    public void DecompilesNamedMacrosWithDefinitionsThatCompileWithoutCatalog()
+    {
+        var catalog = new GameCubeScriptMacroCatalog();
+        catalog.Add("flag", 0x340, "#FLAG_TEST_EVENT");
+        var script = CreateSampleScript(
+            Instruction(2, 1, 0), 0x340,
+            Instruction(9, 0, 129),
+            Instruction(6, 1, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError, catalog), decompileError);
+
+        Assert.Contains("define #FLAG_TEST_EVENT FlagID(0x00000340)", text);
+        Assert.Contains("callstd setFlagToTrue(#FLAG_TEST_EVENT)", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(text, out var compiled, out var compileError), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
+    public void CompilesNamedMacrosFromCatalogWhenDefinitionsAreAbsent()
+    {
+        var catalog = new GameCubeScriptMacroCatalog();
+        catalog.Add("room", 0x391, "#ROOM_AGATE_VILLAGE");
+        var script = CreateSampleScript(
+            Instruction(2, 1, 0), 0x391,
+            Instruction(17, 3, 38),
+            Instruction(9, 38, 38),
+            Instruction(6, 2, 0),
+            0x08000000);
+
+        Assert.True(GameCubeScriptCodec.TryDecompileXds(script, "sample.scd", out var text, out var decompileError, catalog), decompileError);
+        var withoutDefines = string.Join(Environment.NewLine, text.Split(Environment.NewLine).Where(line => !line.StartsWith("define #", StringComparison.Ordinal)));
+
+        Assert.Contains("callstd Map.enterMenuMap(ptr(class_object_38), #ROOM_AGATE_VILLAGE)", text);
+        Assert.True(GameCubeScriptCodec.TryCompileXds(withoutDefines, out var compiled, out var compileError, catalog), compileError);
+        Assert.Equal(script, compiled);
+    }
+
+    [Fact]
     public void DecompilesOperatorExpressionsInAssignmentsWithoutChangingBytes()
     {
         var script = CreateSampleScript(

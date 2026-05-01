@@ -113,7 +113,12 @@ public static class GameCubeScriptCodec
             .GroupBy(info => info.WrapperName, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
-    public static bool TryDecompileXds(byte[] scriptBytes, string sourceName, out string text, out string? error)
+    public static bool TryDecompileXds(
+        byte[] scriptBytes,
+        string sourceName,
+        out string text,
+        out string? error,
+        GameCubeScriptMacroCatalog? macroCatalog = null)
     {
         text = string.Empty;
         if (!TryParse(scriptBytes, out var script, out error))
@@ -151,21 +156,30 @@ public static class GameCubeScriptCodec
         }
 
         AppendGlobals(builder, script);
-        AppendHighLevelSubset(builder, script);
+
+        var decompileContext = new ScriptDecompileContext(macroCatalog);
+        var highLevelBuilder = new StringBuilder();
+        AppendHighLevelSubset(highLevelBuilder, script, decompileContext);
+        AppendMacroDefinitions(builder, decompileContext.UsedMacros);
+        builder.Append(highLevelBuilder);
         AppendDisassembly(builder, script);
         AppendRawWords(builder, scriptBytes);
         text = builder.ToString();
         return true;
     }
 
-    public static bool TryCompileXds(string xdsText, out byte[] scriptBytes, out string? error)
+    public static bool TryCompileXds(
+        string xdsText,
+        out byte[] scriptBytes,
+        out string? error,
+        GameCubeScriptMacroCatalog? macroCatalog = null)
     {
         scriptBytes = [];
         error = null;
 
         var block = ExtractRawWordsBlock(xdsText);
         if (block is not null
-            && TryCompileHighLevelSubset(xdsText, block, out scriptBytes, out error))
+            && TryCompileHighLevelSubset(xdsText, block, out scriptBytes, out error, macroCatalog))
         {
             return true;
         }
@@ -279,7 +293,31 @@ public static class GameCubeScriptCodec
         }
     }
 
-    private static void AppendHighLevelSubset(StringBuilder builder, ParsedScript script)
+    private static void AppendMacroDefinitions(StringBuilder builder, IReadOnlyCollection<GameCubeScriptMacro> macros)
+    {
+        if (macros.Count == 0)
+        {
+            return;
+        }
+
+        builder.AppendLine();
+        builder.AppendLine("// XDS macro defines");
+        foreach (var macro in macros.OrderBy(macro => macro.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            var valueText = MacroDefinitionValueText(macro.ParameterType, macro.Value);
+            builder.AppendLine($"define {macro.Name} {valueText}");
+        }
+    }
+
+    private static string MacroDefinitionValueText(string parameterType, uint value)
+    {
+        parameterType = NormalizeMacroType(parameterType);
+        return MacroArgumentsByType.TryGetValue(parameterType, out var macroInfo)
+            ? $"{macroInfo.WrapperName}({MacroArgumentValueText(value, macroInfo.Hexadecimal)})"
+            : ConstantText(1, value);
+    }
+
+    private static void AppendHighLevelSubset(StringBuilder builder, ParsedScript script, ScriptDecompileContext context)
     {
         if (script.Functions.Count == 0 || script.Instructions.Count == 0)
         {
@@ -305,7 +343,7 @@ public static class GameCubeScriptCodec
             var function = functions[index];
             var endOffset = index + 1 < functions.Length ? functions[index + 1].CodeOffset : totalWords;
             builder.AppendLine($"function @{function.Name}() {{");
-            AppendHighLevelFunctionBody(builder, instructionMap, functionNamesByOffset, function.CodeOffset, endOffset);
+            AppendHighLevelFunctionBody(builder, instructionMap, functionNamesByOffset, function.CodeOffset, endOffset, context);
             builder.AppendLine("}");
             builder.AppendLine();
         }
@@ -318,7 +356,8 @@ public static class GameCubeScriptCodec
         IReadOnlyDictionary<int, ScriptInstruction> instructionMap,
         IReadOnlyDictionary<int, string> functionNamesByOffset,
         int startOffset,
-        int endOffset)
+        int endOffset,
+        ScriptDecompileContext context)
     {
         var instructions = new List<ScriptInstruction>();
         var wordIndex = startOffset;
@@ -326,7 +365,7 @@ public static class GameCubeScriptCodec
         {
             if (!instructionMap.TryGetValue(wordIndex, out var instruction))
             {
-                AppendHighLevelInstructionBlock(builder, instructions, functionNamesByOffset);
+                AppendHighLevelInstructionBlock(builder, instructions, functionNamesByOffset, context);
                 instructions.Clear();
                 builder.AppendLine($"    // missing instruction at 0x{wordIndex:x6}");
                 wordIndex++;
@@ -337,13 +376,14 @@ public static class GameCubeScriptCodec
             wordIndex += instruction.Words.Count;
         }
 
-        AppendHighLevelInstructionBlock(builder, instructions, functionNamesByOffset);
+        AppendHighLevelInstructionBlock(builder, instructions, functionNamesByOffset, context);
     }
 
     private static void AppendHighLevelInstructionBlock(
         StringBuilder builder,
         IReadOnlyList<ScriptInstruction> instructions,
-        IReadOnlyDictionary<int, string> functionNamesByOffset)
+        IReadOnlyDictionary<int, string> functionNamesByOffset,
+        ScriptDecompileContext context)
     {
         var pendingStack = new List<StackValueExpression>();
         for (var index = 0; index < instructions.Count; index++)
@@ -369,7 +409,7 @@ public static class GameCubeScriptCodec
                 FlushStackValues(builder, pendingStack.Take(firstArgumentIndex));
                 var arguments = pendingStack.Skip(firstArgumentIndex).Reverse().ToArray();
                 pendingStack.Clear();
-                builder.AppendLine("    " + StandardCallText(classId, functionId, arguments));
+                builder.AppendLine("    " + StandardCallText(classId, functionId, arguments, context));
                 index++;
                 continue;
             }
@@ -417,7 +457,12 @@ public static class GameCubeScriptCodec
         }
     }
 
-    private static bool TryCompileHighLevelSubset(string xdsText, string rawWordsBlock, out byte[] scriptBytes, out string? error)
+    private static bool TryCompileHighLevelSubset(
+        string xdsText,
+        string rawWordsBlock,
+        out byte[] scriptBytes,
+        out string? error,
+        GameCubeScriptMacroCatalog? macroCatalog)
     {
         scriptBytes = [];
         error = null;
@@ -452,7 +497,8 @@ public static class GameCubeScriptCodec
             return false;
         }
 
-        if (!TryParseHighLevelFunctions(highLevelBlock, out var functions, out error))
+        var compileContext = new ScriptCompileContext(macroCatalog, ParseMacroDefinitions(xdsText));
+        if (!TryParseHighLevelFunctions(highLevelBlock, compileContext, out var functions, out error))
         {
             return false;
         }
@@ -471,7 +517,11 @@ public static class GameCubeScriptCodec
         return TryParse(scriptBytes, out _, out error);
     }
 
-    private static bool TryParseHighLevelFunctions(string block, out List<HighLevelFunction> functions, out string? error)
+    private static bool TryParseHighLevelFunctions(
+        string block,
+        ScriptCompileContext context,
+        out List<HighLevelFunction> functions,
+        out string? error)
     {
         functions = [];
         error = null;
@@ -519,7 +569,7 @@ public static class GameCubeScriptCodec
                 return false;
             }
 
-            if (!TryParseHighLevelInstruction(line, out var instruction, out error))
+            if (!TryParseHighLevelInstruction(line, context, out var instruction, out error))
             {
                 error = $"Editable XDS line {lineNumber}: {error}";
                 return false;
@@ -537,7 +587,11 @@ public static class GameCubeScriptCodec
         return true;
     }
 
-    private static bool TryParseHighLevelInstruction(string line, out HighLevelInstruction instruction, out string? error)
+    private static bool TryParseHighLevelInstruction(
+        string line,
+        ScriptCompileContext context,
+        out HighLevelInstruction instruction,
+        out string? error)
     {
         instruction = HighLevelInstruction.Empty;
         error = null;
@@ -629,7 +683,7 @@ public static class GameCubeScriptCodec
         if (op == "set")
         {
             var assignmentText = line["set".Length..].Trim();
-            if (!TryParseSetInstruction(assignmentText, out instruction, out error))
+            if (!TryParseSetInstruction(assignmentText, context, out instruction, out error))
             {
                 return false;
             }
@@ -674,7 +728,7 @@ public static class GameCubeScriptCodec
         if (op == "callstd")
         {
             var callText = line["callstd".Length..].Trim();
-            if (!TryParseStandardCallInstruction(callText, out instruction, out error))
+            if (!TryParseStandardCallInstruction(callText, context, out instruction, out error))
             {
                 return false;
             }
@@ -682,12 +736,12 @@ public static class GameCubeScriptCodec
             return true;
         }
 
-        if (op == "goto" && TryParseConditionalGoto(line, out instruction, out error))
+        if (op == "goto" && TryParseConditionalGoto(line, context, out instruction, out error))
         {
             return error is null;
         }
 
-        if (op is "jmptrue" or "jmpfalse" && TryParseConditionalJump(line, op, out instruction, out error))
+        if (op is "jmptrue" or "jmpfalse" && TryParseConditionalJump(line, op, context, out instruction, out error))
         {
             return error is null;
         }
@@ -1270,11 +1324,15 @@ public static class GameCubeScriptCodec
         return string.IsNullOrWhiteSpace(comment) ? $"callstd {name}" : $"callstd {name} // {comment}";
     }
 
-    private static string StandardCallText(int classId, int functionId, IReadOnlyList<StackValueExpression> arguments)
+    private static string StandardCallText(
+        int classId,
+        int functionId,
+        IReadOnlyList<StackValueExpression> arguments,
+        ScriptDecompileContext context)
     {
         var name = GameCubeScriptCatalog.FunctionDisplayName(classId, functionId);
         var parameterTypes = ParameterTypesForFunction(classId, functionId);
-        var argumentText = string.Join(", ", arguments.Select((argument, index) => ArgumentDisplayText(argument, parameterTypes.ElementAtOrDefault(index))));
+        var argumentText = string.Join(", ", arguments.Select((argument, index) => ArgumentDisplayText(argument, parameterTypes.ElementAtOrDefault(index), context)));
         var comment = GameCubeScriptCatalog.FunctionComment(classId, functionId);
         var call = $"callstd {name}({argumentText})";
         return string.IsNullOrWhiteSpace(comment) ? call : $"{call} // {comment}";
@@ -1379,8 +1437,16 @@ public static class GameCubeScriptCodec
         return open > 0 ? macroType[..open] : macroType;
     }
 
-    private static string ArgumentDisplayText(StackValueExpression argument, string? parameterType)
+    private static string ArgumentDisplayText(StackValueExpression argument, string? parameterType, ScriptDecompileContext context)
     {
+        parameterType = parameterType is null ? null : NormalizeMacroType(parameterType);
+        if (parameterType is not null
+            && argument.Constant is { Type: 1 } namedConstant
+            && context.TryUseMacro(parameterType, namedConstant.Value, out var macro))
+        {
+            return macro.Name;
+        }
+
         if (parameterType is not null
             && argument.Constant is { Type: 1 } constant
             && MacroArgumentsByType.TryGetValue(parameterType, out var macroInfo))
@@ -1524,7 +1590,11 @@ public static class GameCubeScriptCodec
         return false;
     }
 
-    private static bool TryParseStandardCallInstruction(string callText, out HighLevelInstruction instruction, out string? error)
+    private static bool TryParseStandardCallInstruction(
+        string callText,
+        ScriptCompileContext context,
+        out HighLevelInstruction instruction,
+        out string? error)
     {
         instruction = HighLevelInstruction.Empty;
         error = null;
@@ -1568,7 +1638,7 @@ public static class GameCubeScriptCodec
         {
             foreach (var argument in SplitTopLevelArguments(argumentText))
             {
-                if (!TryParseStackArgument(argument, out var words, out error))
+                if (!TryParseStackArgument(argument, context, out var words, out error))
                 {
                     return false;
                 }
@@ -1597,14 +1667,18 @@ public static class GameCubeScriptCodec
         return true;
     }
 
-    private static bool TryParseStackArgument(string text, out IReadOnlyList<uint> words, out string? error)
+    private static bool TryParseStackArgument(
+        string text,
+        ScriptCompileContext context,
+        out IReadOnlyList<uint> words,
+        out string? error)
     {
         words = [];
         error = null;
         text = text.Trim();
         text = TrimOuterParentheses(text);
 
-        if (TryParseStackExpression(text, out words, out error))
+        if (TryParseStackExpression(text, context, out words, out error))
         {
             return true;
         }
@@ -1613,7 +1687,11 @@ public static class GameCubeScriptCodec
         return false;
     }
 
-    private static bool TryParseStackExpression(string text, out IReadOnlyList<uint> words, out string? error)
+    private static bool TryParseStackExpression(
+        string text,
+        ScriptCompileContext context,
+        out IReadOnlyList<uint> words,
+        out string? error)
     {
         words = [];
         error = null;
@@ -1632,7 +1710,7 @@ public static class GameCubeScriptCodec
             return true;
         }
 
-        if (TryParseMacroConstant(text, out var macroValue))
+        if (TryParseMacroConstant(text, context, out var macroValue))
         {
             words = [BuildWord(2, 1, 0), macroValue];
             return true;
@@ -1652,12 +1730,12 @@ public static class GameCubeScriptCodec
             return true;
         }
 
-        if (TryParseUnaryExpression(text, out words, out error))
+        if (TryParseUnaryExpression(text, context, out words, out error))
         {
             return true;
         }
 
-        if (TryParseBinaryExpression(text, out words, out error))
+        if (TryParseBinaryExpression(text, context, out words, out error))
         {
             return true;
         }
@@ -1665,7 +1743,11 @@ public static class GameCubeScriptCodec
         return false;
     }
 
-    private static bool TryParseConditionalGoto(string line, out HighLevelInstruction instruction, out string? error)
+    private static bool TryParseConditionalGoto(
+        string line,
+        ScriptCompileContext context,
+        out HighLevelInstruction instruction,
+        out string? error)
     {
         instruction = HighLevelInstruction.Empty;
         error = null;
@@ -1687,10 +1769,15 @@ public static class GameCubeScriptCodec
         }
 
         conditionText = conditionText[(opcode == 11 ? "ifnot".Length : "if".Length)..].Trim();
-        return TryBuildConditionalJumpInstruction(target, conditionText, opcode, out instruction, out error);
+        return TryBuildConditionalJumpInstruction(target, conditionText, opcode, context, out instruction, out error);
     }
 
-    private static bool TryParseConditionalJump(string line, string op, out HighLevelInstruction instruction, out string? error)
+    private static bool TryParseConditionalJump(
+        string line,
+        string op,
+        ScriptCompileContext context,
+        out HighLevelInstruction instruction,
+        out string? error)
     {
         instruction = HighLevelInstruction.Empty;
         error = null;
@@ -1710,18 +1797,19 @@ public static class GameCubeScriptCodec
 
         var opcode = op.Equals("jmptrue", StringComparison.OrdinalIgnoreCase) ? 10 : 11;
         var conditionText = conditionPrefix["if".Length..].Trim();
-        return TryBuildConditionalJumpInstruction(target, conditionText, opcode, out instruction, out error);
+        return TryBuildConditionalJumpInstruction(target, conditionText, opcode, context, out instruction, out error);
     }
 
     private static bool TryBuildConditionalJumpInstruction(
         string target,
         string conditionText,
         int opcode,
+        ScriptCompileContext context,
         out HighLevelInstruction instruction,
         out string? error)
     {
         instruction = HighLevelInstruction.Empty;
-        if (!TryParseStackArgument(conditionText, out var conditionWords, out error))
+        if (!TryParseStackArgument(conditionText, context, out var conditionWords, out error))
         {
             return true;
         }
@@ -1737,7 +1825,7 @@ public static class GameCubeScriptCodec
         return true;
     }
 
-    private static bool TryParseMacroConstant(string text, out uint value)
+    private static bool TryParseMacroConstant(string text, ScriptCompileContext context, out uint value)
     {
         value = 0;
         text = text.Trim();
@@ -1750,6 +1838,11 @@ public static class GameCubeScriptCodec
         if (text.Equals("NO", StringComparison.OrdinalIgnoreCase))
         {
             value = 0;
+            return true;
+        }
+
+        if (text.StartsWith('#') && context.TryResolveMacro(text, out value))
+        {
             return true;
         }
 
@@ -1775,7 +1868,11 @@ public static class GameCubeScriptCodec
         return true;
     }
 
-    private static bool TryParseUnaryExpression(string text, out IReadOnlyList<uint> words, out string? error)
+    private static bool TryParseUnaryExpression(
+        string text,
+        ScriptCompileContext context,
+        out IReadOnlyList<uint> words,
+        out string? error)
     {
         words = [];
         error = null;
@@ -1789,7 +1886,7 @@ public static class GameCubeScriptCodec
         }
 
         var operandText = text[2..^1].Trim();
-        if (!TryParseStackArgument(operandText, out var operandWords, out error))
+        if (!TryParseStackArgument(operandText, context, out var operandWords, out error))
         {
             return true;
         }
@@ -1798,7 +1895,11 @@ public static class GameCubeScriptCodec
         return true;
     }
 
-    private static bool TryParseBinaryExpression(string text, out IReadOnlyList<uint> words, out string? error)
+    private static bool TryParseBinaryExpression(
+        string text,
+        ScriptCompileContext context,
+        out IReadOnlyList<uint> words,
+        out string? error)
     {
         words = [];
         error = null;
@@ -1817,8 +1918,8 @@ public static class GameCubeScriptCodec
                 continue;
             }
 
-            if (!TryParseStackArgument(leftText, out var leftWords, out error)
-                || !TryParseStackArgument(rightText, out var rightWords, out error))
+            if (!TryParseStackArgument(leftText, context, out var leftWords, out error)
+                || !TryParseStackArgument(rightText, context, out var rightWords, out error))
             {
                 return true;
             }
@@ -1967,7 +2068,11 @@ public static class GameCubeScriptCodec
         return -1;
     }
 
-    private static bool TryParseSetInstruction(string assignmentText, out HighLevelInstruction instruction, out string? error)
+    private static bool TryParseSetInstruction(
+        string assignmentText,
+        ScriptCompileContext context,
+        out HighLevelInstruction instruction,
+        out string? error)
     {
         instruction = HighLevelInstruction.Empty;
         error = null;
@@ -1986,7 +2091,7 @@ public static class GameCubeScriptCodec
             return false;
         }
 
-        if (!TryParseStackArgument(valueText, out var valueWords, out error))
+        if (!TryParseStackArgument(valueText, context, out var valueWords, out error))
         {
             return false;
         }
@@ -2026,6 +2131,63 @@ public static class GameCubeScriptCodec
 
         arguments.Add(text[start..].Trim());
         return arguments.Where(argument => argument.Length > 0).ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, uint> ParseMacroDefinitions(string xdsText)
+    {
+        var definitions = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rawLine in xdsText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        {
+            var line = StripInlineComment(rawLine).Trim();
+            if (!line.StartsWith("define ", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var definition = line["define ".Length..].Trim();
+            var nameEnd = FirstWhitespaceIndex(definition);
+            if (nameEnd <= 0)
+            {
+                continue;
+            }
+
+            var macroName = definition[..nameEnd].Trim();
+            var valueText = definition[nameEnd..].Trim();
+            if (!macroName.StartsWith('#') || valueText.Length == 0)
+            {
+                continue;
+            }
+
+            if (TryParseMacroDefinitionValue(valueText, out var value))
+            {
+                definitions[GameCubeScriptMacroCatalog.NormalizeMacroName(macroName)] = value;
+            }
+        }
+
+        return definitions;
+    }
+
+    private static bool TryParseMacroDefinitionValue(string text, out uint value)
+    {
+        var context = new ScriptCompileContext(null, new Dictionary<string, uint>());
+        if (TryParseMacroConstant(text, context, out value))
+        {
+            return true;
+        }
+
+        if (TryParseConstant(text, out _, out value))
+        {
+            return true;
+        }
+
+        if (TryParseInteger(text, out var parsed))
+        {
+            value = unchecked((uint)parsed);
+            return true;
+        }
+
+        value = 0;
+        return false;
     }
 
     private static string StripInlineComment(string line)
@@ -2409,6 +2571,41 @@ public static class GameCubeScriptCodec
     private sealed record MacroArgumentInfo(string WrapperName, bool Hexadecimal);
 
     private sealed record StackConstant(int Type, uint Value);
+
+    private sealed class ScriptDecompileContext(GameCubeScriptMacroCatalog? macroCatalog)
+    {
+        private readonly Dictionary<string, GameCubeScriptMacro> _usedMacros = new(StringComparer.OrdinalIgnoreCase);
+
+        public IReadOnlyCollection<GameCubeScriptMacro> UsedMacros => _usedMacros.Values;
+
+        public bool TryUseMacro(string parameterType, uint value, out GameCubeScriptMacro macro)
+        {
+            if (macroCatalog is not null && macroCatalog.TryFormat(parameterType, value, out macro!))
+            {
+                _usedMacros.TryAdd(macro.Name, macro);
+                return true;
+            }
+
+            macro = null!;
+            return false;
+        }
+    }
+
+    private sealed class ScriptCompileContext(
+        GameCubeScriptMacroCatalog? macroCatalog,
+        IReadOnlyDictionary<string, uint> definitions)
+    {
+        public bool TryResolveMacro(string macroName, out uint value)
+        {
+            macroName = GameCubeScriptMacroCatalog.NormalizeMacroName(macroName);
+            if (definitions.TryGetValue(macroName, out value))
+            {
+                return true;
+            }
+
+            return macroCatalog?.TryResolve(macroName, out value) == true;
+        }
+    }
 
     private sealed record StackValueExpression(
         string Text,

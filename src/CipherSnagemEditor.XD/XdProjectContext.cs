@@ -21,6 +21,7 @@ public sealed partial class XdProjectContext
         Iso = iso;
         Settings = settings;
         IsoWorkspace = new GameCubeIsoWorkspace(iso, workspaceDirectory, settings.IncreaseFileSizes);
+        IsoWorkspace.ScriptMacroCatalogFactory = BuildScriptMacroCatalog;
     }
 
     public string SourcePath { get; }
@@ -34,6 +35,8 @@ public sealed partial class XdProjectContext
     public XdSettings Settings { get; }
 
     private GameCubeIsoWorkspace IsoWorkspace { get; }
+
+    private GameCubeScriptMacroCatalog? _scriptMacroCatalog;
 
     public Dictionary<string, byte[]> LoadedFiles => IsoWorkspace.LoadedFiles;
 

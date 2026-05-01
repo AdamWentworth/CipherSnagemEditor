@@ -33,6 +33,8 @@ public sealed class GameCubeIsoWorkspace
 
     public Dictionary<string, GameStringTable> LoadedStringTables { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public Func<GameCubeScriptMacroCatalog?>? ScriptMacroCatalogFactory { get; set; }
+
     public string ExtractIsoFile(GameCubeIsoFileEntry entry, string? outputPath = null, bool overwrite = true)
     {
         var targetPath = ResolveIsoExtractPath(entry.Name, outputPath);
@@ -91,7 +93,7 @@ public sealed class GameCubeIsoWorkspace
             if (decode)
             {
                 decodedFiles.AddRange(DecodeExtractedFsysFiles(archive, folder, overwrite));
-                decodedFiles.AddRange(DecodeWorkspaceBinaryFiles(folder, overwrite));
+                decodedFiles.AddRange(DecodeWorkspaceBinaryFiles(folder, overwrite, ScriptMacroCatalogFactory?.Invoke()));
             }
         }
         else if (decode && entryFileType is GameFileType.Gtx or GameFileType.Atx)
@@ -229,7 +231,7 @@ public sealed class GameCubeIsoWorkspace
                 if (encodeDecodedFiles)
                 {
                     encodedFiles.AddRange(EncodeDecodedMessageFiles(folder));
-                    encodedFiles.AddRange(EncodeWorkspaceBinaryFiles(folder));
+                    encodedFiles.AddRange(EncodeWorkspaceBinaryFiles(folder, ScriptMacroCatalogFactory?.Invoke()));
                 }
 
                 if (packArchive)
@@ -345,7 +347,10 @@ public sealed class GameCubeIsoWorkspace
         LoadedFiles[messagePath] = bytes;
     }
 
-    private static IEnumerable<string> DecodeWorkspaceBinaryFiles(string folder, bool overwrite)
+    private static IEnumerable<string> DecodeWorkspaceBinaryFiles(
+        string folder,
+        bool overwrite,
+        GameCubeScriptMacroCatalog? macroCatalog)
     {
         if (!Directory.Exists(folder))
         {
@@ -438,7 +443,8 @@ public sealed class GameCubeIsoWorkspace
                     File.ReadAllBytes(filePath),
                     Path.GetFileName(filePath),
                     out var scriptText,
-                    out _))
+                    out _,
+                    macroCatalog))
                 {
                     File.WriteAllText(xdsPath, scriptText);
                     yield return xdsPath;
@@ -459,7 +465,8 @@ public sealed class GameCubeIsoWorkspace
                         relBytes[scriptOffset..(scriptOffset + scriptLength)],
                         Path.GetFileName(filePath),
                         out var scriptText,
-                        out _))
+                        out _,
+                        macroCatalog))
                 {
                     File.WriteAllText(xdsPath, scriptText);
                     yield return xdsPath;
@@ -491,7 +498,7 @@ public sealed class GameCubeIsoWorkspace
         }
     }
 
-    private static IEnumerable<string> EncodeWorkspaceBinaryFiles(string folder)
+    private static IEnumerable<string> EncodeWorkspaceBinaryFiles(string folder, GameCubeScriptMacroCatalog? macroCatalog)
     {
         if (!Directory.Exists(folder))
         {
@@ -541,7 +548,7 @@ public sealed class GameCubeIsoWorkspace
 
         foreach (var xdsPath in Directory.EnumerateFiles(folder, "*.xds", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            if (!GameCubeScriptCodec.TryCompileXds(File.ReadAllText(xdsPath), out var scriptBytes, out _))
+            if (!GameCubeScriptCodec.TryCompileXds(File.ReadAllText(xdsPath), out var scriptBytes, out _, macroCatalog))
             {
                 continue;
             }
