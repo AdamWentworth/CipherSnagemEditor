@@ -44,6 +44,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private TreasureEditorResources _treasureEditorResources = TreasureEditorResources.Empty;
     private InteractionEditorResources _interactionEditorResources = InteractionEditorResources.Empty;
     private TrainerEntryViewModel? _lastSelectedTrainer;
+    private PokemonStatsEntryViewModel? _lastSelectedPokemonStats;
 
     [ObservableProperty]
     private ToolEntryViewModel? _selectedTool;
@@ -2052,9 +2053,20 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedPokemonStatsChanged(PokemonStatsEntryViewModel? value)
     {
         var timer = Stopwatch.StartNew();
-        foreach (var pokemon in _allPokemonStats)
+
+        if (!ReferenceEquals(_lastSelectedPokemonStats, value))
         {
-            pokemon.IsSelected = ReferenceEquals(pokemon, value);
+            if (_lastSelectedPokemonStats is not null)
+            {
+                _lastSelectedPokemonStats.IsSelected = false;
+            }
+
+            if (value is not null)
+            {
+                value.IsSelected = true;
+            }
+
+            _lastSelectedPokemonStats = value;
         }
 
         SelectedPokemonStatsDetail = value is null

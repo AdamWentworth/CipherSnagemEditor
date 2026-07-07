@@ -70,6 +70,21 @@ dotnet test CipherSnagemEditor.slnx --no-build
 See [testing](docs/testing.md) for local ISO fixture layout, parity probes,
 Dolphin smoke checks, and deeper verification commands.
 
+## 📸 Demo Media
+
+Demo screenshots and videos can be generated from a local packaged Linux build
+and a local Pokemon Colosseum ISO:
+
+```bash
+python3 tools/capture_demo_media.py \
+  --app .local/cipher-package/opt/cipher-snagem-editor/CipherSnagemEditor.App \
+  --iso "/home/adam/Pokemon Colosseum/Pokemon Colosseum.iso"
+```
+
+The command writes native desktop window media under
+`artifacts/demo-media/cipher-snagem-editor/`. Game files, extracted packages,
+and generated media artifacts are local-only and ignored by git.
+
 ## 📚 Documentation
 
 - [Project scope](docs/scope.md): supported editor workflows and boundaries.
