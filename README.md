@@ -78,7 +78,7 @@ and a local Pokemon Colosseum ISO:
 ```bash
 python3 tools/capture_demo_media.py \
   --app .local/cipher-package/opt/cipher-snagem-editor/CipherSnagemEditor.App \
-  --iso "/home/adam/Pokemon Colosseum/Pokemon Colosseum.iso"
+  --iso "$HOME/Pokemon Colosseum/Pokemon Colosseum.iso"
 ```
 
 The command writes native desktop window media under

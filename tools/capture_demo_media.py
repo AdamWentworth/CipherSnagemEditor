@@ -764,8 +764,8 @@ def write_manifest(output_dir: Path, iso_path: Path, app_path: Path) -> None:
         "product": "cipher-snagem-editor",
         "frame": {"mode": "native-window", "fps": FRAME_RATE},
         "source": {
-            "iso": str(iso_path),
-            "app": str(app_path),
+            "iso": iso_path.name,
+            "app": app_path.name,
         },
         "screenshots": [
             {"id": key, "path": f"screenshots/cipher-snagem-{key}-desktop.png"} for key, _ in SCREENSHOTS
