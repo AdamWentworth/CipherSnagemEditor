@@ -15,7 +15,10 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($DolphinExe)) {
-    $DolphinExe = Join-Path $repoRoot ".local\dolphin\Dolphin-x64\Dolphin.exe"
+    $DolphinExe = $env:DOLPHIN_EXE
+}
+if ([string]::IsNullOrWhiteSpace($DolphinExe)) {
+    $DolphinExe = Join-Path $repoRoot ".local\dolphin\Dolphin.exe"
 }
 if ([string]::IsNullOrWhiteSpace($IsoPath)) {
     $IsoPath = Join-Path $repoRoot ".local\fixtures\Pokemon Colosseum.iso"

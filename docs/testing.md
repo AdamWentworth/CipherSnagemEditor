@@ -21,9 +21,19 @@ Recommended local layout:
   fixtures/
     Pokemon Colosseum.iso
     Pokemon XD - Gale of Darkness.iso
-  dolphin/
   dolphin-user/
 ```
+
+Point `DOLPHIN_EXE` at the shared Dolphin installation. On Adam's development
+machine that is:
+
+```powershell
+$env:DOLPHIN_EXE = "D:\DevTools\Emulators\Dolphin\Dolphin.exe"
+```
+
+Passing `-DolphinExe` to a smoke script still overrides the environment value.
+If neither is supplied, the script retains a `.local\dolphin\Dolphin.exe`
+fallback for self-contained checkouts.
 
 ## Colosseum Checks
 
