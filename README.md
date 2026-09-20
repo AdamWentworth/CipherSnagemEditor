@@ -1,9 +1,17 @@
-# Cipher Snagem Editor
+<p align="center">
+  <a href="https://phlosion.com/">
+    <img src="assets/branding/cipher-snagem-editor/cipher-snagem-lockup-transparent.png" width="720" alt="Cipher Snagem Editor: Colosseum Tool and GoD Tool">
+  </a>
+</p>
 
-![.NET](https://img.shields.io/badge/.NET-10-512BD4)
-![Avalonia](https://img.shields.io/badge/UI-Avalonia-8B44AC)
-![License](https://img.shields.io/badge/license-GPL--2.0--only-blue)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)
+<h1 align="center">Cipher Snagem Editor</h1>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-10-512BD4" alt=".NET 10">
+  <img src="https://img.shields.io/badge/UI-Avalonia-8B44AC" alt="Avalonia UI">
+  <img src="https://img.shields.io/badge/license-GPL--2.0--only-blue" alt="GPL-2.0-only license">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey" alt="Windows and Linux">
+</p>
 
 Cipher Snagem Editor is a Windows-first, cross-platform .NET/Avalonia remake of
 the legacy Pokemon Colosseum and Pokemon XD: Gale of Darkness modding tools from
