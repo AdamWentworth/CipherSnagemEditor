@@ -18,6 +18,37 @@ The goal is preservation and practical parity with StarsMMD's original
 Swift/macOS tools: familiar editor windows, equivalent data behavior, safe ISO
 workspace flows, and repeatable rebuilds on modern Windows and Linux.
 
+## 🎬 App Preview
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/images/cipher-snagem-workspace.gif" alt="Opening a Pokemon Colosseum workspace in Cipher Snagem Editor">
+    </td>
+    <td width="50%">
+      <img src="docs/images/cipher-snagem-pokemon-stats.gif" alt="Browsing Pokemon stats in Cipher Snagem Editor">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Workspace</strong></td>
+    <td align="center"><strong>Pokemon stats</strong></td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/images/cipher-snagem-move-editor.gif" alt="Browsing moves in Cipher Snagem Editor">
+    </td>
+    <td width="50%">
+      <img src="docs/images/cipher-snagem-trainer-editor.gif" alt="Browsing trainers in Cipher Snagem Editor">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Move editor</strong></td>
+    <td align="center"><strong>Trainer editor</strong></td>
+  </tr>
+</table>
+
+Animated previews adapted from the [Phlosion demo captures](https://phlosion.com/).
+
 ## ⬇️ Download
 
 Most users should download a prebuilt package from the
