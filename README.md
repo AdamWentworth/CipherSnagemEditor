@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://phlosion.com/">
-    <img src="assets/branding/cipher-snagem-editor/cipher-snagem-lockup-transparent.png" width="720" alt="Cipher Snagem Editor: Colosseum Tool and GoD Tool">
+    <img src="assets/branding/cipher-snagem-editor/cipher-snagem-lockup-transparent.png" width="480" alt="Cipher Snagem Editor: Colosseum Tool and GoD Tool">
   </a>
 </p>
 
