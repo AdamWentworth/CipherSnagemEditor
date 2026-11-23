@@ -55,6 +55,36 @@ Run parser/codec probes against real assets from the clean ISO:
 .\scripts\run-colosseum-parity-probes.ps1
 ```
 
+### Rebuild Parity
+
+Export and reimport the Colosseum party menu, battle menus, and common data
+with no edits.
+Start with a verified stock ISO. The probe checks the original types for Ice
+Punch, Leer, and Sandstorm before repacking. It needs space for one ISO in the
+system temp directory and compares the entire disc after the rebuild.
+
+```powershell
+dotnet run --project src/CipherSnagemEditor.Cli -- colosseum-rebuild-probe ".local/fixtures/Pokemon Colosseum.iso"
+```
+
+To keep a rebuilt ISO for playtesting, pass a new output path as the last
+argument. The probe saves it after parity passes.
+
+To check an edited Colosseum or XD rebuild against GoD Tool, start both tools
+from the same clean disc and apply the same edits. Compare the two resulting
+images with GoD Tool's output as the expected image.
+
+```powershell
+dotnet run --project src/CipherSnagemEditor.Cli -- compare-rebuild ".local/god-tool.iso" ".local/cipher-rebuilt.iso"
+```
+
+The comparison reads both images and checks the boot data, apploader,
+executable, file paths, and every file's bytes. Disc file offsets and padding
+can differ. A changed FSYS archive is reported by member name and ID when its
+contents differ. Different archive packaging also fails the strict check,
+even if the decoded member data matches. The basic test suite exercises the
+comparison with synthetic fixtures. Keep actual game images under `.local/`.
+
 ## Pokemon XD Checks
 
 Run the main XD closeout probe:

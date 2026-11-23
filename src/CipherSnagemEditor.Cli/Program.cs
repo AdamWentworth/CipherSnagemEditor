@@ -22,11 +22,35 @@ if (args.Length == 0)
     Console.WriteLine("       ciphersnagem smoke-apply <iso> <operation>");
     Console.WriteLine("       ciphersnagem closeout-probe <iso>");
     Console.WriteLine("       ciphersnagem parity-probe <iso> [--messages N] [--assets N]");
+    Console.WriteLine("       ciphersnagem colosseum-rebuild-probe <clean-iso> [output-iso]");
+    Console.WriteLine("       ciphersnagem compare-rebuild <expected-iso> <rebuilt-iso>");
     return 1;
 }
 
 try
 {
+    if (args[0].Equals("compare-rebuild", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length != 3)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem compare-rebuild <expected-iso> <rebuilt-iso>");
+            return 1;
+        }
+
+        return CompareRebuilds(args[1], args[2]);
+    }
+
+    if (args[0].Equals("colosseum-rebuild-probe", StringComparison.OrdinalIgnoreCase))
+    {
+        if (args.Length is < 2 or > 3)
+        {
+            Console.Error.WriteLine("Usage: ciphersnagem colosseum-rebuild-probe <clean-iso> [output-iso]");
+            return 1;
+        }
+
+        return RunColosseumRebuildProbe(args[1], args.Length == 3 ? args[2] : null);
+    }
+
     if (args[0].Equals("inspect", StringComparison.OrdinalIgnoreCase))
     {
         if (args.Length < 2)
@@ -1175,6 +1199,78 @@ static void ProbeXdScriptCodecRoundTrip(string isoPath, ICollection<string> fail
     {
         failures.Add($"XD script codec probe failed: {ex.Message}");
     }
+}
+
+static int RunColosseumRebuildProbe(string isoPath, string? outputPath)
+{
+    if (!GameCubeIsoReader.Open(isoPath).IsPokemonColosseum)
+    {
+        throw new InvalidDataException("The rebuild probe requires a Colosseum ISO.");
+    }
+
+    var work = Directory.CreateTempSubdirectory("cipher-colosseum-rebuild-");
+    try
+    {
+        var rebuiltPath = Path.Combine(work.FullName, "Rebuilt.iso");
+        File.Copy(isoPath, rebuiltPath);
+        var context = ColosseumProjectContext.Open(rebuiltPath);
+        var moves = context.LoadMoves();
+        (int MoveId, int TypeId, string Label)[] expectedTypes =
+        [
+            (8, 15, "Ice Punch (Ice)"),
+            (43, 0, "Leer (Normal)"),
+            (201, 5, "Sandstorm (Rock)"),
+        ];
+        var mismatches = expectedTypes.Where(expected =>
+            !moves.Any(move => move.Index == expected.MoveId && move.TypeId == expected.TypeId));
+        var unexpectedTypes = string.Join(", ", mismatches.Select(expected => expected.Label));
+        if (unexpectedTypes.Length > 0)
+        {
+            throw new InvalidDataException(
+                $"The source ISO already differs from stock for {unexpectedTypes}. Use a clean disc for the rebuild probe.");
+        }
+
+        string[] archives = ["pocket_menu.fsys", "waza_menu.fsys", "fight_common.fsys", "colosseumbattle_menu.fsys", "common.fsys"];
+        foreach (var name in archives)
+        {
+            var entry = context.Iso!.Files.Single(file => file.Name == name && file.TocEntryOffset is not null);
+            var export = context.ExportIsoFile(entry);
+            context.ImportIsoFile(entry, encode: true);
+            Console.WriteLine($"Rebuilt {name} with {export.ExtractedFiles.Count} members and {export.DecodedFiles.Count} editable exports.");
+        }
+
+        var result = CompareRebuilds(isoPath, rebuiltPath);
+        if (result == 0 && outputPath is not null)
+        {
+            File.Copy(rebuiltPath, outputPath);
+            Console.WriteLine($"Saved rebuilt ISO to {Path.GetFullPath(outputPath)}");
+        }
+
+        return result;
+    }
+    finally
+    {
+        work.Delete(recursive: true);
+    }
+}
+
+static int CompareRebuilds(string expectedPath, string rebuiltPath)
+{
+    var result = GameCubeRebuildComparison.Compare(expectedPath, rebuiltPath);
+    Console.WriteLine($"Compared {result.ComparedFiles} disc files, boot data, apploader, and DOL.");
+    foreach (var difference in result.Differences)
+    {
+        Console.Error.WriteLine(difference);
+    }
+
+    if (result.Differences.Count == 0)
+    {
+        Console.WriteLine("Rebuild parity passed.");
+        return 0;
+    }
+
+    Console.Error.WriteLine($"Rebuild parity failed with {result.Differences.Count} difference(s).");
+    return 1;
 }
 
 static void RunParityProbe(string isoPath, int messageLimit, int assetLimit)

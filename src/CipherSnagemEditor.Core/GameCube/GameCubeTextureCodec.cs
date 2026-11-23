@@ -43,6 +43,14 @@ public static class GameCubeTextureCodec
         }
 
         var image = PngRgbaCodec.Decode(pngBytes);
+        if (image.Width == info.Width && image.Height == info.Height
+            && image.Rgba.AsSpan().SequenceEqual(DecodeImage(info)))
+        {
+            // An unchanged PNG cannot express the original palette indices or unused palette entries.
+            updatedTextureBytes = textureBytes.ToArray();
+            return true;
+        }
+
         var textureData = EncodeTextureData(info, image);
         var result = textureBytes.ToArray();
         EnsureWritableRange(result, info.TextureStart, textureData.Length);

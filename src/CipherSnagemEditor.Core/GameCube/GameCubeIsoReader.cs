@@ -72,7 +72,7 @@ public static class GameCubeIsoReader
             new("Game.toc", tocStart, tocSize)
         };
 
-        if (tocStart == 0 || tocSize < TocEntrySize || tocStart + tocSize > stream.Length || tocSize > int.MaxValue)
+        if (tocStart == 0 || tocSize < TocEntrySize || (long)tocStart + tocSize > stream.Length || tocSize > int.MaxValue)
         {
             return entries;
         }
@@ -85,6 +85,8 @@ public static class GameCubeIsoReader
             return entries;
         }
 
+        var directories = new Stack<(int Index, uint EndIndex, string Prefix)>();
+        directories.Push((0, entryCount, string.Empty));
         for (var index = 1; index < entryCount; index++)
         {
             var offset = checked(index * TocEntrySize);
@@ -93,19 +95,34 @@ public static class GameCubeIsoReader
                 break;
             }
 
-            var entryType = toc[offset];
-            if (entryType == 1)
+            while (directories.Peek().EndIndex <= index)
             {
-                continue;
+                directories.Pop();
             }
 
             var nameOffset = (int)(BigEndian.ReadUInt32(toc, offset) & 0x00ff_ffff);
             var fileOffset = BigEndian.ReadUInt32(toc, offset + 4);
             var fileSize = BigEndian.ReadUInt32(toc, offset + 8);
             var name = ReadNullTerminatedAscii(toc, firstStringOffset + nameOffset);
+            var parent = directories.Peek();
+            var path = parent.Prefix + name;
+            if (toc[offset] == 1)
+            {
+                if (fileOffset != parent.Index || fileSize <= index || fileSize > parent.EndIndex || string.IsNullOrWhiteSpace(name))
+                {
+                    throw new InvalidDataException($"Invalid FST directory at index {index}.");
+                }
+
+                directories.Push((index, fileSize, path + "/"));
+                continue;
+            }
+
             if (!string.IsNullOrWhiteSpace(name))
             {
-                entries.Add(new GameCubeIsoFileEntry(name, fileOffset, fileSize, tocStart + (uint)offset));
+                entries.Add(new GameCubeIsoFileEntry(name, fileOffset, fileSize, tocStart + (uint)offset)
+                {
+                    DiscPath = path,
+                });
             }
         }
 

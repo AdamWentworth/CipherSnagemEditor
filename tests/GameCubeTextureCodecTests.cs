@@ -49,6 +49,26 @@ public sealed class GameCubeTextureCodecTests
     }
 
     [Fact]
+    public void ReimportingUnchangedIndexedPngPreservesPaletteAndIndices()
+    {
+        var texture = CreateTexture(8, 4, format: 0x01, bitsPerPixel: 8, textureLength: 32,
+            paletteLength: 512, paletteFormat: 3);
+        for (var i = 0; i < 32; i++)
+        {
+            texture[0x80 + i] = i % 2 == 0 ? (byte)9 : (byte)5;
+        }
+
+        const int paletteStart = 0x80 + 32;
+        BigEndian.WriteUInt16(texture, paletteStart + 5 * 2, 0xfc00);
+        BigEndian.WriteUInt16(texture, paletteStart + 9 * 2, 0x83e0);
+        BigEndian.WriteUInt16(texture, paletteStart + 24 * 2, 0x801f);
+
+        Assert.True(GameCubeTextureCodec.TryDecodePng(texture, out var png));
+        Assert.True(GameCubeTextureCodec.TryImportPng(texture, png, out var imported));
+        Assert.Equal(texture, imported);
+    }
+
+    [Fact]
     public void DecodesAndImportsTransparentCmprTexturePng()
     {
         var texture = CreateTexture(8, 8, format: 0xb0, bitsPerPixel: 4, textureLength: 32);

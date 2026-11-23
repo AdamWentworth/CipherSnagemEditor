@@ -338,9 +338,26 @@ public sealed class GameCubeIsoWorkspace
         var validStrings = strings
             .Where(message => message.Id is > 0 and <= 0x000f_ffff)
             .ToArray();
-        var table = File.Exists(messagePath)
-            ? GameStringTable.Parse(File.ReadAllBytes(messagePath)).WithStrings(validStrings)
-            : GameStringTable.FromStrings(validStrings);
+        GameStringTable table;
+        if (File.Exists(messagePath))
+        {
+            var originalBytes = File.ReadAllBytes(messagePath);
+            var original = GameStringTable.Parse(originalBytes);
+            if (original.Strings.Where(message => message.Id > 0).Select(message => (message.Id, message.Text))
+                .SequenceEqual(validStrings.Select(message => (message.Id, message.Text))))
+            {
+                LoadedStringTables[messagePath] = original;
+                LoadedFiles[messagePath] = originalBytes;
+                return;
+            }
+
+            table = original.WithStrings(validStrings);
+        }
+        else
+        {
+            table = GameStringTable.FromStrings(validStrings);
+        }
+
         var bytes = table.ToArray(allowGrowth: _allowStringGrowth);
         File.WriteAllBytes(messagePath, bytes);
         LoadedStringTables[messagePath] = table;

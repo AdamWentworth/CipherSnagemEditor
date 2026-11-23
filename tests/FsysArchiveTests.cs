@@ -95,7 +95,7 @@ public sealed class FsysArchiveTests
         Assert.Throws<InvalidDataException>(() => archive.AddFile(sourcePath, 0x1234));
     }
 
-    private static byte[] CreateColosseumStyleFsys(params (string RawName, byte[] FileBytes, GameFileType FileType, ushort ShortIdentifier)[] entries)
+    internal static byte[] CreateColosseumStyleFsys(params (string RawName, byte[] FileBytes, GameFileType FileType, ushort ShortIdentifier)[] entries)
     {
         const int pointerListStart = 0x60;
         const int namesStart = 0x70;
